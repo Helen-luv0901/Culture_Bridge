@@ -1,5 +1,7 @@
 # Culture Bridge 產品地圖
 
+> The experience-led MVP direction is now defined in [Experience-Led MVP](experience-led-mvp.md). The Action Card model below remains a later supporting layer for verified administrative information, not the primary MVP home experience.
+
 ## 0. 產品一句話定義
 
 Culture Bridge 是一個「由真實國際生執行結果持續更新的生活任務平台」。

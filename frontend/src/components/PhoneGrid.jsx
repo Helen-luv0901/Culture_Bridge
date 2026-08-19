@@ -1,11 +1,11 @@
 import PhoneFrame from "./PhoneFrame";
-import { screenOrder } from "../data/tabs";
+import { showcaseScreens } from "../data/tabs";
 
 export default function PhoneGrid() {
   return (
     <section className="phone-grid">
-      {screenOrder.map((screen) => (
-        <PhoneFrame key={screen} initialTab={screen} />
+      {showcaseScreens.map((screen) => (
+        <PhoneFrame key={screen.route} initialRoute={screen.route} label={screen.label} />
       ))}
     </section>
   );

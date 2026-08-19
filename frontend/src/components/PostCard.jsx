@@ -7,7 +7,7 @@ export default function PostCard({ post }) {
           <strong>{post.name}</strong>
           <div className="school">{post.school}</div>
         </div>
-        <div className="badge">{post.badge}</div>
+        <div className="badge">{post.type}</div>
       </div>
       <div className="post-body">
         <h4>{post.body}</h4>
@@ -15,15 +15,11 @@ export default function PostCard({ post }) {
           <p>{post.translation}</p>
         </div>
         <div className="translate-row">
-          <div className="tag-row">
-            <span className="tag ok">正確翻譯</span>
-            <span className="tag warn">提供資訊</span>
-          </div>
+          <span>{post.badge}</span>
           <span>{post.count}</span>
         </div>
-        <div className="translate-row">
-          <span />
-          <span className="translate-link">{post.action}</span>
+        <div className="community-signals">
+          {post.signals.map((signal) => <button type="button" key={signal}>{signal}</button>)}
         </div>
       </div>
     </article>
