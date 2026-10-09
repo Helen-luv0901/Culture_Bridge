@@ -1,3 +1,4 @@
+import { InkIcon } from "./DesignPrimitives";
 import { tabs } from "../data/tabs";
 import { useLanguage } from "../i18n/LanguageContext";
 
@@ -5,17 +6,17 @@ export default function BottomTabBar({ activeTab, onTabChange }) {
   const { t } = useLanguage();
 
   return (
-    <nav className="tabbar">
+    <nav className="tabbar" aria-label={t("home")}>
       {tabs.map((tab) => (
-        <button
+        <a
           key={tab.id}
           className={`tab ${tab.id === activeTab ? "active" : ""}`}
-          type="button"
-          onClick={() => onTabChange(tab.id)}
+          href={`#${tab.id}`}
+          onClick={(event) => { if (onTabChange) { event.preventDefault(); onTabChange(tab.id); } }} aria-current={tab.id === activeTab ? "page" : undefined}
         >
-          <span className={`tab-icon icon-${tab.icon}`} />
+          <InkIcon name={{home: "home", explore: "compass", share: "feather", profile: "user"}[tab.id]} />
           <span className="tab-label">{t(tab.id === "profile" ? "my" : tab.id)}</span>
-        </button>
+        </a>
       ))}
     </nav>
   );

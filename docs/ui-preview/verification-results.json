@@ -1,0 +1,174 @@
+{
+  "results": [
+    {
+      "width": 375,
+      "route": "home",
+      "scrollWidth": 375,
+      "active": 1,
+      "heading": "Home"
+    },
+    {
+      "width": 375,
+      "route": "explore",
+      "scrollWidth": 375,
+      "active": 1,
+      "heading": "Explore"
+    },
+    {
+      "width": 375,
+      "route": "share",
+      "scrollWidth": 375,
+      "active": 1,
+      "heading": "Share"
+    },
+    {
+      "width": 375,
+      "route": "profile",
+      "scrollWidth": 375,
+      "active": 1,
+      "heading": "My experiences"
+    },
+    {
+      "width": 768,
+      "route": "home",
+      "scrollWidth": 768,
+      "active": 1,
+      "heading": "Home"
+    },
+    {
+      "width": 768,
+      "route": "explore",
+      "scrollWidth": 768,
+      "active": 1,
+      "heading": "Explore"
+    },
+    {
+      "width": 768,
+      "route": "share",
+      "scrollWidth": 768,
+      "active": 1,
+      "heading": "Share"
+    },
+    {
+      "width": 768,
+      "route": "profile",
+      "scrollWidth": 768,
+      "active": 1,
+      "heading": "My experiences"
+    },
+    {
+      "width": 1024,
+      "route": "home",
+      "scrollWidth": 1024,
+      "active": 1,
+      "heading": "Home"
+    },
+    {
+      "width": 1024,
+      "route": "explore",
+      "scrollWidth": 1024,
+      "active": 1,
+      "heading": "Explore"
+    },
+    {
+      "width": 1024,
+      "route": "share",
+      "scrollWidth": 1024,
+      "active": 1,
+      "heading": "Share"
+    },
+    {
+      "width": 1024,
+      "route": "profile",
+      "scrollWidth": 1024,
+      "active": 1,
+      "heading": "My experiences"
+    },
+    {
+      "width": 1440,
+      "route": "home",
+      "scrollWidth": 1440,
+      "active": 1,
+      "heading": "Home"
+    },
+    {
+      "width": 1440,
+      "route": "explore",
+      "scrollWidth": 1440,
+      "active": 1,
+      "heading": "Explore"
+    },
+    {
+      "width": 1440,
+      "route": "share",
+      "scrollWidth": 1440,
+      "active": 1,
+      "heading": "Share"
+    },
+    {
+      "width": 1440,
+      "route": "profile",
+      "scrollWidth": 1440,
+      "active": 1,
+      "heading": "My experiences"
+    },
+    {
+      "width": 812,
+      "route": "home",
+      "scrollWidth": 812,
+      "active": 1,
+      "heading": "Home"
+    },
+    {
+      "width": 812,
+      "route": "explore",
+      "scrollWidth": 812,
+      "active": 1,
+      "heading": "Explore"
+    },
+    {
+      "width": 812,
+      "route": "share",
+      "scrollWidth": 812,
+      "active": 1,
+      "heading": "Share"
+    },
+    {
+      "width": 812,
+      "route": "profile",
+      "scrollWidth": 812,
+      "active": 1,
+      "heading": "My experiences"
+    },
+    {
+      "width": 320,
+      "route": "home",
+      "scrollWidth": 320,
+      "active": 1,
+      "heading": "Home"
+    },
+    {
+      "width": 320,
+      "route": "explore",
+      "scrollWidth": 320,
+      "active": 1,
+      "heading": "Explore"
+    },
+    {
+      "width": 320,
+      "route": "share",
+      "scrollWidth": 320,
+      "active": 1,
+      "heading": "Share"
+    },
+    {
+      "width": 320,
+      "route": "profile",
+      "scrollWidth": 320,
+      "active": 1,
+      "heading": "My experiences"
+    }
+  ],
+  "errors": [],
+  "flows": "filters, detail/back, empty validation, draft/edit, progress, mobile navigation, reduced motion"
+}

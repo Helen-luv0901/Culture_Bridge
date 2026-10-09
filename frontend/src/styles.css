@@ -2360,3 +2360,271 @@ h1 {
   font-size: 8px;
   font-weight: 700;
 }
+
+/* Action-first home: official procedures are distinct from personal experiences. */
+.action-home-intro {
+  padding: 9px 0 19px;
+  border-bottom: 1px solid var(--border);
+}
+
+.action-home-intro p,
+.action-home-intro span {
+  display: block;
+  margin: 0;
+  color: var(--jade);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.action-home-intro h2 {
+  margin: 8px 0 8px;
+  color: var(--text);
+  font-family: "Iowan Old Style", "Songti SC", "Noto Serif TC", serif;
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+}
+
+.action-home-intro span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.current-action {
+  margin-top: 17px;
+  padding: 14px;
+  border: 1px solid #dce5e2;
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 6px 18px rgba(32, 49, 60, 0.045);
+}
+
+.current-action-head {
+  margin: 0 0 12px;
+}
+
+.current-action-head h3,
+.action-directory-head h3,
+.life-entry-head h3 {
+  color: #53646f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.current-action-head > span,
+.action-directory-head > span,
+.life-entry-head > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.current-action-title-row {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8eeee;
+}
+
+.current-action-title-row .action-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: #e5f1ef;
+  color: var(--jade);
+  font-size: 12px;
+}
+
+.current-action-title-row strong,
+.current-action-title-row small {
+  display: block;
+}
+
+.current-action-title-row strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.current-action-title-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.home-process {
+  display: grid;
+  gap: 0;
+  margin: 12px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.home-process li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 30px;
+  color: #61727c;
+  font-size: 10px;
+}
+
+.home-process li:not(:last-child)::before {
+  position: absolute;
+  top: 22px;
+  left: 10px;
+  width: 1px;
+  height: 16px;
+  background: #d4dfe0;
+  content: "";
+}
+
+.process-dot {
+  z-index: 1;
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #b9c8ca;
+  border-radius: 50%;
+  background: var(--paper);
+  color: #71818b;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.home-process .done {
+  color: #526b65;
+}
+
+.home-process .done .process-dot {
+  border-color: var(--jade);
+  background: var(--jade);
+  color: #fff;
+}
+
+.home-process li small {
+  color: var(--jade);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.action-link {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 3px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid #e8eeee;
+  background: transparent;
+  color: var(--blue-strong);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.action-directory-head,
+.life-entry-head {
+  margin: 25px 0 8px;
+}
+
+.action-directory {
+  border-top: 1px solid var(--border);
+}
+
+.action-directory-item {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+  min-height: 57px;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.action-directory-item .action-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e5f1ef;
+  color: var(--jade);
+  font-size: 10px;
+}
+
+.action-directory-item strong,
+.action-directory-item small {
+  display: block;
+}
+
+.action-directory-item strong {
+  font-size: 11px;
+}
+
+.action-directory-item small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.action-directory-item .verification {
+  align-self: center;
+  padding: 3px 5px;
+  font-size: 8px;
+}
+
+.life-entry-head {
+  margin-top: 28px;
+}
+
+.life-entry-list {
+  border-top: 1px solid var(--border);
+}
+
+.life-entry-list .experience-topic {
+  min-height: 54px;
+}
+
+.step-title > button {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #e8f4ff;
+  color: #478bc9;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.step-card.done .step-title > button {
+  background: #dff5e5;
+  color: #4c9d63;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .process-dot {
+    transition: none;
+  }
+}

@@ -1,10 +1,10 @@
 # Culture Bridge 產品地圖
 
-> The experience-led MVP direction is now defined in [Experience-Led MVP](experience-led-mvp.md). The Action Card model below remains a later supporting layer for verified administrative information, not the primary MVP home experience.
+> The experience-led MVP direction is defined in [Experience-Led MVP](experience-led-mvp.md). The product home uses a hybrid structure: verified administrative Action Cards are the primary entry point, while life and cultural experiences remain a clearly separate supporting section.
 
 ## 0. 產品一句話定義
 
-Culture Bridge 是一個「由真實國際生執行結果持續更新的生活任務平台」。
+Culture Bridge 是一個「由官方文件與真實國際生執行結果持續更新的生活任務平台」。
 
 產品不是要取代 ChatGPT，也不是單純提供資訊，而是：
 
@@ -94,11 +94,14 @@ HELP NEXT USER
 * Take a Leave
 * Get from Airport to Campus
 
-首頁應優先呈現「我要完成什麼」，而不是：
+首頁上半部應優先呈現「我要完成什麼」與使用者正在進行的流程。生活與文化經驗可保留在首頁下半部，但必須與可驗證的制度流程清楚分開。
 
-* 社群
-* AI
-* 影片
+制度型 Action Card 的內容來源與規則：
+
+* 以官方文件、學校公告或合作單位確認的流程為主。
+* 每個流程提供統一、可追溯的辦理順序，不以零散社群貼文作為流程答案。
+* 每張卡必須顯示驗證狀態、適用情境、來源與最後更新日期。
+* 學生經驗可以補充差異與卡關情況，但不能覆蓋或混同於官方流程。
 
 ---
 
@@ -644,41 +647,90 @@ AI 不應：
 
 # 17. 首頁資訊架構
 
+首頁採用「流程任務優先、生活經驗輔助」的混合架構。制度型流程與經驗型內容不可混為同一種資訊來源。
+
+## A. 首頁上半部：我的辦理流程
+
+若使用者已開始任一 Action，最上方優先顯示進行中的流程：
+
+```text
+我的辦理流程
+
+更新 ARC
+2 / 4 步驟已完成
+
+● 確認申請資格        ✓
+● 準備必要文件        ✓
+○ 線上送出申請
+○ 確認結果
+
+[查看完整流程]
+```
+
+流程呈現規則：
+
+* 使用垂直排列的圓點與連線呈現官方辦理順序。
+* 每個圓點與步驟列皆可點擊；使用者可將步驟標記為完成或取消完成。
+* 已完成步驟以勾號與文字狀態呈現，不能只靠顏色區分。
+* 點選步驟可查看該步驟的說明、所需文件、官方來源與卡關協助。
+* 首頁僅顯示目前進行中的一個流程摘要；完整流程在 Action Progress 頁面操作。
+
+## B. 首頁中段：開始辦理
+
 首頁核心 CTA：
 
 ```text
-What do you need to do in Taiwan?
+你接下來要辦什麼？
 ```
 
-下方：
+下方顯示可開始的官方流程：
 
 ```text
-🪪 Renew ARC
-
-💼 Apply for Work Permit
-
-🏥 Get Health Insurance
-
-🏦 Open a Bank Account
-
-🏫 Take a Leave
-
-🚌 Get Around Taiwan
+更新／申請 ARC
+申請工作證
+加入全民健康保險
+開立銀行帳戶
+申請在學證明
 ```
 
-Action Card Preview：
+每張 Action Card 必須顯示：
 
 ```text
-Apply for Work Permit
+申請工作證
 
-🟢 Recently Verified
+已由官方資料驗證
+最後更新：2026-08-16
+適用於：逢甲大學國際生
+18 位學生近期完成
 
-18 students completed recently
-
-Updated 3 days ago
-
-[Start]
+[開始流程]
 ```
+
+時間資訊規則：
+
+* 對制度型流程優先顯示明確日期，例如「最後更新：2026-08-16」。
+* 可輔以相對時間，但不可只顯示「3 days ago」。
+* 驗證狀態必須來自來源確認與管理者複核，不得由按讚或社群多數決產生。
+
+## C. 首頁下半部：了解台灣生活
+
+保留生活適應與文化溝通的經驗入口：
+
+```text
+了解台灣生活
+
+住宿、飲食與生活適應
+教授、同學與文化溝通
+```
+
+此區內容是不同學生的真實經驗，不提供唯一正確答案，也不得使用「已驗證」標籤。
+
+## D. 首頁視覺原則
+
+* 風格採簡潔、留白充足、資訊優先的行動工具介面。
+* 色彩控制為中性色底、單一主操作色與單一完成／已驗證色；避免多色卡片與裝飾性漸層。
+* 以清楚的字級、細邊框、圓點流程與留白建立層級，而非大量卡片陰影。
+* 主要操作與圓點按鈕必須具備清楚的按下、鍵盤焦點與無障礙名稱。
 
 ---
 

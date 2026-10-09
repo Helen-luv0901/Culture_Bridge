@@ -4,6 +4,8 @@ import { useLanguage } from "../i18n/LanguageContext";
 
 export default function ExperienceDetailScreen({ experience, onShareDifferent }) {
   const [responded, setResponded] = useState(false);
+  const [experienced, setExperienced] = useState(false);
+  const [helpful, setHelpful] = useState(false);
   const { locale, t } = useLanguage();
 
   return (
@@ -33,7 +35,7 @@ export default function ExperienceDetailScreen({ experience, onShareDifferent })
       <button className="primary-button" type="button" onClick={() => { setResponded(true); onShareDifferent(); }}>
         {responded ? t("shareMyExperience") : t("myExperienceDifferent")}
       </button>
-      <div className="secondary-experience-actions"><button type="button">{t("iAlsoExperienced")}</button><button type="button">{t("helpful")}</button></div>
+      <div className="secondary-experience-actions"><button type="button" aria-pressed={experienced} onClick={() => setExperienced(value => !value)}>{experienced && "✓ "}{t("iAlsoExperienced")}</button><button type="button" aria-pressed={helpful} onClick={() => setHelpful(value => !value)}>{helpful && "✓ "}{t("helpful")}</button></div>
     </div>
   );
 }

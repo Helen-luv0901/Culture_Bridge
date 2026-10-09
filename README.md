@@ -10,3 +10,5 @@
 ## Frontend
 - React app source: `frontend/`
 - Install dependencies in `frontend/`, then run `npm run dev`
+- Responsive web app: desktop sidebar, tablet layout, and mobile bottom navigation use the same screens.
+- [Responsive UI and verification](docs/responsive-ui.md)

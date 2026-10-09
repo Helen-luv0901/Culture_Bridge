@@ -1,12 +1,9 @@
 import PhoneFrame from "./PhoneFrame";
-import { showcaseScreens } from "../data/tabs";
 
 export default function PhoneGrid() {
   return (
-    <section className="phone-grid">
-      {showcaseScreens.map((screen) => (
-        <PhoneFrame key={screen.route} initialRoute={screen.route} label={screen.label} />
-      ))}
+    <section className="phone-grid single-phone-preview" aria-label="Culture Bridge 手機預覽">
+      <PhoneFrame initialRoute="home" label="點選底部分頁，試用 Culture Bridge" />
     </section>
   );
 }

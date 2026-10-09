@@ -1,11 +1,8 @@
-import Hero from "./components/Hero";
-import PhoneGrid from "./components/PhoneGrid";
+import { DesignSymbols } from "./components/DesignPrimitives";
+import ResponsiveApp from "./components/ResponsiveApp";
 
 export default function App() {
   return (
-    <main className="page">
-      <Hero />
-      <PhoneGrid />
-    </main>
+    <><DesignSymbols /><ResponsiveApp /></>
   );
 }
