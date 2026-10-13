@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser
@@ -203,6 +203,31 @@ def _summary(
 
 def list_actions(db: Session) -> list[ActionSummary]:
     rows = db.execute(_latest_published(db).order_by(ActionVersion.title_zh)).all()
+    successes = _recent_successes(db, [a.id for a, _ in rows])
+    verified = _last_verified(db, [v.id for _, v in rows])
+    return [_summary(a, v, successes, verified) for a, v in rows]
+
+
+def search_actions(db: Session, q: str, limit: int) -> list[ActionSummary]:
+    """Keyword search over the latest published versions, both languages and step titles."""
+    query = _latest_published(db)
+    for word in q.split()[:8]:
+        pattern = f"%{word.replace('%', '').replace('_', '')}%"
+        in_steps = exists().where(
+            ActionStep.action_version_id == ActionVersion.id,
+            or_(ActionStep.title_zh.ilike(pattern), ActionStep.title_en.ilike(pattern)),
+        )
+        query = query.where(
+            or_(
+                ActionVersion.title_zh.ilike(pattern),
+                ActionVersion.title_en.ilike(pattern),
+                ActionVersion.description_zh.ilike(pattern),
+                ActionVersion.description_en.ilike(pattern),
+                Action.slug.ilike(pattern),
+                in_steps,
+            )
+        )
+    rows = db.execute(query.order_by(ActionVersion.title_zh).limit(limit)).all()
     successes = _recent_successes(db, [a.id for a, _ in rows])
     verified = _last_verified(db, [v.id for _, v in rows])
     return [_summary(a, v, successes, verified) for a, v in rows]
