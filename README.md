@@ -8,6 +8,7 @@
 - [PostgreSQL Schema（雲端資料庫現行版本）](database/schema_postgres.sql)
 - [工作分配表](docs/work-assignment.md)
 - [技術架構](docs/tech-architecture.md)
+- [Backend（FastAPI＋AI 助理）](backend/README.md)
 
 ## Database
 - 雲端資料庫：Google Cloud SQL（PostgreSQL），資料表以 `database/schema_postgres.sql` 為準
