@@ -4,6 +4,8 @@
 
 > 指令在 [Cloud Shell](https://shell.cloud.google.com) 執行。主控台選項可能變動，標【確認】的地方請先看過主控台。
 
+> **最快的方式**：在 Cloud Shell 執行 `bash scripts/gcp-setup.sh`，用選單一步一步做完下面的事（每個指令會先顯示、按 Enter 才執行；花錢或刪除前要輸入 `yes`）。以下是它做的事情的詳細說明。
+
 ## 0. 先完成
 
 - A-1、A-2：專案 `culture-bridge`、Cloud SQL 執行個體（若已依 [A-3](a3-cloud-sql-migration.md) 搬遷，用新的執行個體）

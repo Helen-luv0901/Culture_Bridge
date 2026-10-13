@@ -12,7 +12,7 @@
 - [開發環境安裝](docs/dev-setup.md)
 - [A-3 Cloud SQL 搬遷步驟](docs/runbooks/a3-cloud-sql-migration.md)
 - [A-5 Gemini 金鑰申請步驟](docs/runbooks/a5-gemini-api-key.md)
-- [A-7 部署到 Cloud Run](docs/runbooks/a7-deploy-cloud-run.md)
+- [A-7 部署到 Cloud Run](docs/runbooks/a7-deploy-cloud-run.md)（Cloud Shell 一步步執行：`bash scripts/gcp-setup.sh`）
 - [手動測試清單](docs/manual-test-checklist.md)
 - [PMP 試用任務腳本](docs/pmp-pilot-script.md)
 - 草稿（上架前需審閱）：[隱私權政策](docs/drafts/privacy-policy.md)、[服務條款與社群規範](docs/drafts/terms-and-community-guidelines.md)、[商店頁文案](docs/drafts/store-listing.md)
