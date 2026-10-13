@@ -13,7 +13,8 @@ app/
 ├── services/          商業邏輯：actions、admin_actions、experiences、moderation
 ├── assistant/         AI 助理：工具呼叫迴圈、工具、知識庫、對話記憶、待確認操作、用量限制
 ├── rag/               語意搜尋：embedding、建立／移除索引、官方文件切段、檢索品質評估
-├── ai/                經驗摘要與翻譯（Gemini 結構化輸出）
+├── ai/                經驗摘要與翻譯、回報整理（Gemini 結構化輸出）
+├── quality/           人工品質檢查用的評分表產生器（D-17、B-22）
 ├── models/            SQLAlchemy 對應（資料表規則在資料庫的 CHECK 與 trigger）
 ├── core/              設定、資料庫連線、Firebase 登入驗證、權限、錯誤格式
 └── seed.py            匯入 Flutter 示範資料（開發／測試站用）
@@ -32,6 +33,8 @@ uv run uvicorn app.main:app --reload
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv run python -m app.rag.evaluate    # 語意搜尋品質（需要 GEMINI_API_KEY；--fake 可離線跑）
+uv run python -m app.quality.assistant_review              # D-17：20 題助理回答 → assistant-review.md 評分表
+uv run python -m app.quality.summary_review shares.json    # B-22：真實分享的 AI 摘要 → summary-review.md（shares.json 不進 repo）
 ```
 
 ## 登入與權限

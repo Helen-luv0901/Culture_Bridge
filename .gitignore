@@ -12,3 +12,7 @@ wheels/
 # Frontend-generated files
 frontend/node_modules/
 frontend/dist/
+
+# Quality review sheets and the real shares they read (D-17, B-22) stay local
+backend/*-review.md
+backend/shares*.json
