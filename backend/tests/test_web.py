@@ -40,6 +40,14 @@ def test_account_deletion_page_and_config():
     assert client.get("/api/config").json() == {"environment": "development", "firebase": None}
 
 
+def test_health_routes():
+    # Cloud Run answers /healthz itself, so production checks use /health.
+    client = TestClient(main_app)
+    for path in ("/health", "/healthz"):
+        response = client.get(path)
+        assert response.status_code == 200 and response.json() == {"status": "ok"}
+
+
 def test_firebase_web_config_from_env(monkeypatch):
     from app.core.config import get_settings
 

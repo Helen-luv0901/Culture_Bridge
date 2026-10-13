@@ -110,7 +110,7 @@ FIREBASE_AUTH_DOMAIN=<authDomain>,FIREBASE_MESSAGING_SENDER_ID=<messagingSenderI
 
 ```sh
 URL=$(gcloud run services describe culture-bridge --region=$REGION --format='value(status.url)')
-curl $URL/healthz
+curl $URL/health          # Cloud Run 保留了 /healthz，不會轉給後端
 curl $URL/api/config        # firebase 應該有值、environment 是 production
 ```
 
@@ -133,7 +133,7 @@ curl $URL/api/config        # firebase 應該有值、environment 是 production
 ## 8. 監控與費用（A-8）
 
 - **伺服器錯誤**：Cloud Run 的 stdout/stderr 自動進 Cloud Logging；含 stack trace 的錯誤會出現在 **Error Reporting**，可設定 Email 通知
-- **服務是否活著**：Monitoring → Uptime checks → 新增 HTTPS 檢查 `<網址>/healthz`，失敗時寄信
+- **服務是否活著**：Monitoring → Uptime checks → 新增 HTTPS 檢查 `<網址>/health`（`/healthz` 被 Cloud Run 保留，不能用），失敗時寄信
 - **費用**：帳單 → 預算與快訊，分別為 Cloud Run、Cloud SQL、Gemini 設門檻
 - **App 閃退（Android）**：上架前用 Firebase Crashlytics（C-2 之後再接）
 

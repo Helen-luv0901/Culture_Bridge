@@ -7,7 +7,7 @@ Python 3.12 + FastAPI + SQLAlchemy 2 + PostgreSQL（Cloud SQL，含 pgvector）�
 
 ```
 app/
-├── main.py            進入點：/api 路由、/api/config、/healthz、網頁版與 /account-deletion
+├── main.py            進入點：/api 路由、/api/config、/health（本機另有 /healthz）、網頁版與 /account-deletion
 ├── web.py             提供 Flutter 網頁版（不存在的路徑回 index.html）
 ├── api/               路由：me、actions（流程與辦理）、experiences、moderation、assistant、admin
 ├── services/          商業邏輯：actions、admin_actions、experiences、moderation
