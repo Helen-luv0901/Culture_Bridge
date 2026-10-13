@@ -5,6 +5,7 @@
 #   git clone https://github.com/Helen-luv0901/Culture_Bridge && cd Culture_Bridge
 #   bash scripts/gcp-setup.sh            # menu
 #   DRY_RUN=1 bash scripts/gcp-setup.sh  # only print what would run
+#   AUTO=1 OLD_INSTANCE=… bash scripts/gcp-setup.sh 2   # no Enter pauses; values from env/state
 #
 # Every command is shown before it runs and waits for Enter. Steps that cost money or cannot be
 # undone ask you to type "yes". Choices are remembered in ~/.culture-bridge-setup.env (no secrets).
@@ -15,6 +16,10 @@ set -euo pipefail
 STATE="${HOME}/.culture-bridge-setup.env"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DRY_RUN="${DRY_RUN:-0}"
+AUTO="${AUTO:-0}"  # 1 = run commands without waiting for Enter (typing "yes" is still required)
+STATE_KEYS=(PROJECT REGION OLD_INSTANCE INSTANCE DB DB_VERSION BUCKET SA IMAGE_REPO
+  FIREBASE_WEB_API_KEY FIREBASE_WEB_APP_ID FIREBASE_AUTH_DOMAIN FIREBASE_MESSAGING_SENDER_ID
+  SERVICE_URL ALERT_EMAIL)
 
 # ---------- helpers ----------
 
@@ -30,8 +35,10 @@ run() {
     | sed -E 's/(--password=)[^ ]+/\1********/g; s/(Bearer )[^ ]+/\1********/g')"
   printf '\n  $ %s\n' "${shown}"
   if [[ "${DRY_RUN}" == "1" ]]; then note "(DRY_RUN: not executed)"; return 0; fi
-  read -r -p "  Enter 執行 / s 略過: " answer
-  [[ "${answer}" == "s" ]] && { note "略過"; return 0; }
+  if [[ "${AUTO}" != "1" ]]; then
+    read -r -p "  Enter 執行 / s 略過: " answer
+    [[ "${answer}" == "s" ]] && { note "略過"; return 0; }
+  fi
   if ! "$@"; then
     printf '\n\033[31m  上面的指令失敗，這一步先停在這裡。修正後可重新執行這一步。\033[0m\n' >&2
     exit 1
@@ -49,6 +56,12 @@ confirm_yes() {
 ask() {  # ask VAR "question" [default]
   local var="$1" question="$2" default="${3:-}" current="${!1:-}"
   local shown="${current:-${default}}"
+  if [[ "${AUTO}" == "1" && -n "${shown}" ]]; then
+    printf -v "${var}" '%s' "${shown}"
+    note "${question}: ${shown}"
+    save_state
+    return 0
+  fi
   read -r -p "  ${question}${shown:+ [${shown}]}: " value
   printf -v "${var}" '%s' "${value:-${shown}}"
   save_state
@@ -56,16 +69,18 @@ ask() {  # ask VAR "question" [default]
 
 save_state() {
   {
-    for key in PROJECT REGION OLD_INSTANCE INSTANCE DB DB_VERSION BUCKET SA IMAGE_REPO \
-      FIREBASE_WEB_API_KEY FIREBASE_WEB_APP_ID FIREBASE_AUTH_DOMAIN FIREBASE_MESSAGING_SENDER_ID \
-      SERVICE_URL ALERT_EMAIL; do
+    for key in "${STATE_KEYS[@]}"; do
       printf '%s=%q\n' "${key}" "${!key:-}"
     done
   } >"${STATE}"
 }
 
+# Values given on the command line (PROJECT=… bash …) win over the saved ones.
+declare -A OVERRIDES=()
+for key in "${STATE_KEYS[@]}"; do [[ -n "${!key:-}" ]] && OVERRIDES[${key}]="${!key}"; done
 # shellcheck disable=SC1090
 [[ -f "${STATE}" ]] && source "${STATE}"
+for key in "${!OVERRIDES[@]}"; do printf -v "${key}" '%s' "${OVERRIDES[${key}]}"; done
 PROJECT="${PROJECT:-culture-bridge}"
 REGION="${REGION:-asia-east1}"
 DB="${DB:-culturebridge}"
@@ -205,8 +220,8 @@ step_database() {
     --database="${DB}" --user=postgres --project="${PROJECT}"
 
   bold "2e. 連線設定與備份（A-2）"
-  local ips
-  read -r -p "  允許連線的 IP（逗號分隔，例如 1.2.3.4/32；Enter 略過）: " ips
+  local ips=""
+  [[ "${AUTO}" == "1" ]] || read -r -p "  允許連線的 IP（逗號分隔，例如 1.2.3.4/32；Enter 略過）: " ips
   [[ -n "${ips}" ]] && run gcloud sql instances patch "${INSTANCE}" --project="${PROJECT}" \
     --authorized-networks="${ips}"
   gcloud sql instances describe "${INSTANCE}" --project="${PROJECT}" \
