@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/design_system.dart';
+import '../features/assistant_panel.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.child, required this.uri});
@@ -38,6 +39,9 @@ class AppShell extends StatelessWidget {
     }
     if (uri.path == '/review') return vm.t('reviewBeforePublish');
     if (uri.path == '/signin') return vm.t('signIn');
+    if (uri.path.startsWith('/admin')) {
+      return vm.pair('審查與管理', 'Review & admin');
+    }
     return vm.t(keys[index]);
   }
 
@@ -77,6 +81,8 @@ class AppShell extends StatelessWidget {
         final mobile = c.maxWidth < 768;
         final wide = c.maxWidth > 1100;
         return Scaffold(
+          endDrawer: mobile ? null : AssistantDrawer(uri: uri),
+          floatingActionButton: AssistantButton(uri: uri, mobile: mobile),
           body: PaperBackground(
             child: SafeArea(
               bottom: false,

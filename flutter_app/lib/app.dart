@@ -8,6 +8,7 @@ import 'ui/view_models/bridge_view_model.dart';
 import 'ui/features/browse_pages.dart';
 import 'ui/features/share_pages.dart';
 import 'ui/features/action_pages.dart';
+import 'ui/features/admin_pages.dart';
 
 class CultureBridgeApp extends StatefulWidget {
   const CultureBridgeApp({
@@ -60,6 +61,18 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
           GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfilePage(),
+          ),
+          GoRoute(
+            path: '/admin',
+            builder: (context, state) =>
+                AdminPage(tab: state.uri.queryParameters['tab'] ?? 'actions'),
+            routes: [
+              GoRoute(
+                path: 'actions/:id',
+                builder: (context, state) =>
+                    AdminActionPage(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
           GoRoute(
             path: '/signin',

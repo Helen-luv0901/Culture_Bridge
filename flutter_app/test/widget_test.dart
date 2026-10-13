@@ -1,4 +1,6 @@
 import 'package:culture_bridge/app.dart';
+import 'package:culture_bridge/domain/api_models.dart';
+import 'package:culture_bridge/ui/features/assistant_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -187,5 +189,77 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await mount(tester, '/profile', const Size(812, 375));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Assistant answers with cards and confirm cards', (tester) async {
+    final app = await mount(tester, '/actions/arc', const Size(1024, 1200));
+    app.repository.assistantReply = (message) => AssistantReply(
+      conversationId: 'c1',
+      text: '依據「申請或更新 ARC」流程卡。',
+      cards: const [
+        AssistantCard(
+          type: 'action',
+          id: 'arc',
+          title: '申請或更新 ARC',
+          verificationStatus: 'verified',
+          lastVerifiedAt: '2026-08-14',
+          recentSuccessCount: 12,
+          sources: ['內政部移民署'],
+          reminder: null,
+        ),
+      ],
+      screenActions: const [ScreenAction('open_progress', 'arc', null)],
+      pendingOperations: [
+        PendingOperation(
+          id: 'op1',
+          summary: '開始辦理「申請或更新 ARC」',
+          status: 'pending',
+          expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+          targetId: 'arc',
+          result: null,
+        ),
+      ],
+      fallback: false,
+    );
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    await tester.enterText(find.byKey(const Key('assistant-input')), '幫我開始辦這個');
+    await tap(tester, find.byKey(const Key('assistant-send')));
+    expect(app.repository.assistantMessages, ['幫我開始辦這個']);
+    expect(find.text('依據: 申請或更新 ARC'), findsOneWidget);
+    expect(find.text('打開辦理進度'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('confirm-op1')));
+    expect(app.repository.confirmed, ['op1']);
+    expect(find.text('已開始，打開進度'), findsOneWidget);
+  });
+
+  test('Only whitelisted screen actions become routes', () {
+    expect(
+      screenActionPath(const ScreenAction('open_action', 'arc', null)),
+      '/actions/arc',
+    );
+    expect(
+      screenActionPath(
+        const ScreenAction('open_explore', null, 'life_adaptation'),
+      ),
+      '/explore?topic=lifeAdaptation',
+    );
+    expect(
+      screenActionPath(const ScreenAction('open_admin', 'x', null)),
+      isNull,
+    );
+    expect(
+      screenActionPath(const ScreenAction('open_action', null, null)),
+      isNull,
+    );
+    expect(
+      screenActionPath(const ScreenAction('open_action', '../admin', null)),
+      '/actions/..%2Fadmin',
+    );
+  });
+
+  testWidgets('Admin console is staff-only', (tester) async {
+    await mount(tester, '/admin', const Size(1024, 900));
+    expect(find.text('只有審查者與管理者可以使用。'), findsOneWidget);
   });
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../data/admin_repository.dart';
 import '../../data/api_client.dart';
 import '../../data/auth_service.dart';
 import '../../data/culture_repository.dart';
@@ -28,6 +29,7 @@ class BridgeViewModel extends ChangeNotifier {
     required this.auth,
     required this.messages,
     required this.preferences,
+    this.admin,
     bool systemEnglish = false,
   }) {
     _english = preferences.english ?? systemEnglish;
@@ -40,6 +42,9 @@ class BridgeViewModel extends ChangeNotifier {
   final AuthService auth;
   final MessageCatalog messages;
   final PreferencesRepository preferences;
+
+  /// Reviewer/admin API; the screens only show it to staff, and the server checks roles.
+  final AdminRepository? admin;
 
   // ---------- language ----------
 
@@ -108,6 +113,8 @@ class BridgeViewModel extends ChangeNotifier {
 
   void _clearPersonalData() {
     profile = null;
+    chat.clear();
+    conversationId = null;
     executions = const Resource();
     mine = const Resource();
     blocks = const Resource();
@@ -576,6 +583,66 @@ class BridgeViewModel extends ChangeNotifier {
   // ---------- assistant ----------
 
   String? conversationId;
+  final List<ChatEntry> chat = [];
+  bool asking = false;
+
+  /// Send a message with what the user is looking at, so "this procedure" can be resolved.
+  Future<void> ask(String text, {Map<String, String>? screen}) async {
+    final message = text.trim();
+    if (message.isEmpty || asking) return;
+    chat.add(ChatEntry.user(message));
+    asking = true;
+    notifyListeners();
+    try {
+      final reply = await repository.askAssistant(
+        message: message,
+        locale: locale,
+        conversationId: conversationId,
+        screen: screen,
+      );
+      conversationId = reply.conversationId;
+      chat.add(ChatEntry.assistant(reply));
+    } on ApiException catch (e) {
+      chat.add(
+        ChatEntry.error(e.needsLogin ? t('signInNeeded') : errorText(e)),
+      );
+    } finally {
+      asking = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> clearChat() async {
+    final id = conversationId;
+    chat.clear();
+    conversationId = null;
+    notifyListeners();
+    if (id != null) await _quietly(() => repository.clearConversation(id));
+  }
+
+  /// Confirm or cancel a write the assistant prepared (A-17); the user always decides.
+  Future<void> resolveOperation(
+    PendingOperation operation,
+    bool confirm,
+  ) async {
+    try {
+      final result = confirm
+          ? await repository.confirmOperation(operation.id)
+          : await repository.cancelOperation(operation.id);
+      operationStates[operation.id] = result.status;
+      if (result.status == 'confirmed') {
+        await loadExecutions();
+        showNotice(pair('已開始辦理。', 'Started.'));
+      }
+    } on ApiException catch (e) {
+      operationStates[operation.id] = e.code.replaceFirst('operation_', '');
+      showNotice(errorText(e));
+    }
+    notifyListeners();
+  }
+
+  /// Latest known status of each pending operation shown in the chat.
+  final Map<String, String> operationStates = {};
 
   @override
   void dispose() {
@@ -583,4 +650,18 @@ class BridgeViewModel extends ChangeNotifier {
     _saveTimer?.cancel();
     super.dispose();
   }
+}
+
+/// One line in the assistant panel.
+class ChatEntry {
+  ChatEntry.user(this.text) : fromUser = true, reply = null, failed = false;
+  ChatEntry.assistant(AssistantReply this.reply)
+    : text = reply.text,
+      fromUser = false,
+      failed = false;
+  ChatEntry.error(this.text) : fromUser = false, reply = null, failed = true;
+  final String text;
+  final bool fromUser;
+  final AssistantReply? reply;
+  final bool failed;
 }

@@ -3,6 +3,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'data/admin_repository.dart';
 import 'data/api_client.dart';
 import 'data/auth_service.dart';
 import 'data/culture_repository.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
   final api = ApiClient.fromEnvironment(token: auth.idToken);
   final vm = BridgeViewModel(
     repository: ApiCultureRepository(api),
+    admin: AdminRepository(api),
     auth: auth,
     messages: await MessageCatalog.load(),
     preferences: LocalPreferencesRepository(
