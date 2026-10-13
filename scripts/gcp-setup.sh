@@ -5,6 +5,7 @@
 #   git clone https://github.com/Helen-luv0901/Culture_Bridge && cd Culture_Bridge
 #   bash scripts/gcp-setup.sh            # menu
 #   DRY_RUN=1 bash scripts/gcp-setup.sh  # only print what would run
+#   AUTO=1 OLD_INSTANCE=… bash scripts/gcp-setup.sh 2   # no Enter pauses; values from env/state
 #
 # Every command is shown before it runs and waits for Enter. Steps that cost money or cannot be
 # undone ask you to type "yes". Choices are remembered in ~/.culture-bridge-setup.env (no secrets).
@@ -15,6 +16,10 @@ set -euo pipefail
 STATE="${HOME}/.culture-bridge-setup.env"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DRY_RUN="${DRY_RUN:-0}"
+AUTO="${AUTO:-0}"  # 1 = run commands without waiting for Enter (typing "yes" is still required)
+STATE_KEYS=(PROJECT REGION OLD_INSTANCE INSTANCE DB DB_VERSION BUCKET SA IMAGE_REPO
+  FIREBASE_WEB_API_KEY FIREBASE_WEB_APP_ID FIREBASE_AUTH_DOMAIN FIREBASE_MESSAGING_SENDER_ID
+  SERVICE_URL ALERT_EMAIL)
 
 # ---------- helpers ----------
 
@@ -30,8 +35,10 @@ run() {
     | sed -E 's/(--password=)[^ ]+/\1********/g; s/(Bearer )[^ ]+/\1********/g')"
   printf '\n  $ %s\n' "${shown}"
   if [[ "${DRY_RUN}" == "1" ]]; then note "(DRY_RUN: not executed)"; return 0; fi
-  read -r -p "  Enter 執行 / s 略過: " answer
-  [[ "${answer}" == "s" ]] && { note "略過"; return 0; }
+  if [[ "${AUTO}" != "1" ]]; then
+    read -r -p "  Enter 執行 / s 略過: " answer
+    [[ "${answer}" == "s" ]] && { note "略過"; return 0; }
+  fi
   if ! "$@"; then
     printf '\n\033[31m  上面的指令失敗，這一步先停在這裡。修正後可重新執行這一步。\033[0m\n' >&2
     exit 1
@@ -49,6 +56,12 @@ confirm_yes() {
 ask() {  # ask VAR "question" [default]
   local var="$1" question="$2" default="${3:-}" current="${!1:-}"
   local shown="${current:-${default}}"
+  if [[ "${AUTO}" == "1" && -n "${shown}" ]]; then
+    printf -v "${var}" '%s' "${shown}"
+    note "${question}: ${shown}"
+    save_state
+    return 0
+  fi
   read -r -p "  ${question}${shown:+ [${shown}]}: " value
   printf -v "${var}" '%s' "${value:-${shown}}"
   save_state
@@ -56,16 +69,18 @@ ask() {  # ask VAR "question" [default]
 
 save_state() {
   {
-    for key in PROJECT REGION OLD_INSTANCE INSTANCE DB DB_VERSION BUCKET SA IMAGE_REPO \
-      FIREBASE_WEB_API_KEY FIREBASE_WEB_APP_ID FIREBASE_AUTH_DOMAIN FIREBASE_MESSAGING_SENDER_ID \
-      SERVICE_URL ALERT_EMAIL; do
+    for key in "${STATE_KEYS[@]}"; do
       printf '%s=%q\n' "${key}" "${!key:-}"
     done
   } >"${STATE}"
 }
 
+# Values given on the command line (PROJECT=… bash …) win over the saved ones.
+declare -A OVERRIDES=()
+for key in "${STATE_KEYS[@]}"; do [[ -n "${!key:-}" ]] && OVERRIDES[${key}]="${!key}"; done
 # shellcheck disable=SC1090
 [[ -f "${STATE}" ]] && source "${STATE}"
+for key in "${!OVERRIDES[@]}"; do printf -v "${key}" '%s' "${OVERRIDES[${key}]}"; done
 PROJECT="${PROJECT:-culture-bridge}"
 REGION="${REGION:-asia-east1}"
 DB="${DB:-culturebridge}"
@@ -89,11 +104,35 @@ need_instance() {
   [[ -n "${INSTANCE:-}" ]] || ask INSTANCE "要使用的 Cloud SQL 執行個體名稱" "culturebridge-db"
 }
 
+# Give the new instance's postgres user a fresh password, store the backend's connection string
+# in Secret Manager (database-url) and show the password once for teammates who use Cloud SQL Studio.
+set_owner_password() {
+  if secret_exists database-url; then
+    note "database-url 已存在，沿用原本的 postgres 密碼。"
+    note "（查看：gcloud secrets versions access latest --secret=database-url）"
+    return 0
+  fi
+  local password
+  password="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)"
+  run gcloud sql users set-password postgres --instance="${INSTANCE}" --project="${PROJECT}" \
+    --password="${password}"
+  [[ "${DRY_RUN}" == "1" ]] && return 0
+  printf 'postgresql+psycopg://postgres:%s@/%s?host=/cloudsql/%s:%s:%s' \
+    "${password}" "${DB}" "${PROJECT}" "${REGION}" "${INSTANCE}" | put_secret database-url
+  note "新執行個體 postgres 的密碼（只顯示這一次，請私下交給需要直接連資料庫的組員，不要貼到任何對話或截圖）："
+  note "    ${password}"
+  note "忘記時可以查：gcloud secrets versions access latest --secret=database-url"
+}
+
 # ---------- 0. project ----------
 
 step_project() {
   bold "0. 專案與 API"
+  note "你的專案：（找不到時用 gcloud projects list 確認 PROJECT_ID）"
+  gcloud projects list --format='value(projectId)' 2>/dev/null | sed 's/^/    /' || true
   ask PROJECT "Google Cloud 專案 ID" "${PROJECT}"
+  gcloud projects describe "${PROJECT}" >/dev/null 2>&1 \
+    || die "找不到專案 ${PROJECT}，請重新執行步驟 0 並輸入上面列出的其中一個 ID。"
   ask REGION "區域" "${REGION}"
   run gcloud config set project "${PROJECT}"
   run gcloud services enable sqladmin.googleapis.com run.googleapis.com \
@@ -163,34 +202,26 @@ step_database() {
     run gcloud sql databases create "${DB}" --instance="${INSTANCE}" --project="${PROJECT}"
   fi
 
-  bold "2c. 資料庫帳號（SQL 匯出不含帳號，先建好再匯入）"
-  note "舊執行個體的帳號："
+  bold "2c. 資料庫帳號"
+  note "舊執行個體的帳號（資料表的擁有者通常是 postgres）："
   gcloud sql users list --instance="${OLD_INSTANCE}" --project="${PROJECT}" \
     --format='value(name)' | sed 's/^/    /'
-  note "請為每位組員輸入帳號名稱；密碼會自動產生並只顯示一次（請私下交給本人）。直接 Enter 結束。"
-  while true; do
-    local user password
-    read -r -p "  帳號名稱: " user
-    [[ -z "${user}" ]] && break
-    password="$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)"
-    run gcloud sql users create "${user}" --instance="${INSTANCE}" --project="${PROJECT}" \
-      --password="${password}"
-    [[ "${DRY_RUN}" == "1" ]] || note "${user} 的密碼：${password}"
-  done
+  note "新執行個體沿用 postgres 當資料表擁有者：匯入、migration 和後端都用它，權限才一致。"
+  note "（另外替組員建帳號的話，那些帳號沒有資料表權限，所以這裡不建。）"
+  set_owner_password
 
   bold "2d. 匯入"
-  local new_sa owner
+  local new_sa
   new_sa="$(gcloud sql instances describe "${INSTANCE}" --project="${PROJECT}" \
     --format='value(serviceAccountEmailAddress)' 2>/dev/null || echo "<new-instance-sa>")"
   run gcloud storage buckets add-iam-policy-binding "${BUCKET}" \
     --member="serviceAccount:${new_sa}" --role=roles/storage.objectViewer
-  read -r -p "  原本建立資料表的帳號（匯入身分）: " owner
   run gcloud sql import sql "${INSTANCE}" "${BUCKET}/${DB}.sql.gz" \
-    --database="${DB}" --user="${owner}" --project="${PROJECT}"
+    --database="${DB}" --user=postgres --project="${PROJECT}"
 
   bold "2e. 連線設定與備份（A-2）"
-  local ips
-  read -r -p "  允許連線的 IP（逗號分隔，例如 1.2.3.4/32；Enter 略過）: " ips
+  local ips=""
+  [[ "${AUTO}" == "1" ]] || read -r -p "  允許連線的 IP（逗號分隔，例如 1.2.3.4/32；Enter 略過）: " ips
   [[ -n "${ips}" ]] && run gcloud sql instances patch "${INSTANCE}" --project="${PROJECT}" \
     --authorized-networks="${ips}"
   gcloud sql instances describe "${INSTANCE}" --project="${PROJECT}" \
@@ -224,7 +255,7 @@ step_gemini() {
   if [[ -z "${name}" ]]; then
     run gcloud services api-keys create --project="${PROJECT}" \
       --display-name=culture-bridge-backend \
-      --api-target=service=generativelanguage.googleapis.com
+      --api-target=service=generativelanguage.googleapis.com --format=none
     name="$(gcloud services api-keys list --project="${PROJECT}" \
       --filter='displayName=culture-bridge-backend' --format='value(name)' 2>/dev/null | head -n1)"
   else
@@ -318,17 +349,8 @@ step_deploy() {
   run gcloud projects add-iam-policy-binding "${PROJECT}" \
     --member="serviceAccount:${SA}" --role=roles/cloudsql.client --condition=None --quiet
 
-  bold "5b. 資料庫連線秘密（應用程式用的 app 帳號）"
-  if secret_exists database-url; then
-    note "database-url 已存在，沿用。"
-  else
-    local password
-    password="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)"
-    run gcloud sql users create app --instance="${INSTANCE}" --project="${PROJECT}" \
-      --password="${password}"
-    printf 'postgresql+psycopg://app:%s@/%s?host=/cloudsql/%s' "${password}" "${DB}" "${conn}" \
-      | put_secret database-url
-  fi
+  bold "5b. 資料庫連線秘密（postgres 帳號，步驟 2 建立）"
+  set_owner_password
   for secret in database-url gemini-api-key; do
     secret_exists "${secret}" || { note "缺少 ${secret}，請先完成步驟 3。"; continue; }
     run gcloud secrets add-iam-policy-binding "${secret}" --project="${PROJECT}" \

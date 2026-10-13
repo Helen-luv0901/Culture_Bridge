@@ -32,9 +32,10 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
 
 ## 2. 資料庫帳號與秘密
 
+後端用 `postgres` 帳號（資料表的擁有者；A-3 搬遷時設定新密碼），migration 才能修改既有資料表：
+
 ```sh
-gcloud sql users create app --instance=$INSTANCE --password='<強密碼>'
-printf '%s' "postgresql+psycopg://app:<強密碼>@/culturebridge?host=/cloudsql/$CONN" \
+printf '%s' "postgresql+psycopg://postgres:<A-3 設定的密碼>@/culturebridge?host=/cloudsql/$CONN" \
   | gcloud secrets create database-url --data-file=-
 # gemini-api-key 已在 A-5 建立
 ```
@@ -80,7 +81,7 @@ gcloud run jobs execute culture-bridge-migrate --region=$REGION --wait   # upgra
 ```
 
 之後每次部署新版本，先 `gcloud run jobs update culture-bridge-migrate --image=$IMAGE:$TAG` 再執行一次 `execute`。
-（`0004` 會執行 `CREATE EXTENSION vector`；Cloud SQL 的 `app` 帳號屬於 `cloudsqlsuperuser`，可以建立。）
+（`0004` 會執行 `CREATE EXTENSION vector`；Cloud SQL 的 `postgres` 帳號屬於 `cloudsqlsuperuser`，可以建立。）
 
 測試站要示範資料時：
 

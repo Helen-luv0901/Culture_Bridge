@@ -132,6 +132,9 @@ def resolve_user(db: Session, identity: Identity) -> CurrentUser:
     elif identity.role and user.role != identity.role:  # dev tokens may switch role
         user.role = identity.role
         db.commit()
+    from app.services.metrics import record_activity  # services import this module
+
+    record_activity(db, user.id)
     return CurrentUser(id=user.id, role=user.role, preferred_locale=user.preferred_locale)  # type: ignore[arg-type]
 
 

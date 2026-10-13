@@ -13,12 +13,13 @@ app/
 ├── services/          商業邏輯：actions、admin_actions、experiences、moderation
 ├── assistant/         AI 助理：工具呼叫迴圈、工具、知識庫、對話記憶、待確認操作、用量限制
 ├── rag/               語意搜尋：embedding、建立／移除索引、官方文件切段、檢索品質評估
-├── ai/                經驗摘要與翻譯（Gemini 結構化輸出）
+├── ai/                經驗摘要與翻譯、回報整理（Gemini 結構化輸出）
+├── quality/           人工品質檢查用的評分表產生器（D-17、B-22）
 ├── models/            SQLAlchemy 對應（資料表規則在資料庫的 CHECK 與 trigger）
 ├── core/              設定、資料庫連線、Firebase 登入驗證、權限、錯誤格式
 └── seed.py            匯入 Flutter 示範資料（開發／測試站用）
 migrations/            Alembic：0001 = schema_postgres.sql，0002 檢舉／封鎖／操作紀錄／待確認操作，
-                       0003 流程英文欄位，0004 語意搜尋（pgvector）
+                       0003 流程英文欄位，0004 語意搜尋（pgvector），0005 使用數據
 tests/                 pytest（真的 PostgreSQL；CI 用 pgvector/pgvector:pg16）
 ```
 
@@ -32,6 +33,8 @@ uv run uvicorn app.main:app --reload
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv run python -m app.rag.evaluate    # 語意搜尋品質（需要 GEMINI_API_KEY；--fake 可離線跑）
+uv run python -m app.quality.assistant_review              # D-17：20 題助理回答 → assistant-review.md 評分表
+uv run python -m app.quality.summary_review shares.json    # B-22：真實分享的 AI 摘要 → summary-review.md（shares.json 不進 repo）
 ```
 
 ## 登入與權限
@@ -54,7 +57,7 @@ uv run python -m app.rag.evaluate    # 語意搜尋品質（需要 GEMINI_API_KE
 | 搜尋 | `GET /api/search?q=` | 流程與經驗關鍵字搜尋（B-16） |
 | 檢舉／封鎖 | `POST /api/reports`、`POST /api/blocks`、`GET /api/me/blocks`、`DELETE /api/me/blocks/{id}` | 3 人檢舉自動隱藏待審；封鎖匿名作者（只回傳不透明 id） |
 | 助理 | `POST /api/assistant/message`、`DELETE /api/assistant/conversations/{id}`、`GET/POST /api/assistant/operations/{id}[/confirm|/cancel]` | 見下方 |
-| 管理 | `/api/admin/actions`、`/versions/{id}`、`/sources`、`/feedback`、`/reports`、`/experiences/{id}/hide|restore`、`/users/{id}/role`、`/kb/documents` | 流程編輯與發布、驗證紀錄、回報與檢舉審查、角色、官方文件 |
+| 管理 | `/api/admin/actions`、`/versions/{id}`、`/sources`、`/feedback`、`/actions/{id}/feedback-summary`、`/reports`、`/experiences/{id}/hide|restore`、`/users`、`/users/{id}/role`、`/kb/documents`、`/stats` | 流程編輯與發布、驗證紀錄、回報審查與 AI 整理（D-7，只供參考）、檢舉、角色、官方文件、成效數據（D-19） |
 
 錯誤一律是 `{"detail": {"code": "...", "message": "..."}}`（驗證錯誤為 FastAPI 預設的 422 格式）。
 
@@ -86,7 +89,7 @@ POST /api/assistant/message
 | 變數 | 預設 | 說明 |
 |---|---|---|
 | `APP_ENV` | development | production 時關閉開發登入與 CORS |
-| `DATABASE_URL` | 本機 culturebridge | Cloud SQL：`postgresql+psycopg://app:<pw>@/culturebridge?host=/cloudsql/<專案>:<區域>:<執行個體>` |
+| `DATABASE_URL` | 本機 culturebridge | Cloud SQL：`postgresql+psycopg://postgres:<pw>@/culturebridge?host=/cloudsql/<專案>:<區域>:<執行個體>` |
 | `FIREBASE_PROJECT_ID` | — | 驗證 ID token 的 audience |
 | `FIREBASE_WEB_API_KEY`、`FIREBASE_WEB_APP_ID`、`FIREBASE_AUTH_DOMAIN`、`FIREBASE_MESSAGING_SENDER_ID` | — | 經 `/api/config` 給網頁版 |
 | `GEMINI_API_KEY`、`GEMINI_MODEL`、`EMBEDDING_MODEL` | —、gemini-2.5-flash、gemini-embedding-001 | 沒有金鑰時 AI 功能回「暫時無法使用」 |

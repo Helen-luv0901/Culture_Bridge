@@ -32,6 +32,7 @@ from app.models import (
 from app.rag.index import remove_content
 from app.services.common import log_admin, now
 from app.services.experiences import delete_experiences
+from app.services.metrics import forget_activity
 
 ReportReason = Literal[
     "spam", "harassment", "hate", "sexual", "personal_info", "misinformation", "other"
@@ -75,6 +76,12 @@ class ResolveIn(BaseModel):
 
 class RoleIn(BaseModel):
     role: Literal["student", "reviewer", "admin"]
+
+
+class StaffMember(BaseModel):
+    id: str
+    role: Literal["reviewer", "admin"]
+    created_at: datetime
 
 
 # ---------- reports ----------
@@ -232,6 +239,13 @@ def unblock(db: Session, user: CurrentUser, block_id: str) -> None:
 # ---------- roles ----------
 
 
+def list_staff(db: Session) -> list[StaffMember]:
+    rows = db.scalars(
+        select(User).where(User.role.in_(["reviewer", "admin"])).order_by(User.created_at)
+    )
+    return [StaffMember(id=u.id, role=u.role, created_at=u.created_at) for u in rows]  # type: ignore[arg-type]
+
+
 def set_role(db: Session, actor: CurrentUser, user_id: str, body: RoleIn) -> None:
     if user_id == actor.id and body.role != "admin":
         raise forbidden("cannot_demote_self")
@@ -300,3 +314,4 @@ def delete_account(db: Session, user: CurrentUser) -> None:
     db.execute(delete(AssistantOperation).where(AssistantOperation.user_id == uid))
     db.execute(delete(User).where(User.id == uid))
     db.commit()
+    forget_activity(uid)

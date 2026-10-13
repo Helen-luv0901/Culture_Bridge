@@ -89,6 +89,7 @@ class BridgeViewModel extends ChangeNotifier {
   late bool _wasSignedIn;
   bool get signedIn => auth.signedIn;
   bool get isStaff => profile?.isStaff ?? false;
+  bool get isAdmin => profile?.isAdmin ?? false;
 
   Future<void> start() async {
     if (signedIn) await loadProfile();

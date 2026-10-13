@@ -12,6 +12,7 @@ from app.rag.embedder import get_embedder
 from app.rag.index import sync_in_background
 from app.services import actions as action_svc
 from app.services import experiences as svc
+from app.services import metrics
 
 router = APIRouter(tags=["experiences"])
 AI = Annotated[ExperienceAI, Depends(get_experience_ai)]
@@ -35,7 +36,10 @@ def explore(
 def get_experience(
     experience_id: str, db: DbSession, viewer: OptionalUser, locale: svc.Locale | None = None
 ) -> svc.ExperienceDetail:
-    return svc.get_public(db, viewer, experience_id, locale)
+    detail = svc.get_public(db, viewer, experience_id, locale)
+    if viewer is not None:
+        metrics.record_view(db, viewer.id, experience_id)
+    return detail
 
 
 @router.post("/experiences", status_code=status.HTTP_201_CREATED)
