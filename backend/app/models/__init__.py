@@ -5,7 +5,7 @@ Change tables through Alembic migrations, never by editing these alone.
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import ForeignKey, Integer, String, Text, func
@@ -13,6 +13,10 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 Timestamp = TIMESTAMP(timezone=True)
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 def new_id() -> str:
@@ -24,7 +28,7 @@ class Base(DeclarativeBase):
 
 
 def _created() -> Mapped[datetime]:
-    return mapped_column(Timestamp, server_default=func.now(), nullable=False)
+    return mapped_column(Timestamp, default=_utcnow, server_default=func.now(), nullable=False)
 
 
 # ---------- people and places ----------
@@ -34,8 +38,8 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
     auth_subject: Mapped[str] = mapped_column(Text, unique=True)
-    preferred_locale: Mapped[str] = mapped_column(Text, server_default="zh-Hant")
-    role: Mapped[str] = mapped_column(Text, server_default="student")
+    preferred_locale: Mapped[str] = mapped_column(Text, default="zh-Hant", server_default="zh-Hant")
+    role: Mapped[str] = mapped_column(Text, default="student", server_default="student")
     created_at: Mapped[datetime] = _created()
 
 
@@ -71,14 +75,16 @@ class ActionVersion(Base):
     version_number: Mapped[int] = mapped_column(Integer)
     title_zh: Mapped[str] = mapped_column(Text)
     title_en: Mapped[str] = mapped_column(Text)
-    description_zh: Mapped[str] = mapped_column(Text, server_default="")
-    description_en: Mapped[str] = mapped_column(Text, server_default="")
+    description_zh: Mapped[str] = mapped_column(Text, default="", server_default="")
+    description_en: Mapped[str] = mapped_column(Text, default="", server_default="")
     institution_id: Mapped[str | None] = mapped_column(ForeignKey("institutions.id"))
     location: Mapped[str | None] = mapped_column(Text)
     applicable_to: Mapped[str] = mapped_column(Text)
-    applicable_to_en: Mapped[str] = mapped_column(Text, server_default="")
+    applicable_to_en: Mapped[str] = mapped_column(Text, default="", server_default="")
     location_en: Mapped[str | None] = mapped_column(Text)
-    verification_status: Mapped[str] = mapped_column(Text, server_default="unverified")
+    verification_status: Mapped[str] = mapped_column(
+        Text, default="unverified", server_default="unverified"
+    )
     published_at: Mapped[datetime | None] = mapped_column(Timestamp)
     created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = _created()
@@ -121,7 +127,9 @@ class VerificationRecord(Base):
     reviewer_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     decision: Mapped[str] = mapped_column(Text)
     note: Mapped[str] = mapped_column(Text)
-    checked_at: Mapped[datetime] = mapped_column(Timestamp, server_default=func.now())
+    checked_at: Mapped[datetime] = mapped_column(
+        Timestamp, default=_utcnow, server_default=func.now()
+    )
 
 
 class Execution(Base):
@@ -131,7 +139,9 @@ class Execution(Base):
     action_version_id: Mapped[str] = mapped_column(ForeignKey("action_versions.id"))
     institution_id: Mapped[str | None] = mapped_column(ForeignKey("institutions.id"))
     identity_type: Mapped[str] = mapped_column(Text)
-    started_at: Mapped[datetime] = mapped_column(Timestamp, server_default=func.now())
+    started_at: Mapped[datetime] = mapped_column(
+        Timestamp, default=_utcnow, server_default=func.now()
+    )
     finished_at: Mapped[datetime | None] = mapped_column(Timestamp)
     outcome: Mapped[str | None] = mapped_column(Text)
 
@@ -141,8 +151,10 @@ class ExecutionStep(Base):
     execution_id: Mapped[str] = mapped_column(Text, primary_key=True)
     action_version_id: Mapped[str] = mapped_column(Text)
     step_id: Mapped[str] = mapped_column(Text, primary_key=True)
-    state: Mapped[str] = mapped_column(Text, server_default="pending")
-    updated_at: Mapped[datetime] = mapped_column(Timestamp, server_default=func.now())
+    state: Mapped[str] = mapped_column(Text, default="pending", server_default="pending")
+    updated_at: Mapped[datetime] = mapped_column(
+        Timestamp, default=_utcnow, server_default=func.now()
+    )
 
 
 class ExecutionFeedback(Base):
@@ -154,7 +166,7 @@ class ExecutionFeedback(Base):
     kind: Mapped[str] = mapped_column(Text)
     category: Mapped[str | None] = mapped_column(Text)
     original_voice: Mapped[str | None] = mapped_column(Text)
-    review_state: Mapped[str] = mapped_column(Text, server_default="pending")
+    review_state: Mapped[str] = mapped_column(Text, default="pending", server_default="pending")
     created_at: Mapped[datetime] = _created()
 
 
@@ -168,10 +180,10 @@ class Experience(Base):
     topic_id: Mapped[str] = mapped_column(ForeignKey("topics.id"))
     identity_type: Mapped[str] = mapped_column(Text)
     original_voice: Mapped[str] = mapped_column(Text)
-    source_locale: Mapped[str] = mapped_column(Text, server_default="zh-Hant")
+    source_locale: Mapped[str] = mapped_column(Text, default="zh-Hant", server_default="zh-Hant")
     institution_id: Mapped[str | None] = mapped_column(ForeignKey("institutions.id"))
     location: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text, server_default="draft")
+    status: Mapped[str] = mapped_column(Text, default="draft", server_default="draft")
     confirmed_summary_id: Mapped[str | None] = mapped_column(Text)
     published_at: Mapped[datetime | None] = mapped_column(Timestamp)
     created_at: Mapped[datetime] = _created()
@@ -238,7 +250,7 @@ class Report(Base):
     target_id: Mapped[str] = mapped_column(Text)
     reason: Mapped[str] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text, server_default="pending")
+    status: Mapped[str] = mapped_column(Text, default="pending", server_default="pending")
     resolved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     resolved_at: Mapped[datetime | None] = mapped_column(Timestamp)
     created_at: Mapped[datetime] = _created()
@@ -258,7 +270,7 @@ class AdminAction(Base):
     action: Mapped[str] = mapped_column(Text)
     target_type: Mapped[str] = mapped_column(Text)
     target_id: Mapped[str] = mapped_column(Text)
-    detail: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}")
+    detail: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     created_at: Mapped[datetime] = _created()
 
 
@@ -269,7 +281,7 @@ class AssistantOperation(Base):
     type: Mapped[str] = mapped_column(String(40))
     target_id: Mapped[str] = mapped_column(Text)
     summary: Mapped[str] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text, server_default="pending")
+    status: Mapped[str] = mapped_column(Text, default="pending", server_default="pending")
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = _created()
     expires_at: Mapped[datetime] = mapped_column(Timestamp)
