@@ -29,6 +29,7 @@ from app.models import (
     UserBlock,
     VerificationRecord,
 )
+from app.rag.index import remove_content
 from app.services.common import log_admin, now
 from app.services.experiences import delete_experiences
 
@@ -107,6 +108,7 @@ def report_experience(db: Session, user: CurrentUser, body: ReportIn) -> ReportA
     )
     if experience.status == "published" and (pending or 0) >= AUTO_HIDE_REPORTS:
         experience.status = "hidden"
+        remove_content(db, "experience", [experience.id])
     db.commit()
     return ReportAck(id=report.id, status="pending")
 
@@ -144,7 +146,7 @@ def report_queue(db: Session, status: str) -> list[ReportedItem]:
     return items
 
 
-def resolve_report(db: Session, actor: CurrentUser, report_id: str, body: ResolveIn) -> None:
+def resolve_report(db: Session, actor: CurrentUser, report_id: str, body: ResolveIn) -> str:
     report = db.get(Report, report_id)
     if report is None:
         raise not_found("report_not_found")
@@ -152,6 +154,7 @@ def resolve_report(db: Session, actor: CurrentUser, report_id: str, body: Resolv
     if experience is not None:
         if body.action == "hide":
             experience.status = "hidden"
+            remove_content(db, "experience", [experience.id])
         elif experience.status == "hidden":
             experience.status = "published"
     db.execute(
@@ -169,6 +172,7 @@ def resolve_report(db: Session, actor: CurrentUser, report_id: str, body: Resolv
     )
     log_admin(db, actor, f"report_{body.action}", report.target_type, report.target_id)
     db.commit()
+    return report.target_id
 
 
 def set_experience_visibility(
@@ -178,6 +182,8 @@ def set_experience_visibility(
     if experience is None or experience.status == "draft":
         raise not_found("experience_not_found")
     experience.status = "hidden" if hidden else "published"
+    if hidden:
+        remove_content(db, "experience", [experience.id])
     log_admin(db, actor, "hide" if hidden else "restore", "experience", experience_id)
     db.commit()
 
@@ -262,6 +268,12 @@ def delete_account(db: Session, user: CurrentUser) -> None:
     db.execute(delete(ExperienceSummary).where(ExperienceSummary.confirmed_by == uid))
     executions = list(db.scalars(select(Execution.id).where(Execution.user_id == uid)))
     if executions:
+        feedback_ids = list(
+            db.scalars(
+                select(ExecutionFeedback.id).where(ExecutionFeedback.execution_id.in_(executions))
+            )
+        )
+        remove_content(db, "execution_feedback", feedback_ids)
         db.execute(delete(ExecutionFeedback).where(ExecutionFeedback.execution_id.in_(executions)))
         db.execute(delete(ExecutionStep).where(ExecutionStep.execution_id.in_(executions)))
         db.execute(delete(Execution).where(Execution.id.in_(executions)))

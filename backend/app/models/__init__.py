@@ -5,10 +5,11 @@ Change tables through Alembic migrations, never by editing these alone.
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, Integer, String, Text, func
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -286,3 +287,42 @@ class AssistantOperation(Base):
     created_at: Mapped[datetime] = _created()
     expires_at: Mapped[datetime] = mapped_column(Timestamp)
     resolved_at: Mapped[datetime | None] = mapped_column(Timestamp)
+
+
+# ---------- semantic search (migration 0004) ----------
+
+EMBEDDING_DIMENSIONS = 768
+
+
+class KbDocument(Base):
+    __tablename__ = "kb_documents"
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text)
+    publisher: Mapped[str] = mapped_column(Text)
+    document_date: Mapped[date | None] = mapped_column(Date)
+    action_id: Mapped[str | None] = mapped_column(ForeignKey("actions.id"))
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = _created()
+
+
+class KbChunk(Base):
+    __tablename__ = "kb_chunks"
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("kb_documents.id", ondelete="CASCADE"))
+    position: Mapped[int] = mapped_column(Integer)
+    content: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
+
+
+class ContentEmbedding(Base):
+    __tablename__ = "content_embeddings"
+    content_type: Mapped[str] = mapped_column(Text, primary_key=True)
+    content_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    content: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
+    published_at: Mapped[datetime | None] = mapped_column(Timestamp)
+    indexed_at: Mapped[datetime] = mapped_column(
+        Timestamp, default=_utcnow, server_default=func.now()
+    )

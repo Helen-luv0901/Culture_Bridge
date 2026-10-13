@@ -8,6 +8,8 @@ from app.core.auth import OptionalUser, RequiredUser
 from app.core.config import get_settings
 from app.core.db import DbSession, get_sessionmaker
 from app.core.errors import ApiError
+from app.rag.embedder import get_embedder
+from app.rag.index import sync_in_background
 from app.services import actions as action_svc
 from app.services import experiences as svc
 
@@ -72,7 +74,11 @@ def publish(
     background: BackgroundTasks,
 ) -> svc.MyExperience:
     result = svc.publish(db, user, experience_id, body)
+    # Translate first so the index includes both languages.
     background.add_task(svc.translate_in_background, get_sessionmaker(), ai, experience_id)
+    background.add_task(
+        sync_in_background, get_sessionmaker(), get_embedder(), "experience", experience_id
+    )
     return result
 
 

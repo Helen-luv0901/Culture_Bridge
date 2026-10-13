@@ -15,6 +15,8 @@ class Settings:
     firebase_project_id: str | None
     web_dir: Path | None
     ai_summaries_per_day: int
+    embedding_model: str
+    semantic_max_distance: float
     gemini_api_key: str | None
     gemini_model: str
     gemini_timeout_seconds: float
@@ -48,6 +50,9 @@ def get_settings() -> Settings:
         # Built Flutter web app (flutter build web); served at / when present.
         web_dir=Path(os.environ["WEB_DIR"]) if os.getenv("WEB_DIR") else None,
         ai_summaries_per_day=int(os.getenv("AI_SUMMARIES_PER_DAY", "20")),
+        embedding_model=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"),
+        # Cosine distance cut-off; tune with `python -m app.rag.evaluate` on real embeddings.
+        semantic_max_distance=float(os.getenv("SEMANTIC_MAX_DISTANCE", "0.6")),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),

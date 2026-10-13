@@ -281,6 +281,24 @@ def open_screen(args: OpenScreenArgs, ctx: ToolContext) -> dict[str, Any]:
     return {"ok": True, "queued": action.model_dump()}
 
 
+class SemanticSearchArgs(ToolArgs):
+    query: str = Field(min_length=1, max_length=300, description="The user's question in words")
+    limit: int = Field(default=4, ge=1, le=8)
+
+
+def semantic_search(args: SemanticSearchArgs, ctx: ToolContext) -> dict[str, Any]:
+    found = ctx.data.semantic_search(args.query, args.limit)
+    if found is None:
+        raise ToolError("Semantic search is unavailable right now; use the keyword tools.")
+    return {
+        **found,
+        "notice": "Official passages: cite title, publisher and date. Student content is "
+        "unverified personal experience, ranked after procedures and official passages; if it "
+        "disagrees with a verified procedure, follow the procedure and suggest checking with "
+        "the school.",
+    }
+
+
 class SearchAppHelpArgs(ToolArgs):
     query: str = Field(min_length=1, max_length=200, description="e.g. 怎麼分享, verified meaning")
     limit: int = Field(default=3, ge=1, le=5)
@@ -362,6 +380,13 @@ TOOLS: list[Tool] = [
         "or start something; ids must come from earlier tool results.",
         OpenScreenArgs,
         open_screen,
+    ),
+    Tool(
+        "semantic_search",
+        "Search by meaning across official source documents and public student content, for "
+        "questions the procedure cards and keyword search don't cover. Returns citations.",
+        SemanticSearchArgs,
+        semantic_search,
     ),
     Tool(
         "search_app_help",

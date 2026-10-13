@@ -25,6 +25,7 @@ from app.models import (
     ExperienceTranslation,
     UserBlock,
 )
+from app.rag.index import remove_content
 from app.services.common import now
 
 logger = logging.getLogger(__name__)
@@ -527,6 +528,7 @@ def delete_experiences(db: Session, ids: list[str]) -> None:
     # The confirmed summary is referenced by the experience (deferred FK), so drop both together.
     db.execute(delete(ExperienceSummary).where(ExperienceSummary.experience_id.in_(ids)))
     db.execute(delete(Experience).where(Experience.id.in_(ids)))
+    remove_content(db, "experience", ids)
 
 
 def my_experience(db: Session, experience: Experience) -> MyExperience:

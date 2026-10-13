@@ -24,6 +24,7 @@ from app.models import (
     Source,
     VerificationRecord,
 )
+from app.rag.index import remove_content
 from app.services.actions import FeedbackCategory, FeedbackKind, VerificationStatus
 from app.services.common import Text2, log_admin, now, text2
 
@@ -559,6 +560,8 @@ def review_feedback(
     if feedback is None:
         raise not_found("feedback_not_found")
     feedback.review_state = body.review_state
+    if body.review_state != "reviewed":
+        remove_content(db, "execution_feedback", [feedback_id])
     log_admin(
         db, actor, "review_feedback", "execution_feedback", feedback_id, state=body.review_state
     )

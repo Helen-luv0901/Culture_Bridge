@@ -1,11 +1,18 @@
 """Reviewer/admin endpoints (D-6). Everything here requires a reviewer or admin role."""
 
+from datetime import date
 from typing import Literal
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Query, Response, status
+from pydantic import BaseModel, Field, HttpUrl
+from sqlalchemy import func, select
 
 from app.core.auth import AdminUser, StaffUser
-from app.core.db import DbSession
+from app.core.db import DbSession, get_sessionmaker
+from app.core.errors import ApiError, not_found
+from app.models import KbChunk, KbDocument
+from app.rag.embedder import EmbeddingUnavailable, get_embedder
+from app.rag.index import add_document, sync_in_background
 from app.services import admin_actions as svc
 from app.services import moderation
 
@@ -101,9 +108,21 @@ def list_feedback(
 
 @router.post("/feedback/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
 def review_feedback(
-    feedback_id: str, body: svc.FeedbackReview, user: StaffUser, db: DbSession
+    feedback_id: str,
+    body: svc.FeedbackReview,
+    user: StaffUser,
+    db: DbSession,
+    background: BackgroundTasks,
 ) -> Response:
     svc.review_feedback(db, user, feedback_id, body)
+    if body.review_state == "reviewed":
+        background.add_task(
+            sync_in_background,
+            get_sessionmaker(),
+            get_embedder(),
+            "execution_feedback",
+            feedback_id,
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -116,11 +135,23 @@ def report_queue(
     return moderation.report_queue(db, status)
 
 
+def _reindex(background: BackgroundTasks, experience_id: str) -> None:
+    background.add_task(
+        sync_in_background, get_sessionmaker(), get_embedder(), "experience", experience_id
+    )
+
+
 @router.post("/reports/{report_id}/resolve", status_code=204)
 def resolve_report(
-    report_id: str, body: moderation.ResolveIn, user: StaffUser, db: DbSession
+    report_id: str,
+    body: moderation.ResolveIn,
+    user: StaffUser,
+    db: DbSession,
+    background: BackgroundTasks,
 ) -> Response:
-    moderation.resolve_report(db, user, report_id, body)
+    target = moderation.resolve_report(db, user, report_id, body)
+    if body.action == "dismiss":
+        _reindex(background, target)
     return Response(status_code=204)
 
 
@@ -131,12 +162,96 @@ def hide_experience(experience_id: str, user: StaffUser, db: DbSession) -> Respo
 
 
 @router.post("/experiences/{experience_id}/restore", status_code=204)
-def restore_experience(experience_id: str, user: StaffUser, db: DbSession) -> Response:
+def restore_experience(
+    experience_id: str, user: StaffUser, db: DbSession, background: BackgroundTasks
+) -> Response:
     moderation.set_experience_visibility(db, user, experience_id, hidden=False)
+    _reindex(background, experience_id)
     return Response(status_code=204)
 
 
 @router.put("/users/{user_id}/role", status_code=204)
 def set_role(user_id: str, body: moderation.RoleIn, user: AdminUser, db: DbSession) -> Response:
     moderation.set_role(db, user, user_id, body)
+    return Response(status_code=204)
+
+
+# ---------- official documents for semantic search (A-21) ----------
+
+
+class KbDocumentIn(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    url: HttpUrl
+    publisher: str = Field(min_length=1, max_length=200)
+    document_date: date | None = None
+    action_id: str | None = None
+    text: str = Field(min_length=1, max_length=200_000)
+
+
+class KbDocumentOut(BaseModel):
+    id: str
+    title: str
+    url: str
+    publisher: str
+    document_date: date | None
+    action_id: str | None
+    active: bool
+    chunk_count: int
+
+
+def _kb_out(db, doc: KbDocument) -> KbDocumentOut:
+    count = db.scalar(select(func.count()).where(KbChunk.document_id == doc.id)) or 0
+    return KbDocumentOut(
+        id=doc.id,
+        title=doc.title,
+        url=doc.url,
+        publisher=doc.publisher,
+        document_date=doc.document_date,
+        action_id=doc.action_id,
+        active=doc.active,
+        chunk_count=count,
+    )
+
+
+@router.get("/kb/documents")
+def list_documents(_: StaffUser, db: DbSession) -> list[KbDocumentOut]:
+    docs = db.scalars(select(KbDocument).order_by(KbDocument.created_at.desc()))
+    return [_kb_out(db, d) for d in docs]
+
+
+@router.post("/kb/documents", status_code=201)
+def create_document(body: KbDocumentIn, user: StaffUser, db: DbSession) -> KbDocumentOut:
+    """Add an official document's text: it is chunked and embedded for the assistant."""
+    try:
+        doc = add_document(
+            db,
+            get_embedder(),
+            title=body.title,
+            url=str(body.url),
+            publisher=body.publisher,
+            document_date=body.document_date,
+            action_id=body.action_id,
+            text=body.text,
+            created_by=user.id,
+        )
+    except EmbeddingUnavailable as exc:
+        raise ApiError(503, "embeddings_unavailable") from exc
+    except ValueError as exc:
+        raise ApiError(422, "document_empty") from exc
+    svc.log_admin(db, user, "add_kb_document", "kb_document", doc.id, url=doc.url)
+    db.commit()
+    return _kb_out(db, doc)
+
+
+@router.post("/kb/documents/{document_id}/active", status_code=204)
+def set_document_active(
+    document_id: str, user: StaffUser, db: DbSession, active: bool = False
+) -> Response:
+    """Retire an outdated document (or bring it back); retired documents are never searched."""
+    doc = db.get(KbDocument, document_id)
+    if doc is None:
+        raise not_found("document_not_found")
+    doc.active = active
+    svc.log_admin(db, user, "kb_document_active", "kb_document", doc.id, active=active)
+    db.commit()
     return Response(status_code=204)

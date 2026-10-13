@@ -15,6 +15,8 @@ from app.assistant.data import (
 )
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError
+from app.rag.embedder import Embedder, EmbeddingUnavailable, get_embedder
+from app.rag.index import semantic_search
 from app.services import actions, experiences
 from app.services.common import Text2
 
@@ -84,6 +86,7 @@ def _searchable(e: ExperienceRecord) -> str:
 class PostgresAssistantData:
     db: Session
     viewer: CurrentUser | None
+    embedder: Embedder = field(default_factory=get_embedder)
     _actions: dict[str, ActionRecord] | None = field(default=None, init=False)
 
     def _all_actions(self) -> dict[str, ActionRecord]:
@@ -130,6 +133,12 @@ class PostgresAssistantData:
             )
             for e in actions.my_executions(self.db, CurrentUser(id=user_id), False)
         ]
+
+    def semantic_search(self, query: str, limit: int) -> dict | None:
+        try:
+            return semantic_search(self.db, self.embedder, query, self.viewer, limit)
+        except EmbeddingUnavailable:
+            return None
 
 
 def _action_text(a: ActionRecord) -> str:
