@@ -20,7 +20,9 @@ from app.assistant.data import (
     Locale,
     TopicId,
 )
+from app.assistant.knowledge import default_knowledge_base
 from app.assistant.llm import ToolCall, ToolResult, ToolSpec
+from app.assistant.operations import OPERATION_TTL, OperationService, PendingOperation
 from app.assistant.schemas import ActionCard, Card, ExperienceCard, ScreenAction, ScreenActionType
 from app.core.auth import CurrentUser
 
@@ -36,8 +38,10 @@ class ToolContext:
     data: AssistantDataSource
     locale: Locale
     user: CurrentUser | None
+    operations: OperationService | None = None
     cards: dict[str, Card] = field(default_factory=dict)
     screen_actions: list[ScreenAction] = field(default_factory=list)
+    proposed_operations: list[PendingOperation] = field(default_factory=list)
 
 
 class ToolArgs(BaseModel):
@@ -277,6 +281,46 @@ def open_screen(args: OpenScreenArgs, ctx: ToolContext) -> dict[str, Any]:
     return {"ok": True, "queued": action.model_dump()}
 
 
+class SearchAppHelpArgs(ToolArgs):
+    query: str = Field(min_length=1, max_length=200, description="e.g. 怎麼分享, verified meaning")
+    limit: int = Field(default=3, ge=1, le=5)
+
+
+def search_app_help(args: SearchAppHelpArgs, ctx: ToolContext) -> dict[str, Any]:
+    kb = default_knowledge_base()
+    found = kb.search(args.query, args.limit)
+    return {
+        "guide_version": kb.version,
+        "count": len(found),
+        "results": [kb.as_result(e, ctx.locale) for e in found],
+    }
+
+
+class ProposeStartActionArgs(ToolArgs):
+    action_id: str = Field(min_length=1, max_length=100)
+
+
+def propose_start_action(args: ProposeStartActionArgs, ctx: ToolContext) -> dict[str, Any]:
+    if ctx.user is None:
+        return {"requires_login": True}
+    if ctx.operations is None:
+        raise ToolError("Starting procedures from the assistant is not available.")
+    action = ctx.data.get_action(args.action_id)
+    if action is None:
+        raise ToolError("Unknown action_id; find it with search_actions first")
+    title = action.title.get(ctx.locale)
+    summary = f"開始辦理「{title}」" if ctx.locale == "zh-Hant" else f"Start “{title}”"
+    operation = ctx.operations.propose_start_action(ctx.user, action.id, summary)
+    ctx.proposed_operations.append(operation)
+    return {
+        "status": "awaiting_user_confirmation",
+        "operation_id": operation.id,
+        "summary": summary,
+        "expires_in_minutes": int(OPERATION_TTL.total_seconds() // 60),
+        "note": "Nothing has been written yet. Ask the user to tap confirm in the app.",
+    }
+
+
 TOOLS: list[Tool] = [
     Tool(
         "search_actions",
@@ -318,6 +362,21 @@ TOOLS: list[Tool] = [
         "or start something; ids must come from earlier tool results.",
         OpenScreenArgs,
         open_screen,
+    ),
+    Tool(
+        "search_app_help",
+        "Explain how to use the Culture Bridge app: tabs, screens, buttons, sharing, privacy, "
+        "what verification statuses mean, what the assistant can do. Never use it for procedure "
+        "facts such as steps, documents, fees or dates.",
+        SearchAppHelpArgs,
+        search_app_help,
+    ),
+    Tool(
+        "propose_start_action",
+        "When the user asks to start a procedure, prepare it for their confirmation. This does "
+        "not start anything: the app shows a confirm card and the user decides.",
+        ProposeStartActionArgs,
+        propose_start_action,
     ),
 ]
 

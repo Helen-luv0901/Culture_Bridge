@@ -2,21 +2,11 @@ import pytest
 from fastapi.testclient import TestClient
 from google.genai import types
 
-from app.api.assistant import get_assistant
+from app.api.assistant import get_services
 from app.assistant.gemini import from_response, to_contents
 from app.assistant.llm import LLMError, ModelTurn, ToolCall, ToolResult, ToolResultsTurn, UserTurn
 from app.main import app
 from tests.conftest import ScriptedLLM, answer, call
-
-
-@pytest.fixture
-def client(make_assistant):
-    def use(llm):
-        app.dependency_overrides[get_assistant] = lambda: make_assistant(llm)
-        return TestClient(app)
-
-    yield use
-    app.dependency_overrides.clear()
 
 
 def test_post_message(client):
@@ -51,12 +41,12 @@ def test_without_api_key_answers_with_fallback(monkeypatch):
     from app.core.config import get_settings
 
     get_settings.cache_clear()
-    get_assistant.cache_clear()
+    get_services.cache_clear()
     try:
         res = TestClient(app).post("/assistant/message", json={"message": "hi", "locale": "en"})
     finally:
         get_settings.cache_clear()
-        get_assistant.cache_clear()
+        get_services.cache_clear()
     assert res.status_code == 200
     assert res.json()["fallback"] is True
 

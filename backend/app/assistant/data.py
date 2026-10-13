@@ -122,26 +122,46 @@ _DEMO_IDENTITY: dict[str, IdentityType] = {
 _CJK = re.compile(r"[㐀-鿿豈-﫿]")
 
 
-def _search_units(query: str) -> list[str]:
-    """Whitespace tokens; CJK runs become bigrams so 「工作證怎麼辦」 still matches 「工作證」."""
+# Question words carry no topic, so they must not make every document "match".
+_STOPWORDS = frozenset(
+    "a an and are can do does for how i in is it me mean my of on the to what where why you".split()
+)
+_CJK_FILLER = set("的了嗎呢吧什麼怎哪我你他她是要")
+
+
+def search_units(query: str) -> list[str]:
+    """Query -> match units. CJK runs become bigrams so 「工作證怎麼辦」 still matches 「工作證」;
+    Latin words are cut to a stem so "sharing" matches "share" and "anonymously" "anonymous"."""
     units: list[str] = []
-    for token in query.lower().split():
-        if _CJK.search(token) and len(token) > 2:
-            units.extend(token[i : i + 2] for i in range(len(token) - 1))
-        else:
-            units.append(token)
+    for token in re.findall(r"[a-z0-9]+|[^\sa-z0-9]+", query.lower()):
+        if _CJK.search(token):
+            if len(token) <= 2:
+                units.append(token)
+                continue
+            bigrams = (token[i : i + 2] for i in range(len(token) - 1))
+            units.extend(b for b in bigrams if not _CJK_FILLER.intersection(b))
+        elif token not in _STOPWORDS:
+            units.append(token if len(token) <= 4 else token[: max(4, len(token) - 3)])
     return units
 
 
-def _score(units: list[str], haystack: str) -> float:
+def _matches(unit: str, haystack: str) -> bool:
+    if _CJK.search(unit):
+        return unit in haystack
+    return re.search(rf"\b{re.escape(unit)}", haystack) is not None
+
+
+def score(units: list[str], haystack: str) -> float:
     if not units:
         return 1.0
-    return sum(1 for unit in units if unit in haystack) / len(units)
+    return sum(1 for unit in units if _matches(unit, haystack)) / len(units)
 
 
-def _rank[T](items: list[tuple[T, str]], query: str, limit: int) -> list[T]:
-    units = _search_units(query)
-    scored = [(item, _score(units, text)) for item, text in items]
+def rank[T](items: list[tuple[T, str, str]], query: str, limit: int) -> list[T]:
+    """Rank (item, heading, body) triples; heading hits count double, so the document *about*
+    a topic beats ones that only mention it."""
+    units = search_units(query)
+    scored = [(item, 2 * score(units, head) + score(units, body)) for item, head, body in items]
     scored = [pair for pair in scored if pair[1] > 0]
     scored.sort(key=lambda pair: pair[1], reverse=True)
     return [item for item, _ in scored[:limit]]
@@ -161,7 +181,11 @@ class DemoDataSource:
         return cls(actions=actions, experiences=experiences)
 
     def search_actions(self, query: str, limit: int) -> list[ActionRecord]:
-        return _rank([(a, _action_text(a)) for a in self.actions.values()], query, limit)
+        return rank(
+            [(a, _both(a.title).lower(), _action_text(a)) for a in self.actions.values()],
+            query,
+            limit,
+        )
 
     def get_action(self, action_id: str) -> ActionRecord | None:
         return self.actions.get(action_id)
@@ -179,7 +203,7 @@ class DemoDataSource:
             if (topic_id is None or e.topic_id == topic_id)
             and (identity_type is None or e.identity_type == identity_type)
         ]
-        return _rank([(e, _experience_text(e)) for e in pool], query or "", limit)
+        return rank([(e, "", _experience_text(e)) for e in pool], query or "", limit)
 
     def get_experience(self, experience_id: str) -> ExperienceRecord | None:
         return self.experiences.get(experience_id)

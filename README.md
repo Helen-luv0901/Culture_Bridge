@@ -9,6 +9,8 @@
 - [工作分配表](docs/work-assignment.md)
 - [技術架構](docs/tech-architecture.md)
 - [Backend（FastAPI＋AI 助理）](backend/README.md)
+- [A-3 Cloud SQL 搬遷步驟](docs/runbooks/a3-cloud-sql-migration.md)
+- [A-5 Gemini 金鑰申請步驟](docs/runbooks/a5-gemini-api-key.md)
 
 ## Database
 - 雲端資料庫：Google Cloud SQL（PostgreSQL），資料表以 `database/schema_postgres.sql` 為準
