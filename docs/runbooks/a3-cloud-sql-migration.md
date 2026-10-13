@@ -55,16 +55,16 @@ gcloud sql databases create $DB --instance=$NEW
 - `--database-version` 換成第 1 步看到的版本
 - `db-f1-micro` 是共用核心的最小規格，適合 MVP；【確認】建立前主控台顯示的每月估價
 
-## 4. 建帳號（匯入前）
+## 4. 帳號（匯入前）
 
-SQL 匯出不包含資料庫帳號。先在新執行個體建立和舊的一樣的帳號，否則資料表擁有者會對不上：
+SQL 匯出不包含帳號密碼。舊執行個體的資料表屬於 `postgres`，新執行個體也沿用 `postgres` 當擁有者——匯入、migration、後端都用它，權限才一致（另外建的帳號沒有這些資料表的權限，ALTER TABLE 也會失敗）：
 
 ```sh
-gcloud sql users list --instance=$OLD
-gcloud sql users create <帳號> --instance=$NEW --password='<新密碼>'   # 每位組員各一個
+gcloud sql users list --instance=$OLD          # 確認只有 postgres（或建表的帳號）
+gcloud sql users set-password postgres --instance=$NEW --password='<新密碼>'
 ```
 
-新密碼私下交給各組員，不要貼在群組或 repo。
+新密碼存進 Secret Manager 的 `database-url`（A-7），需要直接連資料庫的組員再私下給，不要貼在群組或 repo。
 
 ## 5. 匯入
 
@@ -72,7 +72,7 @@ gcloud sql users create <帳號> --instance=$NEW --password='<新密碼>'   # �
 NEW_SA=$(gcloud sql instances describe $NEW --format="value(serviceAccountEmailAddress)")
 gcloud storage buckets add-iam-policy-binding $BUCKET \
   --member=serviceAccount:$NEW_SA --role=roles/storage.objectViewer
-gcloud sql import sql $NEW $BUCKET/$DB.sql.gz --database=$DB --user=<原本建表的帳號>
+gcloud sql import sql $NEW $BUCKET/$DB.sql.gz --database=$DB --user=postgres
 ```
 
 ## 6. 連線設定

@@ -86,7 +86,7 @@ POST /api/assistant/message
 | 變數 | 預設 | 說明 |
 |---|---|---|
 | `APP_ENV` | development | production 時關閉開發登入與 CORS |
-| `DATABASE_URL` | 本機 culturebridge | Cloud SQL：`postgresql+psycopg://app:<pw>@/culturebridge?host=/cloudsql/<專案>:<區域>:<執行個體>` |
+| `DATABASE_URL` | 本機 culturebridge | Cloud SQL：`postgresql+psycopg://postgres:<pw>@/culturebridge?host=/cloudsql/<專案>:<區域>:<執行個體>` |
 | `FIREBASE_PROJECT_ID` | — | 驗證 ID token 的 audience |
 | `FIREBASE_WEB_API_KEY`、`FIREBASE_WEB_APP_ID`、`FIREBASE_AUTH_DOMAIN`、`FIREBASE_MESSAGING_SENDER_ID` | — | 經 `/api/config` 給網頁版 |
 | `GEMINI_API_KEY`、`GEMINI_MODEL`、`EMBEDDING_MODEL` | —、gemini-2.5-flash、gemini-embedding-001 | 沒有金鑰時 AI 功能回「暫時無法使用」 |
