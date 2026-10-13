@@ -8,6 +8,7 @@ import 'ui/view_models/bridge_view_model.dart';
 import 'ui/features/browse_pages.dart';
 import 'ui/features/share_pages.dart';
 import 'ui/features/action_pages.dart';
+import 'ui/features/admin_pages.dart';
 
 class CultureBridgeApp extends StatefulWidget {
   const CultureBridgeApp({
@@ -26,7 +27,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
     initialLocation: widget.initialLocation,
     redirect: (context, state) {
       if (state.uri.path == '/review' &&
-          widget.viewModel.reviewedDraft == null) {
+          widget.viewModel.reviewSummary == null) {
         return '/share';
       }
       return null;
@@ -62,6 +63,23 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             builder: (context, state) => const ProfilePage(),
           ),
           GoRoute(
+            path: '/admin',
+            builder: (context, state) =>
+                AdminPage(tab: state.uri.queryParameters['tab'] ?? 'actions'),
+            routes: [
+              GoRoute(
+                path: 'actions/:id',
+                builder: (context, state) =>
+                    AdminActionPage(id: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/signin',
+            builder: (context, state) =>
+                SignInPage(next: state.uri.queryParameters['next']),
+          ),
+          GoRoute(
             path: '/experiences/:id',
             builder: (context, state) =>
                 ExperienceDetailPage(id: state.pathParameters['id']!),
@@ -88,6 +106,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
     ],
     errorBuilder: (context, state) =>
         const Scaffold(body: Center(child: MissingContent())),
+    refreshListenable: widget.viewModel.auth,
   );
   @override
   void dispose() {

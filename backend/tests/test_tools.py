@@ -20,6 +20,7 @@ def test_specs_are_plain_json_schema():
         "open_screen",
         "search_app_help",
         "propose_start_action",
+        "semantic_search",
     }
     search = specs["search_experiences"].parameters
     assert search["type"] == "object"

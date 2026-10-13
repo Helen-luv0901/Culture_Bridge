@@ -122,17 +122,17 @@ def test_operation_endpoints(client):
     llm = ScriptedLLM(call("propose_start_action", action_id="arc"), answer("請確認。"))
     c = client(llm)
     alice = {"X-Dev-User-Id": "alice"}
-    reply = c.post("/assistant/message", json={"message": "開始 ARC"}, headers=alice).json()
+    reply = c.post("/api/assistant/message", json={"message": "開始 ARC"}, headers=alice).json()
     op_id = reply["pending_operations"][0]["id"]
 
-    assert c.get(f"/assistant/operations/{op_id}", headers=alice).json()["status"] == "pending"
-    other = c.post(f"/assistant/operations/{op_id}/confirm", headers={"X-Dev-User-Id": "bob"})
+    assert c.get(f"/api/assistant/operations/{op_id}", headers=alice).json()["status"] == "pending"
+    other = c.post(f"/api/assistant/operations/{op_id}/confirm", headers={"X-Dev-User-Id": "bob"})
     assert other.status_code == 404 and other.json()["detail"] == {"code": "operation_not_found"}
-    assert c.post(f"/assistant/operations/{op_id}/confirm").status_code == 401
+    assert c.post(f"/api/assistant/operations/{op_id}/confirm").status_code == 401
 
-    confirmed = c.post(f"/assistant/operations/{op_id}/confirm", headers=alice).json()
+    confirmed = c.post(f"/api/assistant/operations/{op_id}/confirm", headers=alice).json()
     assert confirmed["status"] == "confirmed" and confirmed["result"]["execution_id"]
-    cancel = c.post(f"/assistant/operations/{op_id}/cancel", headers=alice)
+    cancel = c.post(f"/api/assistant/operations/{op_id}/cancel", headers=alice)
     assert cancel.status_code == 409 and cancel.json()["detail"] == {"code": "operation_confirmed"}
 
 
@@ -141,9 +141,9 @@ def test_operation_endpoints(client):
 
 def test_guests_blocked_when_not_allowed(client):
     c = client(ScriptedLLM(answer("hi")), allow_guests=False)
-    res = c.post("/assistant/message", json={"message": "hi"})
+    res = c.post("/api/assistant/message", json={"message": "hi"})
     assert res.status_code == 401 and res.json()["detail"] == {"code": "login_required"}
-    ok = c.post("/assistant/message", json={"message": "hi"}, headers={"X-Dev-User-Id": "u1"})
+    ok = c.post("/api/assistant/message", json={"message": "hi"}, headers={"X-Dev-User-Id": "u1"})
     assert ok.status_code == 200
 
 
@@ -154,9 +154,10 @@ def test_rate_limit_returns_429_with_retry_after(client):
     headers = {"X-Dev-User-Id": "u1"}
     for _ in range(2):
         assert (
-            c.post("/assistant/message", json={"message": "x"}, headers=headers).status_code == 200
+            c.post("/api/assistant/message", json={"message": "x"}, headers=headers).status_code
+            == 200
         )
-    res = c.post("/assistant/message", json={"message": "x"}, headers=headers)
+    res = c.post("/api/assistant/message", json={"message": "x"}, headers=headers)
     assert res.status_code == 429
     assert res.json()["detail"] == {"code": "rate_limited"}
     assert int(res.headers["Retry-After"]) > 0
@@ -194,11 +195,11 @@ def test_daily_llm_budget_turns_into_fallback():
 
 def test_budget_exhaustion_still_answers_200(client):
     c = client(ScriptedLLM(LLMError("daily Gemini call budget reached")))
-    res = c.post("/assistant/message", json={"message": "hi"})
+    res = c.post("/api/assistant/message", json={"message": "hi"})
     assert res.status_code == 200 and res.json()["fallback"] is True
 
 
 def test_guest_rate_limit_is_per_ip(client):
     c = client(ScriptedLLM(answer("a")), limiter=UsageLimiter(per_minute=1, per_day=50))
-    assert c.post("/assistant/message", json={"message": "x"}).status_code == 200
-    assert c.post("/assistant/message", json={"message": "x"}).status_code == 429
+    assert c.post("/api/assistant/message", json={"message": "x"}).status_code == 200
+    assert c.post("/api/assistant/message", json={"message": "x"}).status_code == 429

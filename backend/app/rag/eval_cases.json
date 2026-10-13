@@ -1,0 +1,8 @@
+[
+  {"query": "教授說再看看是不是拒絕我", "expect": ["experience:professor-see"]},
+  {"query": "My professor gave an unclear answer, what does it mean?", "expect": ["experience:professor-see"]},
+  {"query": "第一次租房子要注意什麼", "expect": ["experience:first-rental"]},
+  {"query": "renting an apartment for the first time", "expect": ["experience:first-rental"]},
+  {"query": "同學邀請我參加活動但我不知道是不是客氣話", "expect": ["experience:class-invitation"]},
+  {"query": "classmates invited me, were they just being polite?", "expect": ["experience:class-invitation"]}
+]

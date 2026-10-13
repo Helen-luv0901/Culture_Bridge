@@ -2,8 +2,8 @@
 
 A write request such as "start this procedure for me" becomes a pending operation that expires
 after 5 minutes. Only the owner can confirm it, and confirming re-checks login, expiry and the
-target before the write runs, exactly once. The in-memory store stands in for the
-assistant_operations table (B-2); `ExecutionWriter` stands in for D's execution service (D-3).
+target before the write runs, exactly once. `OperationService` keeps operations in memory for
+unit tests; `db_operations.DbOperationService` stores them in assistant_operations.
 """
 
 import threading
@@ -42,6 +42,18 @@ class OperationError(Exception):
         super().__init__(code)
         self.code = code
         self.status_code = status_code
+
+
+class OperationStore(Protocol):
+    def propose_start_action(
+        self, user: CurrentUser, action_id: str, summary: str
+    ) -> PendingOperation: ...
+
+    def get(self, operation_id: str, user: CurrentUser | None) -> PendingOperation: ...
+
+    def confirm(self, operation_id: str, user: CurrentUser | None) -> PendingOperation: ...
+
+    def cancel(self, operation_id: str, user: CurrentUser | None) -> PendingOperation: ...
 
 
 class ExecutionWriter(Protocol):

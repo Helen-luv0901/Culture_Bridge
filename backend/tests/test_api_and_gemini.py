@@ -11,7 +11,9 @@ from tests.conftest import ScriptedLLM, answer, call
 
 def test_post_message(client):
     llm = ScriptedLLM(call("get_action", action_id="certificate"), answer("在學證明……"))
-    res = client(llm).post("/assistant/message", json={"message": "在學證明", "locale": "zh-Hant"})
+    res = client(llm).post(
+        "/api/assistant/message", json={"message": "在學證明", "locale": "zh-Hant"}
+    )
     assert res.status_code == 200
     body = res.json()
     assert body["text"] == "在學證明……"
@@ -24,7 +26,7 @@ def test_post_message(client):
 def test_dev_user_header_reaches_tools(client, data):
     llm = ScriptedLLM(call("get_my_progress"), answer("沒有進行中的流程。"))
     client(llm).post(
-        "/assistant/message", json={"message": "我的進度"}, headers={"X-Dev-User-Id": "u9"}
+        "/api/assistant/message", json={"message": "我的進度"}, headers={"X-Dev-User-Id": "u9"}
     )
     result = llm.calls[1]["history"][-1].results[0].result
     assert result == {"count": 0, "results": []}
@@ -32,8 +34,10 @@ def test_dev_user_header_reaches_tools(client, data):
 
 def test_validation_rejects_bad_input(client):
     c = client(ScriptedLLM())
-    assert c.post("/assistant/message", json={"message": ""}).status_code == 422
-    assert c.post("/assistant/message", json={"message": "hi", "locale": "ja"}).status_code == 422
+    assert c.post("/api/assistant/message", json={"message": ""}).status_code == 422
+    assert (
+        c.post("/api/assistant/message", json={"message": "hi", "locale": "ja"}).status_code == 422
+    )
 
 
 def test_without_api_key_answers_with_fallback(monkeypatch):
@@ -43,7 +47,7 @@ def test_without_api_key_answers_with_fallback(monkeypatch):
     get_settings.cache_clear()
     get_services.cache_clear()
     try:
-        res = TestClient(app).post("/assistant/message", json={"message": "hi", "locale": "en"})
+        res = TestClient(app).post("/api/assistant/message", json={"message": "hi", "locale": "en"})
     finally:
         get_settings.cache_clear()
         get_services.cache_clear()
@@ -52,7 +56,7 @@ def test_without_api_key_answers_with_fallback(monkeypatch):
 
 
 def test_clear_endpoint(client):
-    assert client(ScriptedLLM()).delete("/assistant/conversations/abc").status_code == 204
+    assert client(ScriptedLLM()).delete("/api/assistant/conversations/abc").status_code == 204
 
 
 def test_gemini_history_conversion_keeps_ids_and_raw_content():

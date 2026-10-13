@@ -102,6 +102,10 @@ class AssistantDataSource(Protocol):
 
     def get_in_progress(self, user_id: str) -> list[ProgressRecord]: ...
 
+    def semantic_search(self, query: str, limit: int) -> dict | None:
+        """Official passages and student content by meaning; None when unavailable."""
+        ...
+
 
 # Demo JSON uses UI labels and camelCase keys; map them onto the schema vocabulary.
 _DEMO_STATUS: dict[str, VerificationStatus] = {
@@ -210,6 +214,9 @@ class DemoDataSource:
 
     def get_in_progress(self, user_id: str) -> list[ProgressRecord]:
         return list(self.progress.get(user_id, []))
+
+    def semantic_search(self, query: str, limit: int) -> dict | None:
+        return None
 
 
 def _localized(zh: str, en: str | None) -> Localized:
