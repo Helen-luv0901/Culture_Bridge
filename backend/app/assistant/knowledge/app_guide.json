@@ -1,0 +1,166 @@
+{
+  "version": "2026-10-13",
+  "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: procedure facts, steps, fees and dates always come from the tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
+  "entries": [
+    {
+      "id": "nav-tabs",
+      "kind": "navigation",
+      "keywords": ["分頁", "導覽", "選單", "在哪", "tab", "menu", "navigation", "where"],
+      "title": {"zh-Hant": "App 的四個分頁", "en": "The four tabs"},
+      "body": {
+        "zh-Hant": "手機底部有四個分頁：「首頁」看你的辦理流程和可以開始的官方流程；「探索」看其他學生的生活經驗；「分享」匿名分享你的經驗；「我的」看你分享過的經驗、你的影響和語言設定。寬螢幕時這些分頁會顯示在左側。",
+        "en": "On phones there are four tabs at the bottom: Home shows your procedures in progress and official procedures you can start; Explore shows other students' experiences; Share lets you share an experience anonymously; My shows the experiences you shared, your impact and language settings. On wide screens the tabs appear on the left."
+      }
+    },
+    {
+      "id": "home",
+      "kind": "feature",
+      "keywords": ["首頁", "辦理流程", "開始辦理", "home", "start"],
+      "title": {"zh-Hant": "首頁", "en": "Home"},
+      "body": {
+        "zh-Hant": "首頁上方是「我的辦理流程」，顯示你正在辦的流程和完成了幾個步驟；中間是可以開始的官方流程，例如工作證、ARC、健保、銀行帳戶、在學證明；下方「了解台灣生活」可以進入學生經驗。",
+        "en": "The top of Home shows your procedures in progress and how many steps are done. Below are official procedures you can start, such as work permit, ARC, health insurance, bank account and enrollment certificate. At the bottom, \"Life in Taiwan\" leads to student experiences."
+      }
+    },
+    {
+      "id": "action-card",
+      "kind": "glossary",
+      "keywords": ["流程卡", "官方流程", "流程", "action card", "procedure", "action"],
+      "title": {"zh-Hant": "流程卡（官方流程）", "en": "Procedure cards"},
+      "body": {
+        "zh-Hant": "流程卡整理一件要辦的事，例如申請工作證。每張卡會顯示驗證狀態、最後官方更新日期、適用對象、學生近期完成人數、步驟和官方來源。流程內容由管理者依官方資料維護，不是由按讚或多數決決定。",
+        "en": "A procedure card describes one thing to get done, such as applying for a work permit. Each card shows its verification status, last official update, who it applies to, how many students recently completed it, the steps and official sources. Admins maintain cards from official sources; likes or votes never decide their content."
+      }
+    },
+    {
+      "id": "verification-status",
+      "kind": "glossary",
+      "keywords": ["驗證", "已驗證", "待確認", "社群支持", "過時", "未驗證", "verified", "needs review", "community supported", "outdated", "status"],
+      "title": {"zh-Hant": "驗證狀態代表什麼", "en": "What verification statuses mean"},
+      "body": {
+        "zh-Hant": "「已驗證」：有官方來源，並經管理者審查確認。「待確認」：可能有變動，正在重新確認，辦理前請向學校再確認。「社群支持」：有學生回報可行，但還沒有經過官方來源審查。「未驗證」：尚未審查。「已過時」：內容可能不再適用。驗證狀態只來自來源與審查，不會因為很多人按讚就變成已驗證。",
+        "en": "Verified: backed by an official source and confirmed by an admin review. Needs review: it may have changed and is being rechecked, so confirm with your school before acting. Community supported: students report it works, but it has not been checked against official sources. Unverified: not reviewed yet. Outdated: it may no longer apply. Status comes only from sources and reviews; many likes never make something verified."
+      }
+    },
+    {
+      "id": "recent-completions",
+      "kind": "glossary",
+      "keywords": ["近期完成", "完成人數", "成功", "recently completed", "completions"],
+      "title": {"zh-Hant": "學生近期完成", "en": "Recently completed by students"},
+      "body": {
+        "zh-Hant": "流程卡上的「學生近期完成」是最近 30 天回報成功完成這個流程的學生人數，讓你知道這個流程最近有人照著辦成功。它不是驗證狀態，人數多不代表內容已驗證。",
+        "en": "\"Recently completed\" counts students who reported finishing the procedure successfully in the last 30 days, so you can see it has worked for others lately. It is not a verification status; a high count does not mean the content is verified."
+      }
+    },
+    {
+      "id": "progress",
+      "kind": "feature",
+      "keywords": ["進度", "步驟", "標記完成", "progress", "step", "mark complete"],
+      "title": {"zh-Hant": "辦理進度與步驟", "en": "Procedure progress and steps"},
+      "body": {
+        "zh-Hant": "在流程頁按「開始辦理」後，可以逐步「標記完成」或「取消完成」。進度會顯示在首頁的「我的辦理流程」。",
+        "en": "After tapping \"Start\" on a procedure page, you can mark each step complete or incomplete. Your progress appears under \"My procedures\" on Home."
+      }
+    },
+    {
+      "id": "stuck",
+      "kind": "feature",
+      "keywords": ["卡住", "卡關", "看不懂", "文件不同", "網站", "stuck", "problem", "website"],
+      "title": {"zh-Hant": "我卡住了", "en": "I'm stuck"},
+      "body": {
+        "zh-Hant": "在某個步驟遇到問題時，按「我卡住了」並選擇原因，例如看不懂這一步、需要的文件不同、網站無法使用。你的回報會幫助管理者改善流程，也能幫助下一位學生。",
+        "en": "If a step goes wrong, tap \"I'm stuck\" and choose what happened, such as not understanding the step, different documents being required, or the website not working. Your report helps admins improve the procedure and helps the next student."
+      }
+    },
+    {
+      "id": "complete-feedback",
+      "kind": "feature",
+      "keywords": ["完成回饋", "流程不同", "沒有完成", "回報", "completion", "different", "feedback", "report"],
+      "title": {"zh-Hant": "完成回饋與回報差異", "en": "Completion feedback and reporting differences"},
+      "body": {
+        "zh-Hant": "辦完後按「完成此流程」，選擇「是，我完成了」、「流程和原本不同」或「否，我沒有完成」。選擇流程不同時，可以指出哪裡不同：文件、費用、地點、流程或資格。回報會先送交審核，不會直接改動流程卡。",
+        "en": "When you finish, tap \"Complete this procedure\" and choose \"Yes, I completed it\", \"The process was different\" or \"No, I didn't complete it\". If it was different, say what changed: documents, fee, location, process or eligibility. Reports are reviewed first and never change the card directly."
+      }
+    },
+    {
+      "id": "experiences",
+      "kind": "glossary",
+      "keywords": ["學生經驗", "經驗", "探索", "experience", "explore", "stories"],
+      "title": {"zh-Hant": "學生經驗", "en": "Student experiences"},
+      "body": {
+        "zh-Hant": "學生經驗是其他國際生分享的真實感受與做法，可以在「探索」依主題（生活適應、文化與溝通）和身分（學位生、交換生、華語生）篩選。經驗是個人觀點，不是官方規定，也不會標示為已驗證；不同情境下可能有不同做法。",
+        "en": "Student experiences are real feelings and approaches shared by other international students. In Explore you can filter by topic (life adaptation, culture and communication) and identity (degree, exchange or language student). Experiences are personal views, not official rules, and are never marked verified; different situations can call for different approaches."
+      }
+    },
+    {
+      "id": "experience-actions",
+      "kind": "feature",
+      "keywords": ["有幫助", "我也遇過", "我的經驗不同", "原文", "譯文", "翻譯", "helpful", "experienced", "different", "original", "translation"],
+      "title": {"zh-Hant": "經驗頁上的按鈕", "en": "Buttons on an experience"},
+      "body": {
+        "zh-Hant": "「這對我有幫助」和「我也遇過」可以回應一則經驗；「我的經驗不同」可以分享你自己的不同經驗，並連回原本那則。「查看原文」和「查看譯文」可以切換作者的原話與 AI 翻譯。",
+        "en": "\"This helped me\" and \"I experienced this too\" let you respond to an experience. \"My experience was different\" lets you share your own, linked to the original. \"Show original\" and \"Show translation\" switch between the author's words and the AI translation."
+      }
+    },
+    {
+      "id": "share",
+      "kind": "feature",
+      "keywords": ["分享", "發布", "匿名", "share", "post", "publish", "anonymous"],
+      "title": {"zh-Hant": "分享經驗", "en": "Sharing an experience"},
+      "body": {
+        "zh-Hant": "在「分享」寫下發生了什麼，一句話就可以，再選主題和身分類型。按「請 AI 幫我整理」後，你會看到 AI 整理的情境和提醒；確認或修改後按「確認並匿名發布」。發布前你都可以修改原話。",
+        "en": "In Share, write what happened (one sentence is enough), then pick a topic and identity type. Tap \"Ask AI to organize\" to see the situation and reminder AI drafted, then confirm or edit and tap \"Confirm and publish anonymously\". You can edit your original words before publishing."
+      }
+    },
+    {
+      "id": "ai-summary",
+      "kind": "faq",
+      "keywords": ["AI 整理", "摘要", "確認", "ai summary", "summary", "confirm"],
+      "title": {"zh-Hant": "為什麼要確認 AI 整理？", "en": "Why confirm the AI summary?"},
+      "body": {
+        "zh-Hant": "AI 會把你的原話整理成情境和給下一位學生的提醒，但它可能誤解你的意思，所以一定要由你確認後才會發布。發布後的經驗會標示「AI 整理，已由作者確認」，你的原話也會一起保留。",
+        "en": "AI turns your words into a situation and a reminder for the next student, but it can misread you, so nothing is published until you confirm it. Published experiences are labeled \"AI-organized, confirmed by the author\", and your original words are kept alongside."
+      }
+    },
+    {
+      "id": "privacy",
+      "kind": "faq",
+      "keywords": ["匿名", "隱私", "姓名", "學校", "公開", "privacy", "anonymous", "name", "school"],
+      "title": {"zh-Hant": "別人看得到我是誰嗎？", "en": "Can others see who I am?"},
+      "body": {
+        "zh-Hant": "不會。分享的經驗是匿名公開的，你的姓名與學校不會顯示給其他使用者。",
+        "en": "No. Shared experiences are public but anonymous; your name and school are not shown to other users."
+      }
+    },
+    {
+      "id": "my-page",
+      "kind": "feature",
+      "keywords": ["我的", "我的經驗", "影響", "語言", "切換語言", "英文", "中文", "my", "profile", "impact", "language", "english", "chinese"],
+      "title": {"zh-Hant": "我的", "en": "My"},
+      "body": {
+        "zh-Hant": "「我的」會列出你分享過的經驗和你的影響，例如有多少人覺得有幫助。你也可以在這裡切換語言：繁體中文、English 或跟隨系統。",
+        "en": "My lists the experiences you shared and your impact, such as how many people found them helpful. You can also switch language here: Traditional Chinese, English or follow the system."
+      }
+    },
+    {
+      "id": "assistant",
+      "kind": "faq",
+      "keywords": ["助理", "AI", "問答", "可以做什麼", "assistant", "chat", "what can you do"],
+      "title": {"zh-Hant": "AI 助理能做什麼？", "en": "What can the assistant do?"},
+      "body": {
+        "zh-Hant": "助理可以幫你找流程卡和學生經驗、說明步驟與驗證狀態、查看你的辦理進度、帶你到相關頁面，也能幫你準備「開始辦理」讓你確認。助理不會替你送出任何申請，也不能修改流程或驗證狀態；它的回答會附上依據，遇到沒有資料的問題會直接說明，建議你向學校國際處確認。",
+        "en": "The assistant finds procedure cards and student experiences, explains steps and verification status, shows your progress, takes you to the right page and can prepare \"Start procedure\" for you to confirm. It never submits applications for you and cannot change procedures or verification status. Its answers cite their basis, and when it has no data it says so and suggests asking your school's international office."
+      }
+    },
+    {
+      "id": "outdated-info",
+      "kind": "faq",
+      "keywords": ["過時", "不一樣", "不準", "錯誤", "更新", "outdated", "wrong", "different", "update"],
+      "title": {"zh-Hant": "發現資訊和實際不同怎麼辦？", "en": "What if the information doesn't match reality?"},
+      "body": {
+        "zh-Hant": "請在流程的完成回饋選「流程和原本不同」，或在卡住的步驟按「我卡住了」回報。管理者審查後會決定是否更新流程卡並發布新版本。急件請直接向學校國際處或主管機關確認。",
+        "en": "Choose \"The process was different\" in the completion feedback, or tap \"I'm stuck\" on the step. Admins review reports and decide whether to publish an updated version of the card. For anything urgent, confirm directly with your school's international office or the authority."
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Culture Bridge — Backend
 
-Python 3.12 + FastAPI。目前只有 AI 助理（工作分配 A-11、A-12）；core、登入與其他 API 由 B、D 補上。
+Python 3.12 + FastAPI。目前只有 AI 助理（工作分配 A-11、A-12、A-14、A-17、A-18）；core、登入與其他 API 由 B、D 補上。
 架構見 [tech-architecture](../docs/tech-architecture.md) 第三、四節。
 
 ## 啟動
@@ -61,6 +61,8 @@ POST /assistant/message
 | get_experience | 經驗原文、摘要、提醒；同時產生經驗卡 |
 | get_my_progress | 登入使用者的辦理進度；訪客回 `requires_login` |
 | open_screen | 白名單畫面動作（open_action、open_experience、open_explore、open_share、open_progress），會檢查目標存在 |
+| search_app_help | 查 App 使用說明知識庫（`knowledge/app_guide.json`），只說明 App 怎麼用，不提供流程內容 |
+| propose_start_action | 使用者要求開始辦理時，產生待確認操作，不會直接寫入；訪客回 `requires_login` |
 
 新增工具：在 `tools.py` 寫一個 `ToolArgs` 參數 model 和 handler，加進 `TOOLS`。參數的 JSON schema 由 pydantic 產生。
 
@@ -74,6 +76,9 @@ POST /assistant/message
              "verification_status": "verified", "last_verified_at": "2026-08-16",
              "recent_success_count": 18, "sources": ["…"]}],
   "screen_actions": [{"type": "open_action", "target_id": "work-permit", "topic": null}],
+  "pending_operations": [{"id": "…", "type": "start_action", "target_id": "work-permit",
+                          "summary": "開始辦理「申請工作證」", "status": "pending",
+                          "expires_at": "2026-10-13T04:05:00Z", "result": null}],
   "tools_used": ["search_actions", "get_action"],
   "fallback": false
 }
@@ -81,10 +86,42 @@ POST /assistant/message
 
 清除對話：`DELETE /assistant/conversations/{conversation_id}`。
 
+### 待確認操作（A-17）
+
+會寫入資料的要求不會由助理直接執行。`propose_start_action` 只建立一筆待確認操作（5 分鐘到期），
+App 顯示確認卡，由使用者決定：
+
+| API | 說明 |
+|---|---|
+| `GET /assistant/operations/{id}` | 查狀態：pending、confirmed、cancelled、expired、failed |
+| `POST /assistant/operations/{id}/confirm` | 重新檢查登入、擁有者、到期與目標流程後才寫入；重複確認只寫一次，回傳同一個結果 |
+| `POST /assistant/operations/{id}/cancel` | 取消（只記錄，不寫入） |
+
+錯誤：未登入 401 `login_required`；不是自己的或不存在 404 `operation_not_found`；
+已到期、已取消、已確認後再取消 409 `operation_expired`／`operation_cancelled`／`operation_confirmed`。
+
+目前操作存在記憶體、寫入示範資料；之後換成 `assistant_operations` 資料表（B-2）與 D 的辦理服務（D-3），
+介面是 `operations.py` 的 `ExecutionWriter`。
+
+### 存取控制與用量（A-18）
+
+| 設定 | 預設 | 說明 |
+|---|---|---|
+| `ASSISTANT_ALLOW_GUESTS` | 開發環境 true，其他 false | 訪客能不能用助理（尚未決定，見技術架構 §9.6）；不行時回 401 `login_required` |
+| `ASSISTANT_PER_MINUTE` | 10 | 每人（訪客依 IP）每分鐘訊息數，超過回 429 `rate_limited` 並附 `Retry-After` |
+| `ASSISTANT_PER_DAY` | 100 | 每人每天訊息數（台北時間），超過回 429 `daily_limit_reached` |
+| `ASSISTANT_DAILY_LLM_CALLS` | 3000 | 全體每天呼叫 Gemini 的上限，超過時回備用回覆（200、`fallback: true`），控制費用 |
+
+計數存在記憶體，多個 Cloud Run 執行個體會各自計算。部署到 Cloud Run 時要讓 uvicorn 讀
+`X-Forwarded-For`（`--proxy-headers --forwarded-allow-ips='*'`），訪客才會依真實 IP 計算。
+
+### 知識庫（A-14）
+
+`app/assistant/knowledge/app_guide.json`：App 功能、導覽、常見問題、名詞，中英文各一份，帶版本號。
+只說明 App 怎麼用；流程步驟、文件、費用、日期一律由資料工具提供。修改內容時兩種語言一起改，並更新 `version`。
+
 ### 還沒做（後續項目）
 
-- A-13/14：回答規則已寫進 system prompt（`prompts.py`），知識庫尚未建立
-- A-17：待確認操作（例如開始辦理）
-- A-18：登入限制、頻率限制、每日用量上限
-- A-19～22：語意搜尋工具 `semantic_search`
-- 換成 Cloud SQL 的 `AssistantDataSource`（需要 B 的 SQLAlchemy／搜尋 API）
+- A-19～22：語意搜尋工具 `semantic_search`（需要 B 的 migration 機制與 Gemini embedding）
+- 換成 Cloud SQL 的 `AssistantDataSource`、待確認操作資料表（需要 B 的 SQLAlchemy／搜尋 API 與 D 的辦理服務）
+- 用真實 Gemini 金鑰實測回答品質（A-5 之後）

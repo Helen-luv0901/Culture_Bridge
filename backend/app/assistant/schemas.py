@@ -1,6 +1,7 @@
 """Request and response bodies for /assistant."""
 
-from typing import Annotated, Literal
+from datetime import datetime
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -54,10 +55,23 @@ class ExperienceCard(BaseModel):
 Card = Annotated[ActionCard | ExperienceCard, Field(discriminator="type")]
 
 
+class PendingOperationOut(BaseModel):
+    """A write the user must confirm in the app (POST /assistant/operations/{id}/confirm)."""
+
+    id: str
+    type: Literal["start_action"]
+    target_id: str
+    summary: str
+    status: Literal["pending", "confirmed", "cancelled", "expired", "failed"]
+    expires_at: datetime
+    result: dict[str, Any] | None = None
+
+
 class AssistantReply(BaseModel):
     conversation_id: str
     text: str
     cards: list[Card] = []
     screen_actions: list[ScreenAction] = []
+    pending_operations: list[PendingOperationOut] = []
     tools_used: list[str] = []
     fallback: bool = False

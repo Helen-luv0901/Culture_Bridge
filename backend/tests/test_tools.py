@@ -18,6 +18,8 @@ def test_specs_are_plain_json_schema():
         "get_experience",
         "get_my_progress",
         "open_screen",
+        "search_app_help",
+        "propose_start_action",
     }
     search = specs["search_experiences"].parameters
     assert search["type"] == "object"
@@ -124,3 +126,32 @@ def test_tool_crash_is_contained(ctx, monkeypatch):
 
     monkeypatch.setattr(ctx.data, "search_actions", boom)
     assert "unavailable" in run(ctx, "search_actions", query="arc")["error"]
+
+
+def test_app_help_answers_how_to_questions(ctx):
+    result = run(ctx, "search_app_help", query="驗證狀態代表什麼")
+    assert result["guide_version"]
+    assert result["results"][0]["id"] == "verification-status"
+
+    ctx.locale = "en"
+    share = run(ctx, "search_app_help", query="how do I share anonymously")
+    assert share["results"][0]["id"] in {"share", "privacy"}
+    assert share["results"][0]["body"].isascii() or "Share" in share["results"][0]["body"]
+
+
+def test_app_guide_is_complete_in_both_languages():
+    from app.assistant.knowledge import default_knowledge_base
+
+    kb = default_knowledge_base()
+    ids = [e.id for e in kb.entries]
+    assert len(ids) == len(set(ids))
+    for entry in kb.entries:
+        assert entry.title.zh and entry.title.en and entry.body.zh and entry.body.en
+        assert entry.title.zh != entry.title.en
+
+
+def test_search_prefers_titles_and_ignores_question_words(ctx):
+    assert run(ctx, "search_actions", query="ARC")["results"][0]["action_id"] == "arc"
+    ctx.locale = "en"
+    found = run(ctx, "search_actions", query="how do I get health insurance")["results"]
+    assert found[0]["action_id"] == "insurance"

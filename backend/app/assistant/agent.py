@@ -23,8 +23,9 @@ from app.assistant.llm import (
     UserTurn,
 )
 from app.assistant.memory import ConversationStore
+from app.assistant.operations import OperationService, PendingOperation
 from app.assistant.prompts import build_system_prompt, build_user_message
-from app.assistant.schemas import AssistantMessageRequest, AssistantReply
+from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import ToolContext, ToolRegistry
 from app.core.auth import CurrentUser
 
@@ -44,6 +45,18 @@ def taipei_today() -> date:
     return datetime.now(UTC).astimezone(TAIPEI).date()
 
 
+def operation_out(operation: PendingOperation) -> PendingOperationOut:
+    return PendingOperationOut(
+        id=operation.id,
+        type=operation.type,
+        target_id=operation.target_id,
+        summary=operation.summary,
+        status=operation.status,
+        expires_at=operation.expires_at,
+        result=operation.result,
+    )
+
+
 def conversation_owner(user: CurrentUser | None) -> str:
     return f"user:{user.id}" if user else "guest"
 
@@ -56,12 +69,14 @@ class Assistant:
         registry: ToolRegistry,
         memory: ConversationStore,
         max_tool_rounds: int = 5,
+        operations: OperationService | None = None,
     ) -> None:
         self._llm = llm
         self._data = data
         self._registry = registry
         self._memory = memory
         self._max_tool_rounds = max_tool_rounds
+        self._operations = operations
 
     def reply(self, request: AssistantMessageRequest, user: CurrentUser | None) -> AssistantReply:
         owner = conversation_owner(user)
@@ -69,7 +84,9 @@ class Assistant:
         history: list[Turn] = self._memory.load(owner, conversation_id)
         history.append(UserTurn(build_user_message(request.message, request.screen)))
 
-        ctx = ToolContext(data=self._data, locale=request.locale, user=user)
+        ctx = ToolContext(
+            data=self._data, locale=request.locale, user=user, operations=self._operations
+        )
         system = build_system_prompt(request.locale, taipei_today())
         specs = self._registry.specs()
         tools_used: list[str] = []
@@ -124,6 +141,7 @@ class Assistant:
             text=turn.text,
             cards=list(ctx.cards.values()),
             screen_actions=ctx.screen_actions,
+            pending_operations=[operation_out(op) for op in ctx.proposed_operations],
             tools_used=tools_used,
         )
 
