@@ -45,6 +45,16 @@ run() {
   fi
 }
 
+# Run a command whose output may contain a secret (e.g. api-keys create prints keyString even
+# with --format=none). Shows nothing on success; on failure shows the error with keys masked.
+hide_output() {
+  local output
+  if output="$("$@" 2>&1)"; then return 0; fi
+  printf '%s\n' "${output}" \
+    | sed -E 's/AIza[0-9A-Za-z_-]+/********/g; s/("?keyString"?[:=] *"?)[^",[:space:]]+/\1********/g' >&2
+  return 1
+}
+
 # For anything that costs money or cannot be undone.
 confirm_yes() {
   printf '\n\033[33m%s\033[0m\n' "$1"
@@ -253,7 +263,7 @@ step_gemini() {
   name="$(gcloud services api-keys list --project="${PROJECT}" \
     --filter='displayName=culture-bridge-backend' --format='value(name)' 2>/dev/null | head -n1)"
   if [[ -z "${name}" ]]; then
-    run gcloud services api-keys create --project="${PROJECT}" \
+    run hide_output gcloud services api-keys create --project="${PROJECT}" \
       --display-name=culture-bridge-backend \
       --api-target=service=generativelanguage.googleapis.com --format=none
     name="$(gcloud services api-keys list --project="${PROJECT}" \
@@ -362,6 +372,13 @@ step_deploy() {
     --project="${PROJECT}" >/dev/null 2>&1 \
     || run gcloud artifacts repositories create culture-bridge --repository-format=docker \
       --location="${REGION}" --project="${PROJECT}"
+  # New projects run Cloud Build as the default Compute service account, which cannot read the
+  # uploaded source without this role (403 storage.objects.get). Granting it again is harmless.
+  local project_number
+  project_number="$(gcloud projects describe "${PROJECT}" --format='value(projectNumber)')"
+  run gcloud projects add-iam-policy-binding "${PROJECT}" \
+    --member="serviceAccount:${project_number}-compute@developer.gserviceaccount.com" \
+    --role=roles/cloudbuild.builds.builder --condition=None --quiet
   local tag
   tag="$(git -C "${REPO_ROOT}" rev-parse --short HEAD)"
   run gcloud builds submit "${REPO_ROOT}" --tag="${IMAGE_REPO}:${tag}" \
@@ -402,7 +419,7 @@ step_deploy() {
   if [[ -n "${SERVICE_URL}" ]]; then
     note "網址：${SERVICE_URL}"
     add_authorized_domain "${SERVICE_URL#https://}"
-    note "檢查：$(curl -fsS "${SERVICE_URL}/healthz" 2>/dev/null || echo '尚未回應')"
+    note "檢查：$(curl -fsS "${SERVICE_URL}/health" 2>/dev/null || echo '尚未回應')"
     note "設定：$(curl -fsS "${SERVICE_URL}/api/config" 2>/dev/null || echo '尚未回應')"
   fi
 
@@ -417,10 +434,11 @@ step_monitoring() {
   bold "6. 監控（A-8）"
   [[ -n "${SERVICE_URL:-}" ]] || ask SERVICE_URL "服務網址（https://…）"
   [[ "${SERVICE_URL}" == https://* ]] || die "需要服務網址，請先完成步驟 5（部署）。"
-  run gcloud monitoring uptime create culture-bridge-healthz --project="${PROJECT}" \
+  # /healthz is reserved by Cloud Run and never reaches the app, so check /health.
+  run gcloud monitoring uptime create culture-bridge-uptime --project="${PROJECT}" \
     --resource-type=uptime-url \
     --resource-labels="host=${SERVICE_URL#https://},project_id=${PROJECT}" \
-    --path=/healthz --protocol=https --period=5
+    --path=/health --protocol=https --period=5
   note "伺服器錯誤會自動出現在 Error Reporting：https://console.cloud.google.com/errors?project=${PROJECT}"
   note "到 Monitoring → Alerting 為這個 uptime check 建立 Email 通知（主控台約一分鐘）。"
 }

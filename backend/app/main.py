@@ -44,8 +44,10 @@ def client_config() -> dict:
 app.include_router(api)
 
 
+# Cloud Run reserves /healthz (its own 404 page answers it), so deployed checks use /health.
+@app.get("/health", include_in_schema=False)
 @app.get("/healthz", include_in_schema=False)
-def healthz() -> dict[str, str]:
+def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
