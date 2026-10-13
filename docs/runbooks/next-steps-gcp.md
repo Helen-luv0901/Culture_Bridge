@@ -6,15 +6,17 @@
 - ✅ 步驟 2 資料庫搬遷：新執行個體 `culturebridge-db`（PostgreSQL 18、db-f1-micro），資料庫 `culturebridge`，帳號 `postgres`；連線字串在 Secret Manager `database-url`；筆數比對全部一致（`bash scripts/compare-migration.sh`）
 - ✅ 步驟 3 Gemini 金鑰：存在 Secret Manager `gemini-api-key`（第一次執行時金鑰被印到畫面上，已手動換新；腳本已修正，不會再印出）
 - ✅ 步驟 4 Firebase 登入：Google 登入已啟用，公開名稱「Culture Bridge」；兩個 `run.app` 網域都已加入 Authorized domains
-- ✅ 步驟 5 部署：revision `culture-bridge-00001-j21`，映像檔 tag `bf91e54`
+- ✅ 步驟 5 部署：第一次 revision `culture-bridge-00001-j21`（`bf91e54`）；2026-10-14 重新部署 `main` 為 `culture-bridge-00002-bx2`（`986a231`，含 migration `0005_usage_metrics`）
 - ✅ 步驟 6 監控：uptime check `culture-bridge-uptime`（檢查 `/api/config`），Email 警報政策「culture-bridge is down」
 - ✅ 步驟 1 費用警報：每月 1000TWD
-- ⬜ 剩下：第 6 節「第一位管理者」、第 7 節「刪除舊試用執行個體」（先問 A）
+- ✅ 第 6 節 第一位管理者：已設定
+- ✅ 第 7 節 舊試用執行個體 `free-trial-first-project` 已刪除（刪前確認 `postgres` 資料庫沒有資料表），匯出用的 bucket 也一併刪除；目前只剩 `culturebridge-db`，備份靠它的每日自動備份
+- 以後重新部署：`git checkout main && git pull` 後執行 `bash scripts/gcp-setup.sh 5`，「第一次接 Alembic 嗎？」要回答 **N**；Cloud Shell 出現 `You do not currently have an active account selected` 時，重新整理頁面並在「授權 Cloud Shell」按授權
 
 2026-10-14 實際執行時遇到、已在腳本修正的問題（下一個人照跑就不會再遇到）：
 - `gcloud services api-keys create --format=none` 仍會印出 `keyString`：步驟 3 現在把輸出藏起來，失敗時只顯示遮掉金鑰的錯誤
 - 新專案的 Cloud Build 用 `<專案編號>-compute@developer.gserviceaccount.com` 執行，`gcloud builds submit` 會 403 `storage.objects.get`：步驟 5c 先授予 `roles/cloudbuild.builds.builder`
-- Cloud Run 保留了 `/healthz`（回 Google 自己的 404，不會到後端）：健康檢查改用 `/health`。目前線上版本（`bf91e54`）還沒有 `/health`，下次部署之後才能用；在那之前 uptime check 維持 `/api/config`
+- Cloud Run 保留了 `/healthz`（回 Google 自己的 404，不會到後端）：健康檢查改用 `/health`。目前線上版本（`986a231`）還沒有 `/health`，這個修正合併進 `main` 並重新部署之後才能用；在那之前 uptime check 維持 `/api/config`
 
 所有指令在 Google Cloud Shell（https://shell.cloud.google.com ，帳號 candy950712@gmail.com）的 `~/Culture_Bridge` 執行。腳本在分支 `claude/awesome-mayer-6q7cq2`。
 
