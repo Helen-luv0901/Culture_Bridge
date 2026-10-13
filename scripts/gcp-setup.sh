@@ -255,7 +255,7 @@ step_gemini() {
   if [[ -z "${name}" ]]; then
     run gcloud services api-keys create --project="${PROJECT}" \
       --display-name=culture-bridge-backend \
-      --api-target=service=generativelanguage.googleapis.com
+      --api-target=service=generativelanguage.googleapis.com --format=none
     name="$(gcloud services api-keys list --project="${PROJECT}" \
       --filter='displayName=culture-bridge-backend' --format='value(name)' 2>/dev/null | head -n1)"
   else
