@@ -1,11 +1,23 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
-from app.api import assistant
+from app.api import assistant, me
+from app.core.errors import register_error_handlers
 
-app = FastAPI(title="Culture Bridge API", version="0.1.0")
-app.include_router(assistant.router)
+app = FastAPI(
+    title="Culture Bridge API",
+    version="0.2.0",
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+)
+register_error_handlers(app)
+
+# Everything lives under /api so the web app can own every other path (/explore, /actions/…).
+api = APIRouter(prefix="/api")
+api.include_router(me.router)
+api.include_router(assistant.router)
+app.include_router(api)
 
 
-@app.get("/healthz")
+@app.get("/healthz", include_in_schema=False)
 def healthz() -> dict[str, str]:
     return {"status": "ok"}

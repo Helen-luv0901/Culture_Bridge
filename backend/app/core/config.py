@@ -11,6 +11,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 @dataclass(frozen=True)
 class Settings:
     env: str
+    database_url: str
+    firebase_project_id: str | None
+    web_dir: Path | None
+    ai_summaries_per_day: int
     gemini_api_key: str | None
     gemini_model: str
     gemini_timeout_seconds: float
@@ -37,6 +41,13 @@ def get_settings() -> Settings:
     env = os.getenv("APP_ENV", "development")
     return Settings(
         env=env,
+        database_url=os.getenv(
+            "DATABASE_URL", "postgresql+psycopg://postgres@localhost:5432/culturebridge"
+        ),
+        firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or None,
+        # Built Flutter web app (flutter build web); served at / when present.
+        web_dir=Path(os.environ["WEB_DIR"]) if os.getenv("WEB_DIR") else None,
+        ai_summaries_per_day=int(os.getenv("AI_SUMMARIES_PER_DAY", "20")),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),
