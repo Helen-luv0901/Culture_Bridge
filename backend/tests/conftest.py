@@ -139,11 +139,15 @@ def make_assistant(data, operations) -> Callable[..., Assistant]:
 
 
 @pytest.fixture
-def client(make_assistant, operations):
+def client(make_assistant, db):
+    """The assistant API over the seeded demo database, with a scripted model."""
+    from app.seed import seed
+
+    seed(db, get_settings().demo_content_path)
+
     def use(llm, allow_guests: bool = True, limiter: UsageLimiter | None = None):
         services = AssistantServices(
             assistant=make_assistant(llm),
-            operations=operations,
             limiter=limiter or UsageLimiter(per_minute=100, per_day=1000),
             allow_guests=allow_guests,
         )

@@ -22,7 +22,7 @@ from app.assistant.data import (
 )
 from app.assistant.knowledge import default_knowledge_base
 from app.assistant.llm import ToolCall, ToolResult, ToolSpec
-from app.assistant.operations import OPERATION_TTL, OperationService, PendingOperation
+from app.assistant.operations import OPERATION_TTL, OperationStore, PendingOperation
 from app.assistant.schemas import ActionCard, Card, ExperienceCard, ScreenAction, ScreenActionType
 from app.core.auth import CurrentUser
 
@@ -38,7 +38,7 @@ class ToolContext:
     data: AssistantDataSource
     locale: Locale
     user: CurrentUser | None
-    operations: OperationService | None = None
+    operations: OperationStore | None = None
     cards: dict[str, Card] = field(default_factory=dict)
     screen_actions: list[ScreenAction] = field(default_factory=list)
     proposed_operations: list[PendingOperation] = field(default_factory=list)

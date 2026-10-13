@@ -23,7 +23,7 @@ from app.assistant.llm import (
     UserTurn,
 )
 from app.assistant.memory import ConversationStore
-from app.assistant.operations import OperationService, PendingOperation
+from app.assistant.operations import OperationStore, PendingOperation
 from app.assistant.prompts import build_system_prompt, build_user_message
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import ToolContext, ToolRegistry
@@ -65,11 +65,11 @@ class Assistant:
     def __init__(
         self,
         llm: LLM,
-        data: AssistantDataSource,
+        data: AssistantDataSource | None,
         registry: ToolRegistry,
         memory: ConversationStore,
         max_tool_rounds: int = 5,
-        operations: OperationService | None = None,
+        operations: OperationStore | None = None,
     ) -> None:
         self._llm = llm
         self._data = data
@@ -78,14 +78,27 @@ class Assistant:
         self._max_tool_rounds = max_tool_rounds
         self._operations = operations
 
-    def reply(self, request: AssistantMessageRequest, user: CurrentUser | None) -> AssistantReply:
+    def reply(
+        self,
+        request: AssistantMessageRequest,
+        user: CurrentUser | None,
+        data: AssistantDataSource | None = None,
+        operations: OperationStore | None = None,
+    ) -> AssistantReply:
+        """Answer one message. `data`/`operations` are per-request (the caller's DB session);
+        the constructor's are the defaults used by unit tests."""
         owner = conversation_owner(user)
         conversation_id = request.conversation_id or uuid.uuid4().hex
         history: list[Turn] = self._memory.load(owner, conversation_id)
         history.append(UserTurn(build_user_message(request.message, request.screen)))
 
+        source = data or self._data
+        assert source is not None, "Assistant needs a data source"
         ctx = ToolContext(
-            data=self._data, locale=request.locale, user=user, operations=self._operations
+            data=source,
+            locale=request.locale,
+            user=user,
+            operations=operations or self._operations,
         )
         system = build_system_prompt(request.locale, taipei_today())
         specs = self._registry.specs()
