@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/auth_service.dart';
 import '../../domain/api_models.dart';
 import '../../domain/keys.dart';
 import '../core/design_system.dart';
@@ -517,6 +518,11 @@ class _AccountPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PaperHeading(vm.t('account')),
+          if (vm.profile != null)
+            SelectableText(
+              '${vm.pair('帳號編號', 'Account ID')}: ${vm.profile!.id}',
+              style: const TextStyle(fontSize: 13, color: Palette.muted),
+            ),
           if (vm.isStaff)
             TextButton(
               onPressed: () => context.push('/admin'),
@@ -634,7 +640,14 @@ class _SignInPageState extends State<SignInPage> {
           ),
           style: const TextStyle(color: Palette.muted),
         ),
-        if (vm.auth.usesDevLogin) ...[
+        if (vm.auth case DevAuthService(enabled: false))
+          ErrorPanel(
+            message: vm.pair(
+              '登入服務尚未設定，請聯絡管理者。',
+              'Sign-in is not set up yet. Please contact the team.',
+            ),
+          )
+        else if (vm.auth.usesDevLogin) ...[
           Text(vm.t('devLoginNote'), style: const TextStyle(fontSize: 14)),
           TextField(
             key: const Key('dev-name'),

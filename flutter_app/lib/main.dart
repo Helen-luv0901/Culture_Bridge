@@ -14,11 +14,19 @@ import 'ui/view_models/bridge_view_model.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
-  // Firebase when configured (--dart-define=FIREBASE_…); otherwise development logins.
-  final AuthService auth = FirebaseConfig.configured
-      ? await FirebaseAuthService.initialize()
-      : await DevAuthService.restore();
-  final api = ApiClient.fromEnvironment(token: auth.idToken);
+  // The token getter is wired up once we know which sign-in to use.
+  AuthService? auth;
+  final api = ApiClient.fromEnvironment(token: () async => auth?.idToken());
+  final server = await api.clientConfig();
+  final firebase =
+      FirebaseConfig.fromEnvironment() ??
+      FirebaseConfig.fromJson(server?['firebase'] as Map<String, dynamic>?);
+  auth = firebase != null
+      ? await FirebaseAuthService.initialize(firebase)
+      // No Firebase: development logins, which only a development server accepts.
+      : await DevAuthService.restore(
+          enabled: (server?['environment'] ?? 'development') == 'development',
+        );
   final vm = BridgeViewModel(
     repository: ApiCultureRepository(api),
     admin: AdminRepository(api),

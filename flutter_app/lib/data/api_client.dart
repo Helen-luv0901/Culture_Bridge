@@ -31,6 +31,15 @@ class ApiClient {
   final TokenProvider token;
   final http.Client _http;
 
+  /// Public startup settings (`GET /api/config`); null when the server can't be reached.
+  Future<Map<String, dynamic>?> clientConfig() async {
+    try {
+      return await get('/config') as Map<String, dynamic>;
+    } on ApiException {
+      return null;
+    }
+  }
+
   Future<dynamic> get(String path, [Map<String, String>? query]) =>
       _send('GET', path, query: query);
   Future<dynamic> post(String path, [Object? body]) =>

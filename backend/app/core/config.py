@@ -13,6 +13,8 @@ class Settings:
     env: str
     database_url: str
     firebase_project_id: str | None
+    # Firebase web app settings handed to the app at startup; public identifiers, not secrets.
+    firebase_web: dict[str, str] | None
     web_dir: Path | None
     ai_summaries_per_day: int
     embedding_model: str
@@ -38,6 +40,18 @@ def _flag(name: str, default: bool) -> bool:
     return default if value is None else value.strip().lower() in ("1", "true", "yes")
 
 
+def _firebase_web() -> dict[str, str] | None:
+    keys = {
+        "apiKey": "FIREBASE_WEB_API_KEY",
+        "appId": "FIREBASE_WEB_APP_ID",
+        "authDomain": "FIREBASE_AUTH_DOMAIN",
+        "messagingSenderId": "FIREBASE_MESSAGING_SENDER_ID",
+        "projectId": "FIREBASE_PROJECT_ID",
+    }
+    values = {name: os.getenv(env, "") for name, env in keys.items()}
+    return values if values["apiKey"] and values["projectId"] else None
+
+
 @lru_cache
 def get_settings() -> Settings:
     env = os.getenv("APP_ENV", "development")
@@ -47,6 +61,7 @@ def get_settings() -> Settings:
             "DATABASE_URL", "postgresql+psycopg://postgres@localhost:5432/culturebridge"
         ),
         firebase_project_id=os.getenv("FIREBASE_PROJECT_ID") or None,
+        firebase_web=_firebase_web(),
         # Built Flutter web app (flutter build web); served at / when present.
         web_dir=Path(os.environ["WEB_DIR"]) if os.getenv("WEB_DIR") else None,
         ai_summaries_per_day=int(os.getenv("AI_SUMMARIES_PER_DAY", "20")),

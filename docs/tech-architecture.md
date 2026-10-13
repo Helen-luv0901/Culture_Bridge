@@ -13,7 +13,7 @@ Flutter App（flutter_app/，Android 為主；Web 版可選）
         │
 資料庫（Google Cloud SQL for PostgreSQL；結構見 database/schema_postgres.sql）
         │
-外部服務：Google Gemini｜登入服務【待確認】｜Google Play Console
+外部服務：Google Gemini｜Firebase Authentication（Google 登入）｜Google Play Console
         │
 基礎設施：Google Cloud 專案 culture-bridge（Cloud SQL、後端主機、網域、監控）
 ```
@@ -241,7 +241,7 @@ App 顯示卡片、執行白名單內的畫面動作；需要時顯示確認卡
 | 服務 | 用途 | 狀態 |
 |---|---|---|
 | Google Gemini | 經驗摘要、翻譯、AI 助理問答、embedding（語意搜尋） | 已確認；方案與費用上限【待確認】 |
-| 登入服務 | 外部登入，後端只存識別碼 | 供應商【待確認】 |
+| Firebase Authentication | Google 登入；後端驗證 ID token，只存識別碼 | 已確認（2026-10-13） |
 | Google Play Console | 測試軌道與上架 | 帳號類型【待確認】 |
 | 推播 | 通知 | P1，MVP 不做 |
 
@@ -277,9 +277,9 @@ App 顯示卡片、執行白名單內的畫面動作；需要時顯示確認卡
 
 ## 九、尚未決定會影響架構的項目
 
-1. 登入服務供應商
+1. ~~登入服務供應商~~：已決定 Firebase Authentication（2026-10-13）
 2. 套件名稱與最低 Android 版本
-3. 是否同步上線 Web 版
+3. ~~是否同步上線 Web 版~~：先做 Web 版，與後端放同一個 Cloud Run 服務（2026-10-13，見 [A-7 部署步驟](runbooks/a7-deploy-cloud-run.md)）
 4. Gemini 方案與每日用量上限
 5. 檢舉與封鎖的處理範圍
 6. 訪客能否使用助理

@@ -19,25 +19,44 @@ abstract class AuthService extends ChangeNotifier {
   Future<void> deleteLogin();
 }
 
-/// Firebase options come from --dart-define so no project settings live in the repo:
-/// FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_PROJECT_ID, FIREBASE_AUTH_DOMAIN,
-/// FIREBASE_MESSAGING_SENDER_ID. They identify the project; they are not secrets.
+/// Firebase web settings: from --dart-define (FIREBASE_API_KEY, FIREBASE_APP_ID,
+/// FIREBASE_PROJECT_ID, FIREBASE_AUTH_DOMAIN, FIREBASE_MESSAGING_SENDER_ID) or, on the web,
+/// from the server's /api/config. They identify the project; they are not secrets.
 class FirebaseConfig {
-  static const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
-  static const appId = String.fromEnvironment('FIREBASE_APP_ID');
-  static const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
-  static const authDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
-  static const senderId = String.fromEnvironment(
-    'FIREBASE_MESSAGING_SENDER_ID',
-  );
-  static bool get configured => apiKey.isNotEmpty && projectId.isNotEmpty;
-  static FirebaseOptions get options => const FirebaseOptions(
-    apiKey: apiKey,
-    appId: appId,
-    projectId: projectId,
-    authDomain: authDomain,
-    messagingSenderId: senderId,
-  );
+  const FirebaseConfig(this.options);
+  final FirebaseOptions options;
+
+  static FirebaseConfig? fromEnvironment() {
+    const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
+    const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+    if (apiKey.isEmpty || projectId.isEmpty) return null;
+    return const FirebaseConfig(
+      FirebaseOptions(
+        apiKey: apiKey,
+        appId: String.fromEnvironment('FIREBASE_APP_ID'),
+        projectId: projectId,
+        authDomain: String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
+        messagingSenderId: String.fromEnvironment(
+          'FIREBASE_MESSAGING_SENDER_ID',
+        ),
+      ),
+    );
+  }
+
+  static FirebaseConfig? fromJson(Map<String, dynamic>? json) {
+    final apiKey = json?['apiKey'] as String? ?? '';
+    final projectId = json?['projectId'] as String? ?? '';
+    if (apiKey.isEmpty || projectId.isEmpty) return null;
+    return FirebaseConfig(
+      FirebaseOptions(
+        apiKey: apiKey,
+        appId: json!['appId'] as String? ?? '',
+        projectId: projectId,
+        authDomain: json['authDomain'] as String?,
+        messagingSenderId: json['messagingSenderId'] as String? ?? '',
+      ),
+    );
+  }
 }
 
 class FirebaseAuthService extends AuthService {
@@ -45,8 +64,8 @@ class FirebaseAuthService extends AuthService {
     _auth.idTokenChanges().listen((_) => notifyListeners());
   }
 
-  static Future<FirebaseAuthService> initialize() async {
-    await Firebase.initializeApp(options: FirebaseConfig.options);
+  static Future<FirebaseAuthService> initialize(FirebaseConfig config) async {
+    await Firebase.initializeApp(options: config.options);
     return FirebaseAuthService._(fb.FirebaseAuth.instance);
   }
 
@@ -92,15 +111,18 @@ class FirebaseAuthService extends AuthService {
 
 /// Used when Firebase is not configured (local development against APP_ENV=development):
 /// sends `dev:<name>[:<role>]` tokens the backend accepts only in development.
+/// With [enabled] false (a production server without Firebase) nobody can sign in.
 class DevAuthService extends AuthService {
-  DevAuthService(this._preferences);
+  DevAuthService(this._preferences, {this.enabled = true});
   final SharedPreferences? _preferences;
+  final bool enabled;
   String? _token;
 
-  static Future<DevAuthService> restore() async {
+  static Future<DevAuthService> restore({bool enabled = true}) async {
     final preferences = await SharedPreferences.getInstance();
-    return DevAuthService(preferences)
-      .._token = preferences.getString('dev-token');
+    final service = DevAuthService(preferences, enabled: enabled);
+    if (enabled) service._token = preferences.getString('dev-token');
+    return service;
   }
 
   @override
@@ -116,6 +138,7 @@ class DevAuthService extends AuthService {
 
   @override
   Future<void> signInAsDev(String name, {String? role}) async {
+    if (!enabled) throw UnsupportedError('Sign-in is not configured');
     final clean = name.trim().toLowerCase().replaceAll(
       RegExp(r'[^a-z0-9_-]'),
       '',
