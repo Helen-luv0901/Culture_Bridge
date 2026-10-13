@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/api_models.dart';
+import '../../domain/keys.dart';
 import '../core/design_system.dart';
-import '../../domain/models.dart';
+import '../core/loading.dart';
+
+export '../core/loading.dart' show MissingContent;
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -16,10 +20,19 @@ class HomePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PaperHeading(vm.t('startAction'), badge: vm.t('officialProcess')),
-          for (final action in vm.actions) ...[
-            ActionSlip(action: action),
-            const SizedBox(height: 10),
-          ],
+          ResourceView<List<ActionSummary>>(
+            resource: (vm) => vm.actions,
+            load: (vm) => vm.loadActions(),
+            builder: (context, actions) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final action in actions) ...[
+                  ActionSlip(action: action),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -102,6 +115,10 @@ class HomePage extends StatelessWidget {
             ],
           ),
         ),
+        if (vm.signedIn) ...[
+          const SizedBox(height: 24),
+          const MyProgressPanel(),
+        ],
         const SizedBox(height: 24),
         LayoutBuilder(
           builder: (context, c) {
@@ -125,24 +142,93 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class ActionSlip extends StatelessWidget {
-  const ActionSlip({super.key, required this.action});
-  final ActionItem action;
+/// "My procedures" on Home (product-map §17A): the procedures in progress.
+class MyProgressPanel extends StatelessWidget {
+  const MyProgressPanel({super.key});
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final icons = {
-      'work-permit': 'permit',
-      'arc': 'arc',
-      'insurance': 'nhi',
-      'bank': 'bank',
-      'enrollment': 'enroll',
-    };
-    final status = action.text('status', false) == 'Needs Review'
-        ? 'needsReview'
-        : action.text('status', false) == 'Community Supported'
-        ? 'communitySupported'
-        : 'verified';
+    return ResourceView<List<Execution>>(
+      resource: (vm) => vm.executions,
+      load: (vm) => vm.loadExecutions(),
+      builder: (context, executions) {
+        if (executions.isEmpty) return const SizedBox.shrink();
+        return PaperCard(
+          color: Palette.high,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PaperHeading(vm.t('myActionProgress')),
+              for (final e in executions)
+                ListTile(
+                  key: Key('progress-${e.actionId}'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    e.title.of(vm.english),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${vm.t('progress')}: ${e.doneCount} / ${e.steps.length}',
+                        ),
+                        const SizedBox(height: 6),
+                        LinearProgressIndicator(
+                          value: e.steps.isEmpty
+                              ? 0
+                              : e.doneCount / e.steps.length,
+                          backgroundColor: Palette.edge,
+                          color: Palette.moss,
+                          minHeight: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                  trailing: TextButton(
+                    onPressed: () =>
+                        context.push('/actions/${e.actionId}/progress'),
+                    child: Text(vm.t('continueAction')),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class StatusTag extends StatelessWidget {
+  const StatusTag(this.status, {super.key});
+  final String status;
+  @override
+  Widget build(BuildContext context) => PaperTag(
+    BridgeScope.of(context).t(statusKey(status)),
+    color: switch (status) {
+      'verified' => Palette.paleMoss,
+      'needs_review' || 'outdated' => Palette.ochre,
+      _ => Palette.oat,
+    },
+  );
+}
+
+class ActionSlip extends StatelessWidget {
+  const ActionSlip({super.key, required this.action});
+  final ActionSummary action;
+  static const _icons = {
+    'work-permit': 'permit',
+    'arc': 'arc',
+    'insurance': 'nhi',
+    'bank': 'bank',
+    'certificate': 'enroll',
+    'transport': 'compass',
+  };
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
     return PaperCard(
       padding: const EdgeInsets.all(8),
       child: ListTile(
@@ -150,29 +236,27 @@ class ActionSlip extends StatelessWidget {
         leading: Container(
           color: Palette.oat,
           padding: const EdgeInsets.all(10),
-          child: InkIcon(icons[action.id] ?? 'enroll'),
+          child: InkIcon(_icons[action.id] ?? 'enroll'),
         ),
         title: Text(
-          action.text('title', vm.english),
+          action.title.of(vm.english),
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 6),
-            Text(
-              '${vm.t('lastUpdated')}: ${action.text('verifiedAt', false)}',
-              style: const TextStyle(
-                fontFamily: 'CourierPrime',
-                fontFamilyFallback: ['NotoSerifTC'],
-                fontSize: 12,
+            if (action.lastVerifiedAt != null)
+              Text(
+                '${vm.t('lastUpdated')}: ${formatDate(action.lastVerifiedAt)}',
+                style: const TextStyle(
+                  fontFamily: 'CourierPrime',
+                  fontFamilyFallback: ['NotoSerifTC'],
+                  fontSize: 12,
+                ),
               ),
-            ),
             const SizedBox(height: 6),
-            PaperTag(
-              vm.t(status),
-              color: status == 'needsReview' ? Palette.ochre : Palette.paleMoss,
-            ),
+            StatusTag(action.verificationStatus),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -182,13 +266,28 @@ class ActionSlip extends StatelessWidget {
   }
 }
 
-class ExplorePage extends StatelessWidget {
+class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key, required this.topic});
   final String topic;
   @override
+  State<ExplorePage> createState() => _ExplorePageState();
+}
+
+class _ExplorePageState extends State<ExplorePage> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final items = vm.filtered(topic);
+    final topic = widget.topic;
+    final from = '/explore${topic == 'all' ? '' : '?topic=$topic'}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -210,6 +309,17 @@ class ExplorePage extends StatelessWidget {
               ),
           ],
         ),
+        const SizedBox(height: 16),
+        TextField(
+          key: const Key('explore-search'),
+          controller: _search,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: vm.t('searchExperiences'),
+            prefixIcon: const Icon(Icons.search),
+          ),
+          onSubmitted: (value) => setState(() => _query = value.trim()),
+        ),
         const SizedBox(height: 18),
         Text(
           vm.t('exploreNote'),
@@ -219,30 +329,55 @@ class ExplorePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        if (items.isEmpty)
-          Text(
-            vm.pair(
-              '目前沒有此分類的經驗，可以分享你的第一則。',
-              'No experiences yet. Share the first one.',
-            ),
-          ),
-        LayoutBuilder(
-          builder: (context, c) {
-            final columns =
-                MediaQuery.sizeOf(context).width > 1100 && c.maxWidth > 800
-                ? 2
-                : 1;
-            final width = (c.maxWidth - (columns - 1) * 24) / columns;
-            return Wrap(
-              spacing: 24,
-              runSpacing: 24,
+        ResourceView<ExperiencePage>(
+          key: ValueKey('$topic|$_query'),
+          resource: (vm) => vm.explore(topic, _query),
+          load: (vm) => vm.loadExplore(topic, query: _query),
+          builder: (context, page) {
+            if (page.items.isEmpty) {
+              return Text(
+                vm.pair(
+                  '目前沒有符合的經驗，可以分享你的第一則。',
+                  'No experiences here yet. Share the first one.',
+                ),
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final item in items)
-                  SizedBox(
-                    width: width,
-                    child: ExperienceCard(
-                      experience: item,
-                      from: '/explore${topic == 'all' ? '' : '?topic=$topic'}',
+                LayoutBuilder(
+                  builder: (context, c) {
+                    final columns =
+                        MediaQuery.sizeOf(context).width > 1100 &&
+                            c.maxWidth > 800
+                        ? 2
+                        : 1;
+                    final width = (c.maxWidth - (columns - 1) * 24) / columns;
+                    return Wrap(
+                      spacing: 24,
+                      runSpacing: 24,
+                      children: [
+                        for (final item in page.items)
+                          SizedBox(
+                            width: width,
+                            child: ExperienceCard(experience: item, from: from),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                if (page.nextOffset != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24),
+                    child: OutlinedButton(
+                      onPressed: vm.explore(topic, _query).loading
+                          ? null
+                          : () => vm.loadExplore(
+                              topic,
+                              query: _query,
+                              more: true,
+                            ),
+                      child: Text(vm.t('loadMore')),
                     ),
                   ),
               ],
@@ -260,12 +395,12 @@ class ExperienceCard extends StatelessWidget {
     required this.experience,
     this.from = '/explore',
   });
-  final Experience experience;
+  final ExperienceItem experience;
   final String from;
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final translated = vm.translated(experience.id);
+    final translated = vm.translated(experience);
     return PaperCard(
       tape: true,
       color: Palette.slate,
@@ -276,8 +411,8 @@ class ExperienceCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              PaperTag(vm.t(experience.topic)),
-              PaperTag(vm.t(experience.identity)),
+              PaperTag(vm.t(topicKey(experience.topicId))),
+              PaperTag(vm.t(identityKey(experience.identityType))),
               PaperTag(vm.t('anonymousShare')),
             ],
           ),
@@ -285,13 +420,13 @@ class ExperienceCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
-                vm.t('translatedFrom'),
+                vm.t('aiTranslated'),
                 style: const TextStyle(fontSize: 13, color: Palette.muted),
               ),
             ),
           const SizedBox(height: 18),
           Text(
-            '「${experience.text('originalVoice', translated)}」',
+            '「${experience.voice(translated)}」',
             style: const TextStyle(
               fontSize: 21,
               fontStyle: FontStyle.italic,
@@ -299,9 +434,7 @@ class ExperienceCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            '${vm.t('aiSummary')}: ${experience.text('summary', translated)}',
-          ),
+          Text('${vm.t('aiSummary')}: ${experience.summaryText(translated)}'),
           const SizedBox(height: 16),
           const Divider(color: Palette.edge),
           Wrap(
@@ -310,19 +443,23 @@ class ExperienceCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                '${experience.reactions} ${vm.t('reactions')}',
+                '${experience.differentCount} ${vm.t('reactions')}',
                 style: const TextStyle(fontSize: 13, color: Palette.muted),
               ),
               TextButton.icon(
-                onPressed: () => vm.toggleHelpful(experience.id),
+                onPressed: () {
+                  if (ensureSignedIn(context)) {
+                    vm.toggleReaction(experience, 'helpful');
+                  }
+                },
                 icon: Icon(
-                  vm.helpful(experience.id)
+                  vm.reacted(experience, 'helpful')
                       ? Icons.favorite
                       : Icons.favorite_border,
                   size: 18,
                 ),
                 label: Text(
-                  '${experience.helpfulCount + (vm.helpful(experience.id) ? 1 : 0)} ${vm.t('foundHelpful')}',
+                  '${experience.helpfulCount} ${vm.t('foundHelpful')}',
                 ),
               ),
               TextButton(
@@ -333,19 +470,20 @@ class ExperienceCard extends StatelessWidget {
               ),
             ],
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => vm.toggleTranslation(experience.id),
-              child: Text(
-                translated
-                    ? vm.t('showOriginal')
-                    : vm.english
-                    ? vm.t('showTranslation')
-                    : vm.t('translate'),
+          if (vm.canTranslate(experience))
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => vm.toggleTranslation(experience),
+                child: Text(
+                  translated
+                      ? vm.t('showOriginal')
+                      : experience.translation != null
+                      ? vm.t('showTranslation')
+                      : vm.t('translate'),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -356,23 +494,39 @@ class ExperienceDetailPage extends StatelessWidget {
   const ExperienceDetailPage({super.key, required this.id});
   final String id;
   @override
+  Widget build(BuildContext context) => ResourceView<ExperienceDetail>(
+    key: ValueKey(id),
+    resource: (vm) => vm.experience(id),
+    load: (vm) => vm.loadExperience(id),
+    builder: (context, detail) => _ExperienceDetail(detail: detail),
+  );
+}
+
+class _ExperienceDetail extends StatelessWidget {
+  const _ExperienceDetail({required this.detail});
+  final ExperienceDetail detail;
+  @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final item = vm.experience(id);
-    if (item == null) return const MissingContent();
-    final translated = vm.translated(id);
-    final others = vm.experiences.where(
-      (e) => e.topic == item.topic && e.id != id,
-    );
+    final item = detail.item;
+    final translated = vm.translated(item);
     return FlowBody(
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PaperTag(vm.t(item.topic)),
-            PaperTag(vm.t(item.identity)),
-            PaperTag(vm.t('anonymousShare')),
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  PaperTag(vm.t(topicKey(item.topicId))),
+                  PaperTag(vm.t(identityKey(item.identityType))),
+                  PaperTag(vm.t('anonymousShare')),
+                ],
+              ),
+            ),
+            ModerationMenu(experienceId: item.id),
           ],
         ),
         PaperCard(
@@ -381,19 +535,25 @@ class ExperienceDetailPage extends StatelessWidget {
             children: [
               PaperHeading(vm.t('originalShare')),
               Text(
-                '「${item.text('originalVoice', translated)}」',
+                '「${item.voice(translated)}」',
                 style: const TextStyle(
                   fontSize: 25,
                   fontStyle: FontStyle.italic,
                   height: 1.6,
                 ),
               ),
-              TextButton(
-                onPressed: () => vm.toggleTranslation(id),
-                child: Text(
-                  translated ? vm.t('showOriginal') : vm.t('translate'),
+              if (translated)
+                Text(
+                  vm.t('aiTranslated'),
+                  style: const TextStyle(fontSize: 13, color: Palette.muted),
                 ),
-              ),
+              if (vm.canTranslate(item))
+                TextButton(
+                  onPressed: () => vm.toggleTranslation(item),
+                  child: Text(
+                    translated ? vm.t('showOriginal') : vm.t('translate'),
+                  ),
+                ),
             ],
           ),
         ),
@@ -403,13 +563,18 @@ class ExperienceDetailPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               PaperHeading(vm.t('aiSummaryConfirmed')),
-              Text(item.text('summary', translated)),
+              Text(item.summaryText(translated)),
               const SizedBox(height: 18),
               Text(
                 vm.t('reminder'),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              Text(item.text('reminder', translated)),
+              Text(item.reminderText(translated)),
+              const SizedBox(height: 12),
+              Text(
+                vm.t('notVerifiedNote'),
+                style: const TextStyle(fontSize: 13, color: Palette.muted),
+              ),
             ],
           ),
         ),
@@ -417,26 +582,26 @@ class ExperienceDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             PaperHeading(vm.t('differentExperiences')),
-            if (others.isEmpty)
+            if (detail.different.isEmpty)
               Text(
                 vm.pair(
-                  '目前尚無其他同主題的補充經驗。',
-                  'No other stories in this topic yet.',
+                  '還沒有學生分享不同的經驗。',
+                  'No one has shared a different experience yet.',
                 ),
               ),
-            for (final other in others)
+            for (final other in detail.different)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: PaperCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      PaperTag(vm.t(other.identity)),
+                      PaperTag(vm.t(identityKey(other.identityType))),
                       const SizedBox(height: 12),
-                      Text(other.text('originalVoice', vm.english)),
+                      Text(other.voice(vm.translated(other))),
                       TextButton(
                         onPressed: () => context.push(
-                          '/experiences/${other.id}?from=${Uri.encodeComponent('/experiences/$id')}',
+                          '/experiences/${other.id}?from=${Uri.encodeComponent('/experiences/${item.id}')}',
                         ),
                         child: Text(vm.t('similarSituations')),
                       ),
@@ -447,21 +612,33 @@ class ExperienceDetailPage extends StatelessWidget {
           ],
         ),
         FilledButton(
-          onPressed: () => context.go('/share'),
+          onPressed: () {
+            if (!ensureSignedIn(context)) return;
+            vm.startDifferentExperience(item.id);
+            context.go('/share');
+          },
           child: Text(vm.t('myExperienceDifferent')),
         ),
         Wrap(
           spacing: 12,
           children: [
             FilterChip(
-              label: Text(vm.t('iAlsoExperienced')),
-              selected: vm.experienced(id),
-              onSelected: (_) => vm.toggleExperienced(id),
+              label: Text(
+                '${vm.t('iAlsoExperienced')} · ${item.experiencedTooCount}',
+              ),
+              selected: vm.reacted(item, 'experienced_too'),
+              onSelected: (_) {
+                if (ensureSignedIn(context)) {
+                  vm.toggleReaction(item, 'experienced_too');
+                }
+              },
             ),
             FilterChip(
-              label: Text(vm.t('helpful')),
-              selected: vm.helpful(id),
-              onSelected: (_) => vm.toggleHelpful(id),
+              label: Text('${vm.t('helpful')} · ${item.helpfulCount}'),
+              selected: vm.reacted(item, 'helpful'),
+              onSelected: (_) {
+                if (ensureSignedIn(context)) vm.toggleReaction(item, 'helpful');
+              },
             ),
           ],
         ),
@@ -470,21 +647,139 @@ class ExperienceDetailPage extends StatelessWidget {
   }
 }
 
-class MissingContent extends StatelessWidget {
-  const MissingContent({super.key});
+/// Report or block from an experience (B-18, B-19; Google Play UGC policy).
+class ModerationMenu extends StatelessWidget {
+  const ModerationMenu({super.key, required this.experienceId});
+  final String experienceId;
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    return FlowBody(
-      children: [
-        Text(
-          vm.pair(
-            '找不到這筆內容，請回首頁選擇。',
-            'This content could not be found. Choose an item from Home.',
-          ),
-        ),
-        TextButton(onPressed: () => context.go('/'), child: Text(vm.t('home'))),
+    return PopupMenuButton<String>(
+      key: const Key('moderation-menu'),
+      tooltip: vm.t('report'),
+      icon: const Icon(Icons.more_horiz),
+      onSelected: (choice) async {
+        if (!ensureSignedIn(context)) return;
+        if (choice == 'report') {
+          await showDialog<void>(
+            context: context,
+            builder: (_) => BridgeScope(
+              viewModel: vm,
+              child: ReportDialog(experienceId: experienceId),
+            ),
+          );
+        } else {
+          final ok = await confirmDialog(
+            context,
+            vm.t('blockAuthor'),
+            vm.t('blockConfirm'),
+          );
+          if (ok && await vm.blockAuthor(experienceId) && context.mounted) {
+            context.go('/explore');
+          }
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(value: 'report', child: Text(vm.t('report'))),
+        PopupMenuItem(value: 'block', child: Text(vm.t('blockAuthor'))),
       ],
     );
   }
+}
+
+class ReportDialog extends StatefulWidget {
+  const ReportDialog({super.key, required this.experienceId});
+  final String experienceId;
+  @override
+  State<ReportDialog> createState() => _ReportDialogState();
+}
+
+class _ReportDialogState extends State<ReportDialog> {
+  String? _reason;
+  final _note = TextEditingController();
+  static const reasons = {
+    'spam': ('垃圾訊息或廣告', 'Spam or advertising'),
+    'harassment': ('騷擾或霸凌', 'Harassment or bullying'),
+    'hate': ('仇恨或歧視', 'Hate or discrimination'),
+    'sexual': ('色情內容', 'Sexual content'),
+    'personal_info': ('洩漏個人資料', 'Personal information'),
+    'misinformation': ('錯誤或誤導的資訊', 'False or misleading information'),
+    'other': ('其他', 'Other'),
+  };
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return AlertDialog(
+      title: Text(vm.t('reportTitle')),
+      content: SingleChildScrollView(
+        child: RadioGroup<String>(
+          groupValue: _reason,
+          onChanged: (value) => setState(() => _reason = value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final entry in reasons.entries)
+                RadioListTile<String>(
+                  value: entry.key,
+                  title: Text(vm.pair(entry.value.$1, entry.value.$2)),
+                ),
+              TextField(
+                controller: _note,
+                maxLength: 1000,
+                decoration: InputDecoration(labelText: vm.t('tellMore')),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(vm.t('cancel')),
+        ),
+        FilledButton(
+          onPressed: _reason == null
+              ? null
+              : () async {
+                  await vm.report(widget.experienceId, _reason!, _note.text);
+                  if (context.mounted) Navigator.pop(context);
+                },
+          child: Text(vm.t('send')),
+        ),
+      ],
+    );
+  }
+}
+
+Future<bool> confirmDialog(
+  BuildContext context,
+  String title,
+  String body,
+) async {
+  final vm = BridgeScope.of(context);
+  return await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(vm.t('cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(vm.t('confirm')),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 }

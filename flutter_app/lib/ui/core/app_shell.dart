@@ -28,10 +28,16 @@ class AppShell extends StatelessWidget {
     if (uri.path.startsWith('/actions')) {
       if (uri.path.endsWith('/progress')) return vm.t('myActionProgress');
       if (uri.path.endsWith('/complete')) return vm.t('actionCompletion');
-      return vm.action(uri.pathSegments.last)?.text('title', vm.english) ??
+      return vm
+              .action(uri.pathSegments[1])
+              .data
+              ?.summary
+              .title
+              .of(vm.english) ??
           vm.t('officialActionGuide');
     }
     if (uri.path == '/review') return vm.t('reviewBeforePublish');
+    if (uri.path == '/signin') return vm.t('signIn');
     return vm.t(keys[index]);
   }
 
@@ -55,6 +61,17 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
+    final notice = vm.notice;
+    if (notice != null) {
+      // Show one-off messages (published, reported, errors) once, then clear them.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (vm.notice != notice) return;
+        vm.notice = null;
+        ScaffoldMessenger.maybeOf(context)
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(notice)));
+      });
+    }
     return LayoutBuilder(
       builder: (context, c) {
         final mobile = c.maxWidth < 768;

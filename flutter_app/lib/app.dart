@@ -26,7 +26,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
     initialLocation: widget.initialLocation,
     redirect: (context, state) {
       if (state.uri.path == '/review' &&
-          widget.viewModel.reviewedDraft == null) {
+          widget.viewModel.reviewSummary == null) {
         return '/share';
       }
       return null;
@@ -62,6 +62,11 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             builder: (context, state) => const ProfilePage(),
           ),
           GoRoute(
+            path: '/signin',
+            builder: (context, state) =>
+                SignInPage(next: state.uri.queryParameters['next']),
+          ),
+          GoRoute(
             path: '/experiences/:id',
             builder: (context, state) =>
                 ExperienceDetailPage(id: state.pathParameters['id']!),
@@ -88,6 +93,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
     ],
     errorBuilder: (context, state) =>
         const Scaffold(body: Center(child: MissingContent())),
+    refreshListenable: widget.viewModel.auth,
   );
   @override
   void dispose() {

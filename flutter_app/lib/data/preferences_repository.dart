@@ -26,6 +26,8 @@ class LocalPreferencesRepository implements PreferencesRepository {
         voice: data['voice'] as String? ?? '',
         topic: data['topic'] as String? ?? 'cultureCommunication',
         identity: data['identity'] as String? ?? 'degreeStudent',
+        serverId: data['serverId'] as String?,
+        differentFromId: data['differentFromId'] as String?,
       );
     } catch (_) {
       return const ShareDraft();
@@ -45,6 +47,8 @@ class LocalPreferencesRepository implements PreferencesRepository {
         'voice': draft.voice,
         'topic': draft.topic,
         'identity': draft.identity,
+        'serverId': ?draft.serverId,
+        'differentFromId': ?draft.differentFromId,
       }),
     );
   }
