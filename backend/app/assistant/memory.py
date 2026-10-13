@@ -48,6 +48,11 @@ class ConversationStore:
         with self._lock:
             self._items.pop((owner, conversation_id), None)
 
+    def clear_owner(self, owner: str) -> None:
+        with self._lock:
+            for key in [k for k in self._items if k[0] == owner]:
+                del self._items[key]
+
     def _trim(self, turns: list[Turn]) -> list[Turn]:
         """Keep the last N exchanges, cutting only at user messages so tool calls stay paired."""
         starts = [i for i, turn in enumerate(turns) if isinstance(turn, UserTurn)]

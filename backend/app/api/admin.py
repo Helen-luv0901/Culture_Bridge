@@ -4,9 +4,10 @@ from typing import Literal
 
 from fastapi import APIRouter, Query, Response, status
 
-from app.core.auth import StaffUser
+from app.core.auth import AdminUser, StaffUser
 from app.core.db import DbSession
 from app.services import admin_actions as svc
+from app.services import moderation
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -104,3 +105,38 @@ def review_feedback(
 ) -> Response:
     svc.review_feedback(db, user, feedback_id, body)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/reports")
+def report_queue(
+    _: StaffUser,
+    db: DbSession,
+    status: Literal["pending", "actioned", "dismissed"] = "pending",
+) -> list[moderation.ReportedItem]:
+    return moderation.report_queue(db, status)
+
+
+@router.post("/reports/{report_id}/resolve", status_code=204)
+def resolve_report(
+    report_id: str, body: moderation.ResolveIn, user: StaffUser, db: DbSession
+) -> Response:
+    moderation.resolve_report(db, user, report_id, body)
+    return Response(status_code=204)
+
+
+@router.post("/experiences/{experience_id}/hide", status_code=204)
+def hide_experience(experience_id: str, user: StaffUser, db: DbSession) -> Response:
+    moderation.set_experience_visibility(db, user, experience_id, hidden=True)
+    return Response(status_code=204)
+
+
+@router.post("/experiences/{experience_id}/restore", status_code=204)
+def restore_experience(experience_id: str, user: StaffUser, db: DbSession) -> Response:
+    moderation.set_experience_visibility(db, user, experience_id, hidden=False)
+    return Response(status_code=204)
+
+
+@router.put("/users/{user_id}/role", status_code=204)
+def set_role(user_id: str, body: moderation.RoleIn, user: AdminUser, db: DbSession) -> Response:
+    moderation.set_role(db, user, user_id, body)
+    return Response(status_code=204)

@@ -120,6 +120,10 @@ class Assistant:
             )
         return self._registry.execute(call, ctx)
 
+    def forget_user(self, user: CurrentUser) -> None:
+        """Drop every conversation of this account (account deletion)."""
+        self._memory.clear_owner(conversation_owner(user))
+
     def clear(self, conversation_id: str, user: CurrentUser | None) -> None:
         self._memory.clear(conversation_owner(user), conversation_id)
 
