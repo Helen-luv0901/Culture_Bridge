@@ -68,6 +68,14 @@ class AdminRepository {
     for (final f in await api.get('/admin/feedback', {'state': state}) as List)
       FeedbackItem.fromJson(f as Json),
   ];
+  Future<FeedbackSummary> summarizeFeedback(
+    String actionId, {
+    required bool english,
+  }) async => FeedbackSummary.fromJson(
+    await api.post('/admin/actions/$actionId/feedback-summary', {
+      'locale': english ? 'en' : 'zh-Hant',
+    }),
+  );
   Future<void> reviewFeedback(String id, String state) =>
       api.post('/admin/feedback/$id', {'review_state': state});
 
@@ -77,6 +85,15 @@ class AdminRepository {
   ];
   Future<void> resolveReport(String reportId, String action) =>
       api.post('/admin/reports/$reportId/resolve', {'action': action});
+
+  Future<List<StaffMember>> staff() async => [
+    for (final u in await api.get('/admin/users') as List)
+      StaffMember.fromJson(u as Json),
+  ];
+  Future<void> setRole(String userId, String role) => api.put(
+    '/admin/users/${Uri.encodeComponent(userId)}/role',
+    {'role': role},
+  );
 
   Future<List<KbDocument>> documents() async => [
     for (final d in await api.get('/admin/kb/documents') as List)

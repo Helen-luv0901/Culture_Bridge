@@ -77,6 +77,12 @@ class RoleIn(BaseModel):
     role: Literal["student", "reviewer", "admin"]
 
 
+class StaffMember(BaseModel):
+    id: str
+    role: Literal["reviewer", "admin"]
+    created_at: datetime
+
+
 # ---------- reports ----------
 
 
@@ -230,6 +236,13 @@ def unblock(db: Session, user: CurrentUser, block_id: str) -> None:
 
 
 # ---------- roles ----------
+
+
+def list_staff(db: Session) -> list[StaffMember]:
+    rows = db.scalars(
+        select(User).where(User.role.in_(["reviewer", "admin"])).order_by(User.created_at)
+    )
+    return [StaffMember(id=u.id, role=u.role, created_at=u.created_at) for u in rows]  # type: ignore[arg-type]
 
 
 def set_role(db: Session, actor: CurrentUser, user_id: str, body: RoleIn) -> None:

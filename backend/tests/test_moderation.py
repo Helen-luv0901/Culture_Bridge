@@ -113,6 +113,10 @@ def test_roles_are_admin_only(api, db):
         == 204
     )
     assert db.get(User, "dev-kai").role == "reviewer"
+    staff = {u["id"]: u["role"] for u in api.get("/api/admin/users", headers=ADMIN).json()}
+    assert staff["dev-kai"] == "reviewer" and staff["dev-ada"] == "admin"
+    assert "dev-lin" not in staff
+    assert api.get("/api/admin/users", headers=REVIEWER).status_code == 403
     assert (
         api.put(
             "/api/admin/users/dev-ada/role", json={"role": "student"}, headers=ADMIN

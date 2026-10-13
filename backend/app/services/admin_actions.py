@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai.feedback_ai import FeedbackAI, FeedbackForSummary
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, conflict, not_found
 from app.models import (
@@ -566,3 +567,106 @@ def review_feedback(
         db, actor, "review_feedback", "execution_feedback", feedback_id, state=body.review_state
     )
     db.commit()
+
+
+# ---------- AI summary of feedback (D-7) ----------
+
+SUMMARY_FEEDBACK_LIMIT = 100
+
+
+class FeedbackCount(BaseModel):
+    step_id: str | None
+    step_title: Text2 | None
+    kind: FeedbackKind
+    count: int
+
+
+class FeedbackThemeOut(BaseModel):
+    title: str
+    detail: str
+    feedback_ids: list[str]
+
+
+class FeedbackSummaryIn(BaseModel):
+    state: Literal["pending", "reviewed"] = "pending"
+    locale: Literal["zh-Hant", "en"] = "zh-Hant"
+
+
+class FeedbackSummaryOut(BaseModel):
+    """Counts come straight from the database; only overview/themes/checks come from the AI."""
+
+    action_id: str
+    feedback_count: int
+    counts: list[FeedbackCount]
+    overview: str | None
+    themes: list[FeedbackThemeOut]
+    suggested_checks: list[str]
+    model_name: str | None
+
+
+def summarize_feedback(
+    db: Session, actor: CurrentUser, ai: FeedbackAI, action_id: str, body: FeedbackSummaryIn
+) -> FeedbackSummaryOut:
+    action = db.get(Action, action_id)
+    if action is None:
+        raise not_found("action_not_found")
+    rows = db.execute(
+        select(ExecutionFeedback, ActionVersion, ActionStep)
+        .join(ActionVersion, ActionVersion.id == ExecutionFeedback.action_version_id)
+        .outerjoin(ActionStep, ActionStep.id == ExecutionFeedback.step_id)
+        .where(ActionVersion.action_id == action_id, ExecutionFeedback.review_state == body.state)
+        .order_by(ExecutionFeedback.created_at.desc())
+        .limit(SUMMARY_FEEDBACK_LIMIT)
+    ).all()
+
+    counts: dict[tuple[str | None, str], FeedbackCount] = {}
+    for f, _, s in rows:
+        key = (f.step_id, f.kind)
+        if key not in counts:
+            counts[key] = FeedbackCount(
+                step_id=f.step_id,
+                step_title=text2(s.title_zh, s.title_en) if s else None,
+                kind=f.kind,  # type: ignore[arg-type]
+                count=0,
+            )
+        counts[key].count += 1
+    out = FeedbackSummaryOut(
+        action_id=action_id,
+        feedback_count=len(rows),
+        counts=sorted(counts.values(), key=lambda c: -c.count),
+        overview=None,
+        themes=[],
+        suggested_checks=[],
+        model_name=None,
+    )
+    if not rows:
+        return out
+
+    zh = body.locale == "zh-Hant"
+    latest = rows[0][1]
+    items = [
+        FeedbackForSummary(
+            id=f.id,
+            kind=f.kind,
+            step=(s.title_zh if zh else s.title_en) if s else None,
+            category=f.category,
+            text=f.original_voice,
+        )
+        for f, _, s in rows
+    ]
+    draft = ai.summarize(latest.title_zh if zh else latest.title_en, items, body.locale)
+    log_admin(
+        db, actor, "summarize_feedback", "action", action_id, count=len(rows), state=body.state
+    )
+    db.commit()
+    return out.model_copy(
+        update={
+            "overview": draft.overview,
+            "themes": [
+                FeedbackThemeOut(title=t.title, detail=t.detail, feedback_ids=list(t.feedback_ids))
+                for t in draft.themes
+            ],
+            "suggested_checks": list(draft.suggested_checks),
+            "model_name": draft.model_name,
+        }
+    )

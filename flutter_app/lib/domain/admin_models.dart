@@ -136,6 +136,7 @@ class AdminVersion {
 class FeedbackItem {
   const FeedbackItem({
     required this.id,
+    required this.actionId,
     required this.actionTitle,
     required this.versionNumber,
     required this.stepTitle,
@@ -146,6 +147,7 @@ class FeedbackItem {
   });
   factory FeedbackItem.fromJson(Json json) => FeedbackItem(
     id: json['id'] as String,
+    actionId: json['action_id'] as String,
     actionTitle: Text2.fromJson(json['action_title'] as Json),
     versionNumber: json['version_number'] as int,
     stepTitle: json['step_title'] == null
@@ -157,6 +159,7 @@ class FeedbackItem {
     createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
   );
   final String id;
+  final String actionId;
   final Text2 actionTitle;
   final int versionNumber;
   final Text2? stepTitle;
@@ -214,4 +217,55 @@ class KbDocument {
   final String publisher;
   final bool active;
   final int chunks;
+}
+
+/// AI overview of students' reports for one procedure (D-7). Counts come from the database;
+/// overview, themes and checks are AI advice for the reviewer and change nothing by themselves.
+class FeedbackSummary {
+  const FeedbackSummary({
+    required this.feedbackCount,
+    required this.counts,
+    required this.overview,
+    required this.themes,
+    required this.checks,
+    required this.modelName,
+  });
+  factory FeedbackSummary.fromJson(Json json) => FeedbackSummary(
+    feedbackCount: json['feedback_count'] as int,
+    counts: [
+      for (final c in json['counts'] as List)
+        (
+          step: (c as Json)['step_title'] == null
+              ? null
+              : Text2.fromJson(c['step_title'] as Json),
+          kind: c['kind'] as String,
+          count: c['count'] as int,
+        ),
+    ],
+    overview: json['overview'] as String?,
+    themes: [
+      for (final t in json['themes'] as List)
+        (
+          title: (t as Json)['title'] as String,
+          detail: t['detail'] as String,
+          reports: (t['feedback_ids'] as List).length,
+        ),
+    ],
+    checks: [for (final c in json['suggested_checks'] as List) c as String],
+    modelName: json['model_name'] as String?,
+  );
+  final int feedbackCount;
+  final List<({Text2? step, String kind, int count})> counts;
+  final String? overview;
+  final List<({String title, String detail, int reports})> themes;
+  final List<String> checks;
+  final String? modelName;
+}
+
+class StaffMember {
+  const StaffMember({required this.id, required this.role});
+  factory StaffMember.fromJson(Json json) =>
+      StaffMember(id: json['id'] as String, role: json['role'] as String);
+  final String id;
+  final String role;
 }

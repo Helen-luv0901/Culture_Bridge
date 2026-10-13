@@ -1,12 +1,14 @@
 """Reviewer/admin endpoints (D-6). Everything here requires a reviewer or admin role."""
 
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, BackgroundTasks, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import func, select
 
+from app.ai.experience_ai import AIUnavailable
+from app.ai.feedback_ai import FeedbackAI, get_feedback_ai
 from app.core.auth import AdminUser, StaffUser
 from app.core.db import DbSession, get_sessionmaker
 from app.core.errors import ApiError, not_found
@@ -106,6 +108,21 @@ def list_feedback(
     return svc.list_feedback(db, state, limit, offset)
 
 
+@router.post("/actions/{action_id}/feedback-summary")
+def feedback_summary(
+    action_id: str,
+    body: svc.FeedbackSummaryIn,
+    user: StaffUser,
+    db: DbSession,
+    ai: Annotated[FeedbackAI, Depends(get_feedback_ai)],
+) -> svc.FeedbackSummaryOut:
+    """AI overview of students' reports for one procedure (D-7). Advice only: nothing changes."""
+    try:
+        return svc.summarize_feedback(db, user, ai, action_id, body)
+    except AIUnavailable as exc:
+        raise ApiError(503, "ai_unavailable") from exc
+
+
 @router.post("/feedback/{feedback_id}", status_code=status.HTTP_204_NO_CONTENT)
 def review_feedback(
     feedback_id: str,
@@ -168,6 +185,12 @@ def restore_experience(
     moderation.set_experience_visibility(db, user, experience_id, hidden=False)
     _reindex(background, experience_id)
     return Response(status_code=204)
+
+
+@router.get("/users")
+def list_staff(_: AdminUser, db: DbSession) -> list[moderation.StaffMember]:
+    """Reviewers and admins (account ids only), so an admin can see who has access."""
+    return moderation.list_staff(db)
 
 
 @router.put("/users/{user_id}/role", status_code=204)
