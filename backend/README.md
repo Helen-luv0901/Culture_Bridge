@@ -18,7 +18,7 @@ app/
 ├── core/              設定、資料庫連線、Firebase 登入驗證、權限、錯誤格式
 └── seed.py            匯入 Flutter 示範資料（開發／測試站用）
 migrations/            Alembic：0001 = schema_postgres.sql，0002 檢舉／封鎖／操作紀錄／待確認操作，
-                       0003 流程英文欄位，0004 語意搜尋（pgvector）
+                       0003 流程英文欄位，0004 語意搜尋（pgvector），0005 使用數據
 tests/                 pytest（真的 PostgreSQL；CI 用 pgvector/pgvector:pg16）
 ```
 
@@ -54,7 +54,7 @@ uv run python -m app.rag.evaluate    # 語意搜尋品質（需要 GEMINI_API_KE
 | 搜尋 | `GET /api/search?q=` | 流程與經驗關鍵字搜尋（B-16） |
 | 檢舉／封鎖 | `POST /api/reports`、`POST /api/blocks`、`GET /api/me/blocks`、`DELETE /api/me/blocks/{id}` | 3 人檢舉自動隱藏待審；封鎖匿名作者（只回傳不透明 id） |
 | 助理 | `POST /api/assistant/message`、`DELETE /api/assistant/conversations/{id}`、`GET/POST /api/assistant/operations/{id}[/confirm|/cancel]` | 見下方 |
-| 管理 | `/api/admin/actions`、`/versions/{id}`、`/sources`、`/feedback`、`/reports`、`/experiences/{id}/hide|restore`、`/users/{id}/role`、`/kb/documents` | 流程編輯與發布、驗證紀錄、回報與檢舉審查、角色、官方文件 |
+| 管理 | `/api/admin/actions`、`/versions/{id}`、`/sources`、`/feedback`、`/actions/{id}/feedback-summary`、`/reports`、`/experiences/{id}/hide|restore`、`/users`、`/users/{id}/role`、`/kb/documents`、`/stats` | 流程編輯與發布、驗證紀錄、回報審查與 AI 整理（D-7，只供參考）、檢舉、角色、官方文件、成效數據（D-19） |
 
 錯誤一律是 `{"detail": {"code": "...", "message": "..."}}`（驗證錯誤為 FastAPI 預設的 422 格式）。
 

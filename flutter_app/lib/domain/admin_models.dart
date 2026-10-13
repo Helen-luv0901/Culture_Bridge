@@ -269,3 +269,24 @@ class StaffMember {
   final String id;
   final String role;
 }
+
+/// Numbers for the MVP success signals (D-19). Rates are null when there is no sample.
+class UsageStats {
+  const UsageStats(this.json);
+  final Json json;
+  int count(String key) => json[key] as int;
+  double? rate(String key) => (json[key] as num?)?.toDouble();
+  Map<String, int> get outcomes => {
+    for (final e in (json['outcomes'] as Json).entries) e.key: e.value as int,
+  };
+  List<({Text2 action, Text2? step, int count})> get stuckSteps => [
+    for (final s in json['top_stuck_steps'] as List)
+      (
+        action: Text2.fromJson((s as Json)['action_title'] as Json),
+        step: s['step_title'] == null
+            ? null
+            : Text2.fromJson(s['step_title'] as Json),
+        count: s['count'] as int,
+      ),
+  ];
+}

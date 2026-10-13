@@ -86,6 +86,8 @@ class AdminRepository {
   Future<void> resolveReport(String reportId, String action) =>
       api.post('/admin/reports/$reportId/resolve', {'action': action});
 
+  Future<UsageStats> stats(int days) async =>
+      UsageStats(await api.get('/admin/stats', {'days': '$days'}) as Json);
   Future<List<StaffMember>> staff() async => [
     for (final u in await api.get('/admin/users') as List)
       StaffMember.fromJson(u as Json),

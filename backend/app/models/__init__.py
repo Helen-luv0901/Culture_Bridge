@@ -234,6 +234,19 @@ class ExperienceLink(Base):
     created_at: Mapped[datetime] = _created()
 
 
+class UserActivityDay(Base):
+    __tablename__ = "user_activity_days"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+
+
+class ExperienceView(Base):
+    __tablename__ = "experience_views"
+    experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id"), primary_key=True)
+    viewer_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+
+
 class ActionExperienceLink(Base):
     __tablename__ = "action_experience_links"
     action_id: Mapped[str] = mapped_column(ForeignKey("actions.id"), primary_key=True)

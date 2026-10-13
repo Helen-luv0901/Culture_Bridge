@@ -20,6 +20,7 @@ Culture Bridge 是協助在台國際學生辦理生活流程、分享生活經�
 | 檢舉、封鎖名單 | 你的操作 | 維護社群安全；封鎖只影響你看到的內容 |
 | AI 助理對話 | 你在助理輸入 | 產生回答。對話只暫存在伺服器記憶體中（約 2 小時、最近幾輪），**不寫入資料庫** |
 | 伺服器紀錄（IP 位址、請求時間、錯誤） | 自動產生 | 防止濫用（頻率限制）、排除故障 |
+| 使用日期、開過哪些經驗（只記日期，不記時間與停留長度） | 你登入後使用 App、打開經驗詳情時 | 計算整體成效（例如回訪率、經驗閱讀率），只以統計數字呈現給管理者；作者本人看自己的經驗不記錄 |
 
 我們不蒐集精確位置、聯絡人、照片或裝置上的其他資料，也不投放廣告。
 
@@ -73,7 +74,7 @@ Last updated: [TBC]
 
 **Who we are.** Culture Bridge helps international students in Taiwan with everyday procedures and shared experiences, operated by [TBC]. Contact: [TBC].
 
-**What we collect and why.** Your Firebase sign-in ID (we never store your password, email or name); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); and server logs (IP address, time, errors) for abuse prevention and troubleshooting. No precise location, contacts, photos or advertising.
+**What we collect and why.** Your Firebase sign-in ID (we never store your password, email or name); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
 
 **Anonymity.** Shared experiences are public but never show your name, school, account, or anything linking several posts to the same person. Please do not write identifying details in your words.
 

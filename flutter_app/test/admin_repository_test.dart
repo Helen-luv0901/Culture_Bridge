@@ -104,4 +104,31 @@ void main() {
     expect(sent.last.url.path, '/api/admin/users/firebase%3Aabc/role');
     expect(jsonDecode(sent.last.body), {'role': 'reviewer'});
   });
+
+  test('usage stats keep missing rates as null', () async {
+    final sent = <http.Request>[];
+    final repo = _repo(
+      sent,
+      (_) => {
+        'active_users': 4,
+        'reader_rate': 0.25,
+        'return_rate': null,
+        'outcomes': {'success': 2},
+        'top_stuck_steps': [
+          {
+            'action_title': {'zh': '開戶', 'en': 'Bank'},
+            'step_title': null,
+            'count': 3,
+          },
+        ],
+      },
+    );
+    final stats = await repo.stats(30);
+    expect(sent.single.url.queryParameters, {'days': '30'});
+    expect(stats.count('active_users'), 4);
+    expect(stats.rate('reader_rate'), 0.25);
+    expect(stats.rate('return_rate'), isNull);
+    expect(stats.outcomes, {'success': 2});
+    expect(stats.stuckSteps.single.step, isNull);
+  });
 }

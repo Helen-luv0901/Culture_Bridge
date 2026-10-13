@@ -18,6 +18,7 @@ class AdminPage extends StatelessWidget {
     'feedback',
     'reports',
     'documents',
+    'stats',
     'accounts',
   ];
 
@@ -43,6 +44,7 @@ class AdminPage extends StatelessWidget {
                     'feedback' => vm.pair('回報審查', 'Reports from students'),
                     'reports' => vm.pair('檢舉', 'Content reports'),
                     'accounts' => vm.pair('權限', 'Access'),
+                    'stats' => vm.pair('數據', 'Numbers'),
                     _ => vm.pair('官方文件', 'Official documents'),
                   }),
                   selected: tab == t,
@@ -56,6 +58,7 @@ class AdminPage extends StatelessWidget {
           'reports' => _ReportQueue(admin: admin),
           'documents' => _Documents(admin: admin),
           'accounts' when vm.isAdmin => _Accounts(admin: admin),
+          'stats' => _Stats(admin: admin),
           _ => _ActionList(admin: admin),
         },
       ],
@@ -1024,6 +1027,118 @@ class _AccountsState extends State<_Accounts> {
                           child: Text(vm.pair('移除權限', 'Remove access')),
                         ),
                 ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------- numbers (D-19) ----------
+
+class _Stats extends StatefulWidget {
+  const _Stats({required this.admin});
+  final AdminRepository admin;
+  @override
+  State<_Stats> createState() => _StatsState();
+}
+
+class _StatsState extends State<_Stats> {
+  int _days = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    String pct(double? r) => r == null
+        ? vm.pair('樣本不足', 'Not enough data')
+        : '${(r * 100).round()}%';
+    Widget row(String label, String value) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final d in const [7, 30, 90])
+              ChoiceChip(
+                label: Text(vm.pair('近 $d 天', 'Last $d days')),
+                selected: _days == d,
+                onSelected: (_) => setState(() => _days = d),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _Loaded<UsageStats>(
+          key: ValueKey(_days),
+          load: () => widget.admin.stats(_days),
+          builder: (context, s, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              row(
+                vm.pair('使用人數', 'Active people'),
+                '${s.count('active_users')}',
+              ),
+              row(
+                vm.pair('看過學生經驗', 'Read an experience'),
+                '${s.count('experience_readers')} · ${pct(s.rate('reader_rate'))}',
+              ),
+              row(
+                vm.pair('分享經驗的人', 'Shared an experience'),
+                '${s.count('sharing_authors')} · ${pct(s.rate('share_rate'))}',
+              ),
+              row(
+                vm.pair('AI 摘要後確認發布', 'Published after AI summary'),
+                '${s.count('published_after_summary')}/${s.count('drafts_with_ai_summary')}'
+                ' · ${pct(s.rate('summary_confirm_rate'))}',
+              ),
+              row(
+                vm.pair('作者修改過摘要', 'Summaries edited by author'),
+                '${s.count('confirmed_with_author_edits')}',
+              ),
+              row(
+                vm.pair('「我的經驗不同」回應', '"Mine was different" replies'),
+                '${s.count('different_responses')}',
+              ),
+              row(
+                vm.pair('7 天內回訪', 'Came back within 7 days'),
+                '${s.count('returned_within_7_days')}/${s.count('return_cohort')}'
+                ' · ${pct(s.rate('return_rate'))}',
+              ),
+              row(
+                vm.pair('開始辦理', 'Procedures started'),
+                '${s.count('executions_started')}',
+              ),
+              for (final e in s.outcomes.entries)
+                row('· ${e.key}', '${e.value}'),
+              if (s.stuckSteps.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  vm.pair('最常卡住的步驟', 'Where people get stuck'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                for (final st in s.stuckSteps)
+                  row(
+                    '${st.action.of(vm.english)} · ${st.step?.of(vm.english) ?? '—'}',
+                    '${st.count}',
+                  ),
+              ],
+              const SizedBox(height: 12),
+              Text(
+                vm.pair(
+                  '只計算登入的使用者；比例的分母是同期間的使用人數。',
+                  'Signed-in people only; rates are out of active people in the same period.',
+                ),
+                style: const TextStyle(fontSize: 13, color: Palette.muted),
+              ),
             ],
           ),
         ),

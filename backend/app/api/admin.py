@@ -16,7 +16,7 @@ from app.models import KbChunk, KbDocument
 from app.rag.embedder import EmbeddingUnavailable, get_embedder
 from app.rag.index import add_document, sync_in_background
 from app.services import admin_actions as svc
-from app.services import moderation
+from app.services import metrics, moderation
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -185,6 +185,14 @@ def restore_experience(
     moderation.set_experience_visibility(db, user, experience_id, hidden=False)
     _reindex(background, experience_id)
     return Response(status_code=204)
+
+
+@router.get("/stats")
+def stats(
+    _: StaffUser, db: DbSession, days: int = Query(default=30, ge=7, le=365)
+) -> metrics.UsageStats:
+    """Numbers for the MVP success signals (D-19)."""
+    return metrics.usage_stats(db, days)
 
 
 @router.get("/users")

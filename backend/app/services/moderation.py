@@ -32,6 +32,7 @@ from app.models import (
 from app.rag.index import remove_content
 from app.services.common import log_admin, now
 from app.services.experiences import delete_experiences
+from app.services.metrics import forget_activity
 
 ReportReason = Literal[
     "spam", "harassment", "hate", "sexual", "personal_info", "misinformation", "other"
@@ -313,3 +314,4 @@ def delete_account(db: Session, user: CurrentUser) -> None:
     db.execute(delete(AssistantOperation).where(AssistantOperation.user_id == uid))
     db.execute(delete(User).where(User.id == uid))
     db.commit()
+    forget_activity(uid)
