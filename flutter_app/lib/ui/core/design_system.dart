@@ -350,3 +350,44 @@ class _RingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_RingPainter old) => false;
 }
+
+/// A form field with its label above the box instead of floating on the border, so stacked
+/// fields never overlap and long text wraps instead of being cut off.
+class LabeledField extends StatelessWidget {
+  const LabeledField({
+    super.key,
+    required this.label,
+    required this.controller,
+    this.minLines = 1,
+    this.hint,
+  });
+  final String label;
+  final TextEditingController controller;
+  final int minLines;
+  final String? hint;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Palette.muted,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          minLines: minLines,
+          maxLines: null,
+          keyboardType: TextInputType.multiline,
+          decoration: InputDecoration(hintText: hint),
+        ),
+      ],
+    ),
+  );
+}

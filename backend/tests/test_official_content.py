@@ -48,7 +48,7 @@ CARD = {
 def test_import_creates_unpublished_drafts_with_sources(db):
     _importer(db)
     assert import_card(db, CARD, WHEN) == "new draft"
-    assert import_card(db, CARD, WHEN) == "skipped (a draft is already open)"
+    assert import_card(db, CARD, WHEN) == "refreshed draft"  # nobody else touched it
 
     api = TestClient(app)
     assert api.get("/api/actions/arc-extension").status_code == 404  # not public until published
@@ -56,6 +56,15 @@ def test_import_creates_unpublished_drafts_with_sources(db):
     assert draft["published_at"] is None and draft["verification_status"] == "unverified"
     assert draft["description_zh"] == "到期前申請延期（內政部移民署）。"
     assert draft["steps"][0]["notes"] == "一個月內（內政部移民署、逢甲大學國際處）"
+
+    # Once a reviewer edits the draft, re-imports leave it alone.
+    content = {k: draft[k] for k in ("title_zh", "title_en", "applicable_to")}
+    steps = [{k: st[k] for k in ("title_zh", "title_en", "notes")} for st in draft["steps"]]
+    edited = {**content, "title_zh": "居留證延期（已審）", "steps": steps}
+    api.put(f"/api/admin/versions/{draft['id']}", json=edited, headers=REVIEWER)
+    assert import_card(db, CARD, WHEN) == "skipped (a reviewer is editing the draft)"
+    [draft] = api.get("/api/admin/actions/arc-extension/versions", headers=REVIEWER).json()
+    assert draft["title_zh"] == "居留證延期（已審）"
     assert {s["url"] for s in draft["sources"]} == {s["url"] for s in CARD["sources"]}
 
     # After a reviewer publishes, a re-import opens v2 and reuses the same sources.
@@ -74,11 +83,18 @@ def test_bundled_cards_import_cleanly(db):
     for card in data["cards"]:
         assert card["sources"] and all(s["url"].startswith("https://") for s in card["sources"])
         assert import_card(db, card, when) == "new draft"
-        assert import_card(db, card, when).startswith("skipped")
+        assert import_card(db, card, when) == "refreshed draft"
 
     api = TestClient(app)
     assert api.get("/api/actions").json() == []
     versions = api.get("/api/admin/actions/work-permit/versions", headers=REVIEWER).json()
-    assert "[" not in versions[0]["steps"][0]["notes"]  # markers became publisher names
+    for version in [versions[0]]:
+        for step in version["steps"]:
+            notes = step["notes"] or ""
+            assert "[" not in notes  # markers became publisher names
+            assert (
+                "內政部移民署、內政部移民署" not in notes
+                and "勞動部勞動力發展署、勞動部勞動力發展署" not in notes
+            )
     urls = {s["url"] for c in data["cards"] for s in c["sources"]}
     assert len(api.get("/api/admin/sources", headers=REVIEWER).json()) == len(urls)  # shared
