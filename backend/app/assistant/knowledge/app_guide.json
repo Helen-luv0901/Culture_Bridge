@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-13",
+  "version": "2026-10-14",
   "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: procedure facts, steps, fees and dates always come from the tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
   "entries": [
     {
@@ -135,11 +135,11 @@
     {
       "id": "my-page",
       "kind": "feature",
-      "keywords": ["我的", "我的經驗", "影響", "語言", "切換語言", "英文", "中文", "my", "profile", "impact", "language", "english", "chinese"],
+      "keywords": ["我的", "我的經驗", "影響", "語言", "切換語言", "英文", "中文", "刪除經驗", "my", "profile", "impact", "language", "english", "chinese", "delete experience"],
       "title": {"zh-Hant": "我的", "en": "My"},
       "body": {
-        "zh-Hant": "「我的」會列出你分享過的經驗和你的影響，例如有多少人覺得有幫助。你也可以在這裡切換語言：繁體中文、English 或跟隨系統。",
-        "en": "My lists the experiences you shared and your impact, such as how many people found them helpful. You can also switch language here: Traditional Chinese, English or follow the system."
+        "zh-Hant": "「我的」會列出你分享過的經驗和你的影響，例如有多少人覺得有幫助。每則經驗都可以按「刪除」移除。你也可以在這裡切換語言：繁中或 English；第一次開啟時會依照手機或瀏覽器的語言。",
+        "en": "My lists the experiences you shared and your impact, such as how many people found them helpful. Each experience has a Delete button. You can also switch language here between 繁中 and English; the first time you open the app it follows your phone or browser language."
       }
     },
     {
@@ -160,6 +160,56 @@
       "body": {
         "zh-Hant": "請在流程的完成回饋選「流程和原本不同」，或在卡住的步驟按「我卡住了」回報。管理者審查後會決定是否更新流程卡並發布新版本。急件請直接向學校國際處或主管機關確認。",
         "en": "Choose \"The process was different\" in the completion feedback, or tap \"I'm stuck\" on the step. Admins review reports and decide whether to publish an updated version of the card. For anything urgent, confirm directly with your school's international office or the authority."
+      }
+    },
+    {
+      "id": "sign-in",
+      "kind": "faq",
+      "keywords": ["登入", "註冊", "帳號", "訪客", "google", "登出", "sign in", "log in", "login", "account", "guest", "sign out"],
+      "title": {"zh-Hant": "需要登入嗎？", "en": "Do I need to sign in?"},
+      "body": {
+        "zh-Hant": "瀏覽流程卡和學生經驗不需要登入。分享經驗、按「有幫助」等回應、開始辦理並記錄進度、檢舉與封鎖、使用 AI 助理時需要登入：到「我的」按「使用 Google 帳號登入」。登出也在「我的」的「帳號」區。",
+        "en": "You can browse procedure cards and student experiences without an account. Sharing, reacting, starting a procedure and saving progress, reporting or blocking, and using the assistant need you to sign in: go to My and choose \"Continue with Google\". Sign out is in the Account section of My."
+      }
+    },
+    {
+      "id": "search",
+      "kind": "feature",
+      "keywords": ["搜尋", "找", "關鍵字", "篩選", "search", "find", "keyword", "filter"],
+      "title": {"zh-Hant": "怎麼找經驗？", "en": "How do I find experiences?"},
+      "body": {
+        "zh-Hant": "在「探索」上方選主題篩選，或在「搜尋經驗」輸入關鍵字後按 Enter。想找要辦的流程，可以回到首頁，或直接問 AI 助理。",
+        "en": "In Explore, pick a topic filter at the top or type keywords in \"Search experiences\" and press Enter. To find a procedure, go back to Home or ask the assistant."
+      }
+    },
+    {
+      "id": "report-block",
+      "kind": "feature",
+      "keywords": ["檢舉", "封鎖", "不當", "騷擾", "垃圾訊息", "解除封鎖", "report", "block", "unblock", "harassment", "spam", "inappropriate"],
+      "title": {"zh-Hant": "檢舉與封鎖", "en": "Reporting and blocking"},
+      "body": {
+        "zh-Hant": "在經驗頁上方標籤旁的「⋯」選單可以「檢舉」或「封鎖這位作者」。檢舉要選原因（例如垃圾訊息、騷擾、洩漏個人資料、錯誤資訊），管理者會審查並決定是否隱藏內容。封鎖後你不會再看到這位作者的經驗，對方不會知道；要解除封鎖，到「我的」→「帳號」→「已封鎖的作者」。",
+        "en": "Use the \"⋯\" menu next to the tags at the top of an experience to Report it or Block this author. A report needs a reason (for example spam, harassment, personal information, false information); a reviewer checks it and decides whether to hide the content. After blocking you won't see that author's experiences, and they aren't notified. To unblock, go to My → Account → Blocked authors."
+      }
+    },
+    {
+      "id": "delete-account",
+      "kind": "faq",
+      "keywords": ["刪除帳號", "刪除資料", "註銷", "個資", "delete account", "delete my data", "remove account", "privacy"],
+      "title": {"zh-Hant": "怎麼刪除帳號？", "en": "How do I delete my account?"},
+      "body": {
+        "zh-Hant": "到「我的」→「帳號」→「刪除帳號」並確認。這會永久刪除你的帳號、分享的經驗、反應、辦理紀錄與助理對話，無法復原。只想移除某一則經驗的話，在「我的」那則經驗按「刪除」即可。沒有登入也可以在網站的 /account-deletion 頁面看刪除說明。",
+        "en": "Go to My → Account → Delete account and confirm. This permanently deletes your account, shared experiences, reactions, procedure progress and assistant conversations, and can't be undone. To remove just one experience, tap Delete on it in My. The /account-deletion page on the website explains this without signing in."
+      }
+    },
+    {
+      "id": "admin",
+      "kind": "faq",
+      "keywords": ["管理", "管理者", "審查", "reviewer", "admin", "誰維護", "who maintains", "review"],
+      "title": {"zh-Hant": "誰在維護流程卡？", "en": "Who maintains the procedure cards?"},
+      "body": {
+        "zh-Hant": "流程卡由團隊的審查者（reviewer）與管理者依官方資料編輯、審查後發布；學生的卡關與差異回報、檢舉也由他們處理。審查者登入後會在「我的」→「帳號」看到 Admin 入口。一般使用者沒有這個入口，也不能直接修改流程卡，請用回報功能告訴我們。",
+        "en": "Reviewers and admins on the team edit procedure cards from official sources, review them and publish them; they also handle stuck and difference reports and content reports. Reviewers see an Admin link under My → Account. Other users don't, and can't edit cards directly; please send a report instead."
       }
     }
   ]

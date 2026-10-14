@@ -1,3 +1,5 @@
+import pytest
+
 from app.assistant.data import Localized, ProgressRecord, ProgressStep
 from app.assistant.llm import ToolCall
 from app.assistant.tools import ToolContext, default_registry
@@ -138,6 +140,21 @@ def test_app_help_answers_how_to_questions(ctx):
     share = run(ctx, "search_app_help", query="how do I share anonymously")
     assert share["results"][0]["id"] in {"share", "privacy"}
     assert share["results"][0]["body"].isascii() or "Share" in share["results"][0]["body"]
+
+
+@pytest.mark.parametrize(
+    ("locale", "query", "expected"),
+    [
+        ("zh-Hant", "怎麼刪除帳號", "delete-account"),
+        ("zh-Hant", "要怎麼檢舉", "report-block"),
+        ("zh-Hant", "需要登入嗎", "sign-in"),
+        ("en", "how do I block someone", "report-block"),
+        ("en", "how do I delete my account", "delete-account"),
+    ],
+)
+def test_app_help_covers_account_and_safety(ctx, locale, query, expected):
+    ctx.locale = locale
+    assert run(ctx, "search_app_help", query=query)["results"][0]["id"] == expected
 
 
 def test_app_guide_is_complete_in_both_languages():
