@@ -1,6 +1,6 @@
 # Google Play「資料安全性」表單填寫草稿（D-12）
 
-> **草稿，送出前請 D 與 A 確認。** 依目前程式實際蒐集的資料整理（對照 [隱私權政策草稿](privacy-policy.md)）。Play Console 的題目與分類名稱可能調整，以實際畫面為準；標【待確認】的地方要先決定。
+> **草稿，送出前請 D 與 A 確認。** 依目前程式實際蒐集的資料整理（對照 [隱私權政策草稿](privacy-policy.md)）。Play Console 的題目與分類名稱可能調整，以實際畫面為準；標【待確認】的地方要先決定。其他聲明（審查帳號、廣告、內容分級、目標年齡）見 [play-console-declarations.md](play-console-declarations.md)。
 
 ## 總覽題
 
