@@ -105,6 +105,7 @@ class FakeCultureRepository implements CultureRepository {
   final List<Map<String, Object?>> feedback = [];
   final Set<String> blocked = {};
   bool aiDown = false;
+  String role = 'student';
   int _ids = 0;
 
   void _requireLogin() {
@@ -114,11 +115,7 @@ class FakeCultureRepository implements CultureRepository {
   @override
   Future<Profile> me() async {
     _requireLogin();
-    return const Profile(
-      id: 'dev-test',
-      role: 'student',
-      preferredLocale: 'zh-Hant',
-    );
+    return Profile(id: 'dev-test', role: role, preferredLocale: 'zh-Hant');
   }
 
   @override

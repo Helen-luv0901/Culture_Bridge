@@ -107,6 +107,35 @@ Future<void> _guard(
   }
 }
 
+/// Title, subtitle and an action button underneath, aligned right. A ListTile trailing button
+/// squeezes the text to nothing on phones with large text (C-17).
+class _ListRow extends StatelessWidget {
+  const _ListRow({required this.title, required this.subtitle, this.action});
+  final Widget title;
+  final Widget subtitle;
+  final Widget? action;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DefaultTextStyle.merge(
+          style: const TextStyle(fontSize: 16),
+          child: title,
+        ),
+        const SizedBox(height: 2),
+        DefaultTextStyle.merge(
+          style: const TextStyle(fontSize: 14, color: Palette.muted),
+          child: subtitle,
+        ),
+        if (action != null)
+          Align(alignment: Alignment.centerRight, child: action),
+      ],
+    ),
+  );
+}
+
 // ---------- procedures ----------
 
 class _ActionList extends StatelessWidget {
@@ -134,8 +163,17 @@ class _ActionList extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: PaperCard(
                 padding: const EdgeInsets.all(8),
+                // The status tag sits above the title: as a ListTile leading it took the whole
+                // row with long English labels and large text.
                 child: ListTile(
-                  title: Text(item.title.of(vm.english)),
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      StatusTag(item.status),
+                      const SizedBox(height: 6),
+                      Text(item.title.of(vm.english)),
+                    ],
+                  ),
                   subtitle: Text(
                     [
                       'v${item.latestVersion}',
@@ -145,7 +183,6 @@ class _ActionList extends StatelessWidget {
                       if (item.archived) vm.pair('已封存', 'Archived'),
                     ].join(' · '),
                   ),
-                  leading: StatusTag(item.status),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/admin/actions/${item.id}'),
                 ),
@@ -950,12 +987,12 @@ class _DocumentsState extends State<_Documents> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final d in docs)
-                ListTile(
+                _ListRow(
                   title: Text(d.title),
                   subtitle: Text(
                     '${d.publisher} · ${d.chunks} ${vm.pair('段', 'passages')}',
                   ),
-                  trailing: TextButton(
+                  action: TextButton(
                     onPressed: () => _guard(context, () async {
                       await widget.admin.setDocumentActive(d.id, !d.active);
                       reload();
@@ -1052,10 +1089,10 @@ class _AccountsState extends State<_Accounts> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final m in staff)
-                ListTile(
+                _ListRow(
                   title: SelectableText(m.id),
                   subtitle: Text(_roleName(m.role)),
-                  trailing: m.id == vm.profile?.id
+                  action: m.id == vm.profile?.id
                       ? Text(vm.pair('（你）', '(you)'))
                       : TextButton(
                           onPressed: () => _set(m.id, 'student'),
@@ -1091,9 +1128,17 @@ class _StatsState extends State<_Stats> {
     Widget row(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: Text(label)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );
