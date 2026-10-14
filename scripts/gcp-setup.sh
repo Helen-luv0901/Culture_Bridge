@@ -446,7 +446,7 @@ step_monitoring() {
 # ---------- 7. official procedure drafts (D-8) ----------
 
 step_import() {
-  bold "7. 匯入第一批官方流程卡草稿（D-8）"
+  bold "7. 匯入官方流程卡草稿（D-8）"
   note "只建立未發布的草稿與來源；審查者在網頁版後台核對來源、修正後才發布。"
   need_instance
   local conn="${PROJECT}:${REGION}:${INSTANCE}" job=culture-bridge-import image
@@ -482,7 +482,7 @@ Culture Bridge — Google Cloud 設定（專案 ${PROJECT}，區域 ${REGION}）
   4) Firebase 登入
   5) 部署網頁版與後端（A-7）
   6) 監控（A-8）
-  7) 匯入第一批官方流程卡草稿（D-8，部署後）
+  7) 匯入官方流程卡草稿（D-8，部署後）
   9) 刪除舊的試用執行個體（確認新資料庫正常後）
   q) 離開
 EOF

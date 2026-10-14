@@ -67,9 +67,11 @@ class LoadingNote extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            BridgeScope.of(context).t('loading'),
-            style: const TextStyle(color: Palette.muted),
+          Flexible(
+            child: Text(
+              BridgeScope.of(context).t('loading'),
+              style: const TextStyle(color: Palette.muted),
+            ),
           ),
         ],
       ),

@@ -160,37 +160,39 @@ class MyProgressPanel extends StatelessWidget {
             children: [
               PaperHeading(vm.t('myActionProgress')),
               for (final e in executions)
-                ListTile(
+                Padding(
                   key: Key('progress-${e.actionId}'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    e.title.of(vm.english),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${vm.t('progress')}: ${e.doneCount} / ${e.steps.length}',
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.title.of(vm.english),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${vm.t('progress')}: ${e.doneCount} / ${e.steps.length}',
+                      ),
+                      const SizedBox(height: 6),
+                      LinearProgressIndicator(
+                        value: e.steps.isEmpty
+                            ? 0
+                            : e.doneCount / e.steps.length,
+                        backgroundColor: Palette.edge,
+                        color: Palette.moss,
+                        minHeight: 6,
+                      ),
+                      // Below the bar, not beside it, so long labels and large text fit.
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () =>
+                              context.push('/actions/${e.actionId}/progress'),
+                          child: Text(vm.t('continueAction')),
                         ),
-                        const SizedBox(height: 6),
-                        LinearProgressIndicator(
-                          value: e.steps.isEmpty
-                              ? 0
-                              : e.doneCount / e.steps.length,
-                          backgroundColor: Palette.edge,
-                          color: Palette.moss,
-                          minHeight: 6,
-                        ),
-                      ],
-                    ),
-                  ),
-                  trailing: TextButton(
-                    onPressed: () =>
-                        context.push('/actions/${e.actionId}/progress'),
-                    child: Text(vm.t('continueAction')),
+                      ),
+                    ],
                   ),
                 ),
             ],
