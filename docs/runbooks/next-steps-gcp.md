@@ -30,7 +30,7 @@ cd ~/Culture_Bridge && bash scripts/deploy.sh
 
 它會自己拉最新的 `main`、建置映像檔（同一版已建過就略過）、更新資料表、部署；流程卡檔案有改才重新匯入；最後做健康檢查。第一次部署、改秘密或權限才需要 `bash scripts/gcp-setup.sh 5`。
 
-### 自動部署（設定一次，之後合併就上線）
+### 自動部署（✅ 2026-10-14 已設定，Deploy #6 成功）
 
 ```bash
 cd ~/Culture_Bridge && git checkout main && git pull && bash scripts/gcp-setup.sh 8
