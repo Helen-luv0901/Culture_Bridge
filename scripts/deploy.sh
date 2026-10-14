@@ -59,9 +59,14 @@ image="${IMAGE_REPO}:${tag}"
 note "版本：${tag}  $(git log -1 --format=%s)"
 
 # The commit currently live, to tell whether the procedure cards changed.
-live_image="$(gc run services describe "${SERVICE}" --region="${REGION}" \
-  --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || true)"
-[[ -n "${live_image}" ]] || die "找不到 ${SERVICE} 服務。第一次部署請用 bash scripts/gcp-setup.sh 5。"
+if ! live_image="$(gc run services describe "${SERVICE}" --region="${REGION}" \
+  --format='value(spec.template.spec.containers[0].image)' 2>&1)"; then
+  printf '%s\n' "${live_image}" >&2
+  if [[ "${live_image}" == *"could not be found"* || "${live_image}" == *NOT_FOUND* ]]; then
+    die "找不到 ${SERVICE} 服務。第一次部署請用 bash scripts/gcp-setup.sh 5。"
+  fi
+  die "讀不到 ${SERVICE} 服務（上面是 Google Cloud 的錯誤訊息）。在 GitHub Actions 出現時，通常是 gcp-setup.sh 步驟 8 沒有完整跑完：重跑 bash scripts/gcp-setup.sh 8。"
+fi
 live_tag="${live_image##*:}"
 
 bold "2/5 映像檔"
