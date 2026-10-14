@@ -69,7 +69,7 @@ def get_settings() -> Settings:
         # Cosine distance cut-off; tune with `python -m app.rag.evaluate` on real embeddings.
         semantic_max_distance=float(os.getenv("SEMANTIC_MAX_DISTANCE", "0.6")),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
-        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),
         assistant_max_tool_rounds=int(os.getenv("ASSISTANT_MAX_TOOL_ROUNDS", "5")),
         assistant_memory_exchanges=int(os.getenv("ASSISTANT_MEMORY_EXCHANGES", "6")),
