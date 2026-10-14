@@ -175,7 +175,10 @@ class AdminActionPage extends StatelessWidget {
           maxWidth: 900,
           children: [
             Text(
-              '${latest.content['title_zh']} / ${latest.content['title_en']}',
+              Text2(
+                latest.content['title_zh'] ?? '',
+                latest.content['title_en'] ?? '',
+              ).of(vm.english),
               style: displayStyle(25),
             ),
             if (latest.isDraft)
@@ -248,37 +251,41 @@ class VersionEditor extends StatefulWidget {
 }
 
 class _VersionEditorState extends State<VersionEditor> {
+  /// Content fields per language: (key, Chinese label, English label, min lines).
   static const fields = {
-    'title_zh': ('標題（中文）', 'Title (Chinese)'),
-    'title_en': ('標題（英文）', 'Title (English)'),
-    'description_zh': ('說明（中文）', 'Description (Chinese)'),
-    'description_en': ('說明（英文）', 'Description (English)'),
-    'applicable_to': ('適用對象（中文）', 'Applies to (Chinese)'),
-    'applicable_to_en': ('適用對象（英文）', 'Applies to (English)'),
-    'location': ('地點（中文）', 'Location (Chinese)'),
-    'location_en': ('地點（英文）', 'Location (English)'),
+    'zh': [
+      ('title_zh', '標題', 'Title', 1),
+      ('description_zh', '說明', 'Description', 3),
+      ('applicable_to', '適用對象', 'Applies to', 2),
+      ('location', '地點', 'Location', 1),
+    ],
+    'en': [
+      ('title_en', '標題', 'Title', 1),
+      ('description_en', '說明', 'Description', 3),
+      ('applicable_to_en', '適用對象', 'Applies to', 2),
+      ('location_en', '地點', 'Location', 1),
+    ],
   };
   late final Map<String, TextEditingController> _fields = {
-    for (final key in fields.keys)
-      key: TextEditingController(text: widget.version?.content[key] ?? ''),
+    for (final f in [...fields['zh']!, ...fields['en']!])
+      f.$1: TextEditingController(text: widget.version?.content[f.$1] ?? ''),
   };
   final _slug = TextEditingController();
-  late final List<(TextEditingController, TextEditingController)> _steps = [
+  late final List<_StepFields> _steps = [
     for (final s in widget.version?.steps ?? const <AdminStep>[])
-      (
-        TextEditingController(text: s.titleZh),
-        TextEditingController(text: s.titleEn),
-      ),
+      _StepFields(s.titleZh, s.titleEn, s.notes ?? ''),
   ];
+
+  /// Which language's content is shown; starts with the interface language.
+  String? _lang;
 
   @override
   void dispose() {
     for (final c in _fields.values) {
       c.dispose();
     }
-    for (final (zh, en) in _steps) {
-      zh.dispose();
-      en.dispose();
+    for (final s in _steps) {
+      s.dispose();
     }
     _slug.dispose();
     super.dispose();
@@ -290,13 +297,16 @@ class _VersionEditorState extends State<VersionEditor> {
           ? null
           : e.value.text.trim(),
     'steps': [
-      for (final (zh, en) in _steps)
-        if (zh.text.trim().isNotEmpty)
+      for (final s in _steps)
+        if (s.zh.text.trim().isNotEmpty || s.en.text.trim().isNotEmpty)
           {
-            'title_zh': zh.text.trim(),
-            'title_en': en.text.trim().isEmpty
-                ? zh.text.trim()
-                : en.text.trim(),
+            'title_zh': s.zh.text.trim().isEmpty
+                ? s.en.text.trim()
+                : s.zh.text.trim(),
+            'title_en': s.en.text.trim().isEmpty
+                ? s.zh.text.trim()
+                : s.en.text.trim(),
+            'notes': s.notes.text.trim().isEmpty ? null : s.notes.text.trim(),
           },
     ],
   };
@@ -305,6 +315,7 @@ class _VersionEditorState extends State<VersionEditor> {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final creating = widget.version == null;
+    final lang = _lang ??= vm.english ? 'en' : 'zh';
     return PaperCard(
       color: Palette.high,
       child: Column(
@@ -316,59 +327,90 @@ class _VersionEditorState extends State<VersionEditor> {
                 : '${vm.t('draft')} v${widget.version!.number}',
           ),
           if (creating)
-            TextField(
+            LabeledField(
+              label: vm.pair(
+                '網址代稱（英文小寫與 -，例如 arc-extension）',
+                'Slug (lowercase letters and -, e.g. arc-extension)',
+              ),
               controller: _slug,
-              decoration: InputDecoration(
-                labelText: vm.pair(
-                  '網址代稱（英文小寫與 -）',
-                  'Slug (lowercase letters and -)',
+            ),
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                vm.pair('編輯語言', 'Editing'),
+                style: const TextStyle(fontSize: 13, color: Palette.muted),
+              ),
+              for (final l in const ['zh', 'en'])
+                ChoiceChip(
+                  label: Text(l == 'zh' ? '中文' : 'English'),
+                  selected: lang == l,
+                  onSelected: (_) => setState(() => _lang = l),
                 ),
-              ),
-            ),
-          for (final e in fields.entries)
-            TextField(
-              controller: _fields[e.key],
-              maxLines: e.key.startsWith('description') ? 4 : 1,
-              decoration: InputDecoration(
-                labelText: vm.pair(e.value.$1, e.value.$2),
-              ),
-            ),
+            ],
+          ),
           const SizedBox(height: 16),
+          for (final f in fields[lang]!)
+            LabeledField(
+              key: ValueKey(f.$1),
+              label: vm.pair(f.$2, f.$3),
+              controller: _fields[f.$1]!,
+              minLines: f.$4,
+            ),
+          const SizedBox(height: 8),
           PaperHeading(vm.t('stepPreview')),
-          for (final (i, (zh, en)) in _steps.indexed)
-            Row(
-              children: [
-                PaperTag('${i + 1}'),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: zh,
-                    decoration: const InputDecoration(labelText: '中文'),
+          for (final (i, step) in _steps.indexed)
+            Padding(
+              key: ObjectKey(step),
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24, right: 12),
+                    child: PaperTag('${i + 1}'),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: en,
-                    decoration: const InputDecoration(labelText: 'English'),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        LabeledField(
+                          key: ValueKey('$lang-title'),
+                          label: vm.pair('步驟標題', 'Step title'),
+                          controller: lang == 'zh' ? step.zh : step.en,
+                        ),
+                        LabeledField(
+                          label: lang == 'zh'
+                              ? vm.pair(
+                                  '補充說明（文件、費用、期限）',
+                                  'Notes (documents, fees, deadlines)',
+                                )
+                              : vm.pair(
+                                  '補充說明（目前只有中文）',
+                                  'Notes (Chinese only for now)',
+                                ),
+                          controller: step.notes,
+                          minLines: 2,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  tooltip: vm.t('delete'),
-                  icon: const Icon(Icons.remove_circle_outline),
-                  onPressed: () => setState(() => _steps.removeAt(i)),
-                ),
-              ],
+                  IconButton(
+                    padding: const EdgeInsets.only(top: 20),
+                    tooltip: vm.t('delete'),
+                    icon: const Icon(Icons.remove_circle_outline),
+                    onPressed: () => setState(() {
+                      _steps.removeAt(i).dispose();
+                    }),
+                  ),
+                ],
+              ),
             ),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: () => setState(
-                () => _steps.add((
-                  TextEditingController(),
-                  TextEditingController(),
-                )),
-              ),
+              onPressed: () => setState(() => _steps.add(_StepFields())),
               icon: const Icon(Icons.add),
               label: Text(vm.pair('新增步驟', 'Add step')),
             ),
@@ -425,6 +467,19 @@ class _VersionEditorState extends State<VersionEditor> {
   }
 }
 
+class _StepFields {
+  _StepFields([String zh = '', String en = '', String notes = ''])
+    : zh = TextEditingController(text: zh),
+      en = TextEditingController(text: en),
+      notes = TextEditingController(text: notes);
+  final TextEditingController zh, en, notes;
+  void dispose() {
+    zh.dispose();
+    en.dispose();
+    notes.dispose();
+  }
+}
+
 /// Sources and verification for the newest version. "Verified" needs a source and a reviewer.
 class _VerificationPanel extends StatefulWidget {
   const _VerificationPanel({
@@ -476,27 +531,18 @@ class _VerificationPanelState extends State<_VerificationPanel> {
             ),
           if (v.isDraft) ...[
             Text(vm.pair('新增來源（發布前）', 'Add a source (before publishing)')),
-            TextField(
+            LabeledField(
               controller: _newTitle,
-              decoration: InputDecoration(
-                labelText: vm.pair('文件名稱', 'Document title'),
-              ),
+              label: vm.pair('文件名稱', 'Document title'),
             ),
-            TextField(
-              controller: _newUrl,
-              decoration: const InputDecoration(labelText: 'URL'),
-            ),
-            TextField(
+            LabeledField(controller: _newUrl, label: 'URL'),
+            LabeledField(
               controller: _newPublisher,
-              decoration: InputDecoration(
-                labelText: vm.pair('發布單位', 'Publisher'),
-              ),
+              label: vm.pair('發布單位', 'Publisher'),
             ),
-            TextField(
+            LabeledField(
               controller: _evidence,
-              decoration: InputDecoration(
-                labelText: vm.pair('這份來源證明了什麼', 'What this source supports'),
-              ),
+              label: vm.pair('這份來源證明了什麼', 'What this source supports'),
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -547,11 +593,9 @@ class _VerificationPanelState extends State<_VerificationPanel> {
               ],
               onChanged: (value) => setState(() => _decision = value!),
             ),
-            TextField(
+            LabeledField(
               controller: _note,
-              decoration: InputDecoration(
-                labelText: vm.pair('審查說明', 'Review note'),
-              ),
+              label: vm.pair('審查說明', 'Review note'),
             ),
             Align(
               alignment: Alignment.centerLeft,
@@ -860,17 +904,11 @@ class _DocumentsState extends State<_Documents> {
             'Paste the full text of an official document so the assistant can cite it. Retire outdated ones.',
           ),
         ),
-        TextField(
-          controller: _title,
-          decoration: InputDecoration(labelText: vm.pair('文件名稱', 'Title')),
-        ),
-        TextField(
-          controller: _url,
-          decoration: const InputDecoration(labelText: 'URL'),
-        ),
-        TextField(
+        LabeledField(controller: _title, label: vm.pair('文件名稱', 'Title')),
+        LabeledField(controller: _url, label: 'URL'),
+        LabeledField(
           controller: _publisher,
-          decoration: InputDecoration(labelText: vm.pair('發布單位', 'Publisher')),
+          label: vm.pair('發布單位', 'Publisher'),
         ),
         TextField(
           controller: _action,
@@ -881,10 +919,10 @@ class _DocumentsState extends State<_Documents> {
             ),
           ),
         ),
-        TextField(
+        LabeledField(
           controller: _text,
-          maxLines: 8,
-          decoration: InputDecoration(labelText: vm.pair('全文', 'Full text')),
+          label: vm.pair('全文', 'Full text'),
+          minLines: 6,
         ),
         Align(
           alignment: Alignment.centerLeft,
@@ -983,10 +1021,7 @@ class _AccountsState extends State<_Accounts> {
             'Ask the teammate to sign in and copy their account ID from Me → Account, then set a role here.',
           ),
         ),
-        TextField(
-          controller: _id,
-          decoration: InputDecoration(labelText: vm.pair('帳號編號', 'Account ID')),
-        ),
+        LabeledField(controller: _id, label: vm.pair('帳號編號', 'Account ID')),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
