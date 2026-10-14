@@ -1,6 +1,6 @@
 # Google Play 商店頁文案（草稿，D-13）
 
-> 草稿。字數限制以 Play Console 為準（應用程式名稱 30、簡短說明 80、完整說明 4000 字元）。截圖與圖示見 C-20。
+> 草稿。字數限制以 Play Console 為準（應用程式名稱 30、簡短說明 80、完整說明 4000 字元）。圖示與截圖（C-20 暫定版）：`docs/store/play-icon-512.png`、`docs/store/screenshots/{zh,en}/`（1080×1920，用示範資料拍攝，上架前用正式流程卡重拍；拍攝程式 `flutter_app/tool/store_screenshots.mjs`）。
 
 ## 繁體中文
 
