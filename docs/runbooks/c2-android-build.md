@@ -10,6 +10,7 @@
 - `android/app/build.gradle.kts`：有 `android/key.properties` 時用上傳金鑰簽署正式版，沒有時退回 debug 金鑰
 - 登入：非網頁平台用 `signInWithProvider(GoogleAuthProvider())`（`lib/data/auth_service.dart`）
 - 設定：App 啟動時先讀 `--dart-define` 的 Firebase 設定，再讀後端 `/api/config`
+- 圖示（C-20 暫定版）：`flutter_app/tool/make_icons.py` 畫出橋與日出圖示，產生網頁、Android（含 Android 8+ 的自適應圖示）、iOS 各尺寸，以及 Play 商店用的 `docs/store/play-icon-512.png`。要改設計就改這支程式後重跑 `python3 tool/make_icons.py`（需要 Pillow）
 
 ## 1. 在 Firebase 加入 Android App
 
