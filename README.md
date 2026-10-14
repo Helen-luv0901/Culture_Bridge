@@ -26,7 +26,7 @@ Cloud Run：FastAPI 後端（backend/）＋同一個服務提供 Flutter 網頁�
         └─ Firebase Authentication（Google 登入）
 ```
 
-細節與決策紀錄見 [技術架構](docs/tech-architecture.md)。
+細節與決策紀錄見 [技術架構](docs/engineering/tech-architecture.md)。
 
 ## 專案結構
 
@@ -34,15 +34,16 @@ Cloud Run：FastAPI 後端（backend/）＋同一個服務提供 Flutter 網頁�
 |---|---|
 | `flutter_app/` | 現行 App（網頁、Android、iOS 共用）— [說明](flutter_app/README.md) |
 | `backend/` | Python 3.12 FastAPI 後端、AI 助理、Alembic migration — [說明](backend/README.md) |
-| `database/` | PostgreSQL schema（`schema_postgres.sql` 為第一版 migration）與 SQLite 草案 |
-| `scripts/` | Google Cloud 一步步設定腳本 `gcp-setup.sh`、搬遷筆數比對 `compare-migration.sh` |
-| `docs/` | 產品、資料庫、分工、runbook、測試清單、上架文件草稿 |
+| `scripts/` | 一行部署 `deploy.sh`、Google Cloud 設定 `gcp-setup.sh`、搬遷筆數比對 `compare-migration.sh` |
+| `docs/` | 產品、技術、分工、runbook、上架草稿與素材 — [目錄](docs/README.md) |
 | `Dockerfile` | 建置網頁版＋後端的單一映像檔（Cloud Run 用） |
-| `frontend/`、`prototype/` | 早期的 React 版與靜態 mockup，只保留作參考 |
+| `.github/workflows/` | CI（每個 PR）與合併後自動部署 |
+
+早期的 React 版（`frontend/`）、HTML mockup（`prototype/`）與 SQLite schema 草案（`database/`）已移除，需要時可從 git 歷史取回（例如 `git checkout 705440c -- frontend`）。
 
 ## 本機快速開始
 
-需要 Python 3.12＋[uv](https://docs.astral.sh/uv/)、Docker、Flutter 3.47.7。完整步驟見 [開發環境安裝](docs/dev-setup.md)。
+需要 Python 3.12＋[uv](https://docs.astral.sh/uv/)、Docker、Flutter 3.47.7。完整步驟見 [開發環境安裝](docs/engineering/dev-setup.md)。
 
 ```sh
 # 資料庫（含 pgvector）
@@ -66,9 +67,8 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 |---|---|
 | 後端 | `cd backend && uv run pytest && uv run ruff check . && uv run ruff format --check .` |
 | Flutter | `cd flutter_app && flutter analyze && flutter test` |
-| Schema | `python database/test_schema.py` |
 
-每個 PR 會由 GitHub Actions（`.github/workflows/ci.yml`）自動跑以上檢查。
+資料表規則（原 `database/test_schema.py`）已併入後端測試 `backend/tests/test_schema_rules.py`。每個 PR 會由 GitHub Actions（`.github/workflows/ci.yml`）自動跑以上檢查。
 
 ## 部署
 
@@ -86,12 +86,11 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 
 ## 文件
 
-- 產品：[Product Map](docs/product-map.md)、[Experience-Led MVP](docs/experience-led-mvp.md)、[設計](design.md)、[響應式 UI](docs/responsive-ui.md)
-- 資料：[Database Schema 與範例查詢](docs/database-schema.md)、[PostgreSQL Schema](database/schema_postgres.sql)
-- 團隊：[工作分配表](docs/work-assignment.md)、[Flutter 遷移紀錄](docs/flutter-migration.md)
-- 內容：[D-8 官方流程卡（18 張，待審查）](docs/content/d8-official-procedures.md)
-- 測試與試用：[手動測試清單](docs/manual-test-checklist.md)、[PMP 試用任務腳本](docs/pmp-pilot-script.md)
-- 上架草稿（需審閱）：[隱私權政策](docs/drafts/privacy-policy.md)、[服務條款與社群規範](docs/drafts/terms-and-community-guidelines.md)、[商店頁文案](docs/drafts/store-listing.md)、[Play 資料安全性表單](docs/drafts/play-data-safety.md)、[Play 其他聲明（審查帳號、廣告、分級、目標年齡）](docs/drafts/play-console-declarations.md)
+完整目錄見 [docs/README.md](docs/README.md)。常用的：
+
+- [工作分配表](docs/team/work-assignment.md)、[技術架構](docs/engineering/tech-architecture.md)、[開發環境安裝](docs/engineering/dev-setup.md)
+- [D-8 官方流程卡（18 張，待審查）](docs/content/d8-official-procedures.md)
+- [上架草稿](docs/drafts/)（隱私權政策、服務條款、商店頁、Play 表單）與[商店素材](docs/store/)
 
 ## 協作規則
 

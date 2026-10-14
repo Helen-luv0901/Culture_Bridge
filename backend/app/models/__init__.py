@@ -1,4 +1,4 @@
-"""SQLAlchemy mappings of the tables in database/schema_postgres.sql (+ migration 0002).
+"""SQLAlchemy mappings of the tables created by the Alembic migrations (0001 onwards).
 
 The database owns the rules (CHECK constraints and triggers); these classes only describe columns.
 Change tables through Alembic migrations, never by editing these alone.

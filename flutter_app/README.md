@@ -1,6 +1,6 @@
 ﻿# Culture Bridge — Flutter
 
-同一套 Flutter 原生 UI 支援響應式 Web、Android 與 iOS。設計見 [design.md](../design.md)。
+同一套 Flutter 原生 UI 支援響應式 Web、Android 與 iOS。設計見 [design.md](../docs/product/design.md)。
 
 ## 啟動
 

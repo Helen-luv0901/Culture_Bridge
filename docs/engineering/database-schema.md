@@ -2,7 +2,7 @@
 
 這份 schema 依目前介面與產品文件，支援「制度流程」及「生活經驗」兩條主線。先用 **SQLite 3.37+**，方便在本機閱讀與驗證；這是待你確認的資料模型，尚未接到 React，也未建立正式資料庫。
 
-SQL：[database/schema.sql](../database/schema.sql)
+SQL：Alembic migration（[第一版](../../backend/migrations/versions/0001_initial_schema.sql) 與之後的 `backend/migrations/versions/`）
 
 ## 先回答你可能會問的問題
 

@@ -1,4 +1,4 @@
-"""database/test_schema.py ported to PostgreSQL (B-1): the integrity rules the triggers enforce."""
+"""The original SQLite schema tests on PostgreSQL (B-1): the rules the triggers enforce."""
 
 import pytest
 from sqlalchemy import text

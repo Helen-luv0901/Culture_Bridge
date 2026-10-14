@@ -11,7 +11,7 @@ Flutter App（flutter_app/，Android 為主；Web 版可選）
         │ HTTPS + 登入 token
 後端 API（Python FastAPI，repo 的 backend/）
         │
-資料庫（Google Cloud SQL for PostgreSQL；結構見 database/schema_postgres.sql）
+資料庫（Google Cloud SQL for PostgreSQL；結構見 backend/migrations）
         │
 外部服務：Google Gemini｜Firebase Authentication（Google 登入）｜Google Play Console
         │
@@ -23,10 +23,9 @@ Flutter App（flutter_app/，Android 為主；Web 版可選）
 | 路徑 | 內容 |
 |---|---|
 | flutter_app/ | App（Android、Web；iOS 平台檔已建立但不在 MVP 範圍） |
-| database/ | schema_postgres.sql（雲端資料庫現行版本）、schema.sql（原 SQLite 草案，保留作參考）、test_schema.py |
-| docs/、design.md | 產品文件、設計規格 |
-| frontend/、prototype/ | React 版與 HTML mockup，保留作對照 |
-| backend/ | 待新增：Python FastAPI 後端（含 AI 助理與語意搜尋） |
+| backend/ | Python FastAPI 後端（含 AI 助理與語意搜尋）、Alembic migration |
+| docs/ | 產品、技術、分工、runbook、上架草稿（設計規格在 docs/product/design.md） |
+| scripts/ | 部署與 Google Cloud 設定腳本 |
 
 ---
 
@@ -69,7 +68,7 @@ Flutter App（flutter_app/，Android 為主；Web 版可選）
 
 ### 4. 版面與設計
 
-- 規格見 design.md：剪貼簿視覺、色彩 token、字體（本機打包）
+- 規格見 docs/product/design.md：剪貼簿視覺、色彩 token、字體（本機打包）
 - 寬度小於 768 用底部四個分頁；768～1100 用精簡側欄；大於 1100 用完整側欄與雙欄
 - 觸控目標至少 44px、焦點可見、支援文字放大
 
@@ -136,7 +135,7 @@ backend/
 │   ├── rag/           語意搜尋：向量化、建立／移除索引、官方文件切段（A 負責）
 │   ├── models/        SQLAlchemy 資料表對應
 │   └── core/          設定、資料庫連線、登入驗證、權限、頻率限制
-├── migrations/        Alembic 資料表變更（第一版＝database/schema_postgres.sql）
+├── migrations/        Alembic 資料表變更（第一版＝0001_initial_schema.sql）
 ├── tests/             pytest
 ├── pyproject.toml     uv 套件設定
 └── Dockerfile         部署到 Cloud Run
@@ -227,7 +226,7 @@ App 顯示卡片、執行白名單內的畫面動作；需要時顯示確認卡
 
 ## 五、資料層
 
-- 以 database/schema_postgres.sql 為準（由 GitHub 的 SQLite 草案 schema.sql 轉成 PostgreSQL，表與規則相同）：users、institutions、topics、actions、action_versions、action_steps、sources、action_version_sources、verification_records、executions、execution_steps、execution_feedback、experiences、experience_summaries、experience_translations、experience_reactions、experience_links、action_experience_links
+- 以 migration 0001 的 SQL 為準（由原 SQLite 草案轉成 PostgreSQL，表與規則相同）：users、institutions、topics、actions、action_versions、action_steps、sources、action_version_sources、verification_records、executions、execution_steps、execution_feedback、experiences、experience_summaries、experience_translations、experience_reactions、experience_links、action_experience_links
 - 核心規則（由資料庫 trigger 保護）：經驗沒有驗證欄位；已發布流程內容凍結；發布經驗必須有作者確認目前原文的摘要；verified 必須有 reviewer 審查紀錄
 - 公開讀取用 public_experiences 與 latest_published_actions 兩個 view
 - 待補：檢舉、封鎖、管理者操作紀錄、助理待確認操作、語意搜尋用的文件與向量資料表（pgvector）
@@ -279,7 +278,7 @@ App 顯示卡片、執行白名單內的畫面動作；需要時顯示確認卡
 
 1. ~~登入服務供應商~~：已決定 Firebase Authentication（2026-10-13）
 2. 套件名稱與最低 Android 版本
-3. ~~是否同步上線 Web 版~~：先做 Web 版，與後端放同一個 Cloud Run 服務（2026-10-13，見 [A-7 部署步驟](runbooks/a7-deploy-cloud-run.md)）
+3. ~~是否同步上線 Web 版~~：先做 Web 版，與後端放同一個 Cloud Run 服務（2026-10-13，見 [A-7 部署步驟](../runbooks/a7-deploy-cloud-run.md)）
 4. Gemini 方案與每日用量上限
 5. 檢舉與封鎖的處理範圍
 6. 訪客能否使用助理

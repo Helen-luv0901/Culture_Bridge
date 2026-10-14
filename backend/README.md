@@ -1,7 +1,7 @@
 # Culture Bridge — Backend
 
 Python 3.12 + FastAPI + SQLAlchemy 2 + PostgreSQL（Cloud SQL，含 pgvector）。所有 API 在 `/api` 底下；正式環境同一個服務也提供 Flutter 網頁版（`WEB_DIR`）。
-架構見 [tech-architecture](../docs/tech-architecture.md)；本機安裝見 [dev-setup](../docs/dev-setup.md)；部署見 [A-7 部署步驟](../docs/runbooks/a7-deploy-cloud-run.md)。
+架構見 [tech-architecture](../docs/engineering/tech-architecture.md)；本機安裝見 [dev-setup](../docs/engineering/dev-setup.md)；部署見 [A-7 部署步驟](../docs/runbooks/a7-deploy-cloud-run.md)。
 
 ## 結構
 
