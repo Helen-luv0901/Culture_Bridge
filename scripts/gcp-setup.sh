@@ -45,6 +45,15 @@ run() {
   fi
 }
 
+# Cloud Shell sometimes loses its credentials, often during the 5-10 minute build. Stop with the
+# fix instead of failing on the next command (and misreading "describe failed" as "missing").
+require_login() {
+  [[ "${DRY_RUN}" == "1" ]] && return 0
+  [[ -n "$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null)" ]] \
+    && return 0
+  die "Cloud Shell 目前沒有登入的帳號。執行 gcloud config set account <你的 Google 帳號>，或重新整理 Cloud Shell 頁面並按「授權」，再重新執行這一步。"
+}
+
 # Run a command whose output may contain a secret (e.g. api-keys create prints keyString even
 # with --format=none). Shows nothing on success; on failure shows the error with keys masked.
 hide_output() {
@@ -381,8 +390,13 @@ step_deploy() {
     --role=roles/cloudbuild.builds.builder --condition=None --quiet
   local tag
   tag="$(git -C "${REPO_ROOT}" rev-parse --short HEAD)"
-  run gcloud builds submit "${REPO_ROOT}" --tag="${IMAGE_REPO}:${tag}" \
-    --machine-type=e2-highcpu-8 --project="${PROJECT}"
+  if gcloud artifacts docker images describe "${IMAGE_REPO}:${tag}" >/dev/null 2>&1; then
+    note "映像檔 ${tag} 已經建置過，略過建置。"
+  else
+    run gcloud builds submit "${REPO_ROOT}" --tag="${IMAGE_REPO}:${tag}" \
+      --machine-type=e2-highcpu-8 --project="${PROJECT}"
+  fi
+  require_login
 
   bold "5d. 資料表（migration）"
   local job=culture-bridge-migrate
@@ -492,14 +506,17 @@ main() {
   command -v gcloud >/dev/null || die "找不到 gcloud；請在 Google Cloud Shell 執行。"
   if [[ $# -gt 0 ]]; then
     local step
-    for step in "$@"; do do_step "${step}"; done
+    # Later steps build on earlier ones (7 needs 5's image), so stop at the first failure.
+    for step in "$@"; do
+      do_step "${step}" || { note "後面的步驟沒有執行。"; return 1; }
+    done
     return
   fi
   while true; do
     menu
     read -r -p "選擇: " choice || break
     [[ "${choice}" == "q" ]] && break
-    do_step "${choice}"
+    do_step "${choice}" || true
   done
 }
 
@@ -508,12 +525,13 @@ main() {
 do_step() {
   local rc
   set +e
-  (set -e; dispatch "$1")
+  (set -e; require_login; dispatch "$1")
   rc=$?
   set -e
   # shellcheck disable=SC1090
   [[ -f "${STATE}" ]] && source "${STATE}"
   [[ ${rc} -eq 0 ]] || note "這一步沒有完成，可以修正後重新執行。"
+  return "${rc}"
 }
 
 dispatch() {
