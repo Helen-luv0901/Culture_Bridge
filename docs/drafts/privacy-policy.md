@@ -12,7 +12,7 @@ Culture Bridge 是協助在台國際學生辦理生活流程、分享生活經�
 
 | 資料 | 來源 | 用途 |
 |---|---|---|
-| 登入識別碼（Firebase 帳號的內部 ID） | 你用 Google 登入時 | 辨識你的帳號。我們**不儲存**你的密碼、Email 或姓名 |
+| 登入識別碼（Firebase 帳號的內部 ID）；Google 帳號的 Email 與名稱 | 你用 Google 登入時 | 辨識你的帳號。登入由 Google 的 Firebase Authentication 處理，Email 與名稱存在 Firebase，用於登入；我們的資料庫只存內部 ID，**不存**你的密碼、Email 或姓名，App 也不顯示。刪除帳號時一併刪除 Firebase 登入資料 |
 | 語言偏好 | 你在 App 中設定 | 顯示介面語言 |
 | 你分享的經驗（原話、主題、身分類型）與 AI 整理、翻譯 | 你在「分享」輸入 | 匿名公開給其他使用者；用於搜尋與 AI 助理引用 |
 | 反應（有幫助、我也遇過）、「我的經驗不同」 | 你的操作 | 顯示統計、讓你看到自己的影響 |
@@ -74,7 +74,7 @@ Last updated: [TBC]
 
 **Who we are.** Culture Bridge helps international students in Taiwan with everyday procedures and shared experiences, operated by [TBC]. Contact: [TBC].
 
-**What we collect and why.** Your Firebase sign-in ID (we never store your password, email or name); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
+**What we collect and why.** Your Firebase sign-in ID (Google sign-in is handled by Firebase Authentication, which keeps your Google email and name for signing in; our database stores only the internal ID, never your password, email or name, and deleting your account also removes the Firebase login); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
 
 **Anonymity.** Shared experiences are public but never show your name, school, account, or anything linking several posts to the same person. Please do not write identifying details in your words.
 

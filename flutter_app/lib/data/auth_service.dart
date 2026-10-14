@@ -100,10 +100,25 @@ class FirebaseAuthService extends AuthService {
 
   @override
   Future<void> deleteLogin() async {
+    final user = _auth.currentUser;
     try {
-      await _auth.currentUser?.delete();
-    } on fb.FirebaseAuthException {
-      // "requires-recent-login": our data is already gone; signing out is enough.
+      await user?.delete();
+    } on fb.FirebaseAuthException catch (e) {
+      // Firebase only deletes a login that signed in recently; confirm with Google once more
+      // so the Google email and name it keeps are removed too. Our own data is already gone.
+      if (e.code == 'requires-recent-login' && user != null) {
+        try {
+          final provider = fb.GoogleAuthProvider();
+          if (kIsWeb) {
+            await user.reauthenticateWithPopup(provider);
+          } else {
+            await user.reauthenticateWithProvider(provider);
+          }
+          await user.delete();
+        } on fb.FirebaseAuthException {
+          // Cancelled or failed: signing out still ends the session.
+        }
+      }
     }
     await _auth.signOut();
   }
