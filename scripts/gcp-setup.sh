@@ -485,6 +485,58 @@ step_import() {
 
 # ---------- menu ----------
 
+# ---------- 8. automatic deployment from GitHub ----------
+
+GITHUB_REPO="Helen-luv0901/Culture_Bridge"
+
+step_autodeploy() {
+  bold "8. 合併到 main 後自動部署（GitHub Actions）"
+  note "設定一次就好。GitHub 用短期憑證登入（不產生金鑰檔），只有這個 repo 的 main 能登入，"
+  note "權限只有：推映像檔、更新 migration／匯入工作、部署新版本。CI 通過後自動執行 scripts/deploy.sh。"
+  local deploy_sa="culture-bridge-deploy@${PROJECT}.iam.gserviceaccount.com"
+  local run_sa="culture-bridge-run@${PROJECT}.iam.gserviceaccount.com"
+  local number pool=github provider=github
+  number="$(gcloud projects describe "${PROJECT}" --format='value(projectNumber)')"
+  confirm_yes "會建立部署用服務帳戶 culture-bridge-deploy，並允許 GitHub ${GITHUB_REPO} 的 main 分支用它部署。" \
+    || { note "已取消"; return 0; }
+
+  run gcloud services enable iamcredentials.googleapis.com sts.googleapis.com --project="${PROJECT}"
+  gcloud iam service-accounts describe "${deploy_sa}" --project="${PROJECT}" >/dev/null 2>&1 \
+    || run gcloud iam service-accounts create culture-bridge-deploy --project="${PROJECT}" \
+      --display-name="Culture Bridge deploy (GitHub Actions)"
+  for role in roles/run.developer roles/artifactregistry.writer; do
+    run gcloud projects add-iam-policy-binding "${PROJECT}" --member="serviceAccount:${deploy_sa}" \
+      --role="${role}" --condition=None --quiet
+  done
+  # Deploying a revision or running a job "as" the runtime account needs actAs on that account only.
+  run gcloud iam service-accounts add-iam-policy-binding "${run_sa}" --project="${PROJECT}" \
+    --member="serviceAccount:${deploy_sa}" --role=roles/iam.serviceAccountUser --quiet
+
+  gcloud iam workload-identity-pools describe "${pool}" --location=global \
+    --project="${PROJECT}" >/dev/null 2>&1 \
+    || run gcloud iam workload-identity-pools create "${pool}" --location=global \
+      --project="${PROJECT}" --display-name="GitHub Actions"
+  gcloud iam workload-identity-pools providers describe "${provider}" --location=global \
+    --workload-identity-pool="${pool}" --project="${PROJECT}" >/dev/null 2>&1 \
+    || run gcloud iam workload-identity-pools providers create-oidc "${provider}" \
+      --location=global --workload-identity-pool="${pool}" --project="${PROJECT}" \
+      --display-name="GitHub ${GITHUB_REPO}" \
+      --issuer-uri=https://token.actions.githubusercontent.com \
+      --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+      --attribute-condition="assertion.repository=='${GITHUB_REPO}' && assertion.ref=='refs/heads/main'"
+  run gcloud iam service-accounts add-iam-policy-binding "${deploy_sa}" --project="${PROJECT}" \
+    --role=roles/iam.workloadIdentityUser \
+    --member="principalSet://iam.googleapis.com/projects/${number}/locations/global/workloadIdentityPools/${pool}/attribute.repository/${GITHUB_REPO}"
+
+  bold "最後一步：在 GitHub 打開自動部署開關"
+  note "1. 打開 https://github.com/${GITHUB_REPO}/settings/variables/actions"
+  note "2. 按 New repository variable，Name 填 AUTO_DEPLOY，Value 填 true，按 Add variable"
+  note "之後每次合併到 main、CI 通過，就會自動部署；進度在 GitHub 的 Actions → Deploy。"
+  note "要暫停：把 AUTO_DEPLOY 改成 false。要完全撤銷：刪除服務帳戶 culture-bridge-deploy。"
+  [[ "${number}" == "689086323045" ]] \
+    || note "注意：專案編號是 ${number}，請把 .github/workflows/deploy.yml 裡的 689086323045 改成這個。"
+}
+
 menu() {
   cat <<EOF
 
@@ -497,6 +549,7 @@ Culture Bridge — Google Cloud 設定（專案 ${PROJECT}，區域 ${REGION}）
   5) 部署網頁版與後端（A-7）
   6) 監控（A-8）
   7) 匯入官方流程卡草稿（D-8，部署後）
+  8) 合併到 main 後自動部署（設定一次）
   9) 刪除舊的試用執行個體（確認新資料庫正常後）
   q) 離開
 EOF
@@ -544,6 +597,7 @@ dispatch() {
     5) step_deploy ;;
     6) step_monitoring ;;
     7) step_import ;;
+    8) step_autodeploy ;;
     9) step_cleanup_old ;;
     *) note "沒有這個選項：$1" ;;
   esac

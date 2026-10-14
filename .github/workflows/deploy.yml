@@ -1,0 +1,49 @@
+# Deploys main to Cloud Run after CI passes, by running scripts/deploy.sh.
+# One-time setup: scripts/gcp-setup.sh step 8, then the repository variable AUTO_DEPLOY=true
+# (Settings → Secrets and variables → Actions → Variables). Set AUTO_DEPLOY=false to pause.
+# Signs in to Google Cloud with short-lived credentials (Workload Identity Federation): no keys.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# One deployment at a time; a newer commit waits for the running one instead of cancelling it.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    if: >-
+      vars.AUTO_DEPLOY == 'true' && (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PROJECT: culture-bridge-511321
+      REGION: asia-east1
+      INSTANCE: culturebridge-db
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0 # deploy.sh compares the procedure cards with the live commit
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/689086323045/locations/global/workloadIdentityPools/github/providers/github
+          service_account: culture-bridge-deploy@culture-bridge-511321.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Deploy
+        run: bash scripts/deploy.sh
+        env:
+          NO_PULL: "1"
+          BUILD_WITH: docker
