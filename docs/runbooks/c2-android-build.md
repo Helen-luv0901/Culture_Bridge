@@ -63,7 +63,7 @@ flutter build appbundle --release $DEFINES   # 上傳 Play 用的 .aab
 
 ## 4. 實機測試（C-19）
 
-照 [手動測試清單](../manual-test-checklist.md)，至少 3 種機型（建議含一台小螢幕、一台 Android 10）。特別確認：
+照 [手動測試清單](../engineering/manual-test-checklist.md)，至少 3 種機型（建議含一台小螢幕、一台 Android 10）。特別確認：
 
 - Google 登入成功、重開 App 仍保持登入
 - 沒有網路時顯示「連不上伺服器」並可重試

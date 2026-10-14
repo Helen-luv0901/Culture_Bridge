@@ -78,7 +78,7 @@ AUTO=1 bash scripts/gcp-setup.sh 3 4
 AUTO=1 bash scripts/gcp-setup.sh 5
 ```
 
-- 問「這個資料庫是用 database/schema_postgres.sql 手動建的、而且第一次接 Alembic 嗎？(y/N)」→ 輸入 `y`
+- 問「這個資料庫是用第一版 schema 手動建的、而且第一次接 Alembic 嗎？(y/N)」→ 輸入 `y`
 - 出現部署確認 → 輸入 `yes`
 - 最後會印出「網址：https://…run.app」、「檢查：」後面有回應（不是「尚未回應」）、設定裡 `"environment":"production"` 且 firebase 有值
 

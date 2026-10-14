@@ -1,4 +1,4 @@
-"""Initial schema: database/schema_postgres.sql as of 2026-10-12.
+"""Initial schema: the PostgreSQL version of the original SQLite draft, as of 2026-10-12.
 
 The Cloud SQL database was created by running that file by hand, so on it run
 `alembic stamp 0001_initial_schema` once instead of upgrading through this revision.

@@ -78,7 +78,7 @@
 ## 三、C 負責的工作
 
 **App 基礎**
-1. 讀 design.md 與 flutter_app/README.md，在自己電腦跑起現有九頁與測試
+1. 讀 docs/product/design.md 與 flutter_app/README.md，在自己電腦跑起現有九頁與測試
 2. Android 原生編譯驗證：打包 APK／AAB、實機開啟、設定最低 Android 版本（【待確認】，原規格為 Android 10）
 3. 套件名稱定案（目前為 com.culturebridge.culture_bridge；第一次上傳 Play 後就不能改）
 4. API client 與 API 版 Repository：取代示範資料，處理載入、錯誤、無網路狀態

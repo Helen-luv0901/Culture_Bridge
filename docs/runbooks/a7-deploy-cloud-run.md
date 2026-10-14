@@ -72,7 +72,7 @@ gcloud run jobs create culture-bridge-migrate --image=$IMAGE:$TAG --region=$REGI
   --command=alembic --args=upgrade,head
 ```
 
-**第一次**：Cloud SQL 是用 `database/schema_postgres.sql` 手動建好的，要先讓 Alembic 知道第一版已存在：
+**第一次**：Cloud SQL 是用第一版 schema（migration 0001 的 SQL）手動建好的，要先讓 Alembic 知道第一版已存在：
 
 ```sh
 gcloud run jobs execute culture-bridge-migrate --region=$REGION \

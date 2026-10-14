@@ -77,9 +77,7 @@ Flutter 必須支援系統文字縮放，不以固定高度裁切多行內容。
 
 ## 資產及 Flutter 重建方式
 
-React 素材：`frontend/src/assets/botanical-0.png` 到 `botanical-4.png` 及 `design-symbols.svg`。
-
-Flutter 將沿用植物 PNG 與字體，透過 `CustomPainter`／`CustomClipper` 重建紙紋、紙邊、膠帶與手繪圈選。SVG symbol/filter 不能原封不動套入 Flutter 的繪圖引擎，應重建相同視覺意圖，避免讓畫面依賴 HTML 或 CSS。
+Flutter 版沿用字體（`flutter_app/assets/fonts/`），透過 `CustomPainter`／`CustomClipper` 重建紙紋、紙邊、膠帶與手繪圈選。SVG symbol/filter 不能原封不動套入 Flutter 的繪圖引擎，應重建相同視覺意圖，避免讓畫面依賴 HTML 或 CSS。
 
 ## 移植順序及驗收
 
@@ -89,8 +87,7 @@ Flutter 將沿用植物 PNG 與字體，透過 `CustomPainter`／`CustomClipper`
 4. 建立 UI／ViewModel／Repository 分層與宣告式路由。
 5. 依本規格逐頁重建並驗證操作。
 6. 執行 format、analyze、單元／Widget 測試、Web 正式建置。
-7. 提供啟動方式與實際驗證結果，React 保留作移植對照。
+7. 提供啟動方式與實際驗證結果。（移植完成後，React 版已自 repo 移除，可從 git 歷史取回。）
 
 測試尺寸至少包含 375、768、1024、1440，以及小尺寸與橫向；測試文字放大、分享驗證／返回編輯、探索篩選、辦事進度、語言切換和路由。
 
-資料庫仍為 `database/schema.sql` 草案；本次前端移植不代表已新增後端、登入、AI API 或正式發布功能。

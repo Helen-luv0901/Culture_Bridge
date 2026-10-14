@@ -409,7 +409,7 @@ step_deploy() {
       --set-secrets=DATABASE_URL=database-url:latest --command=alembic --args=upgrade,head
   fi
   local first
-  read -r -p "  這個資料庫是用 database/schema_postgres.sql 手動建的、而且第一次接 Alembic 嗎？(y/N) " first
+  read -r -p "  這個資料庫是用第一版 schema 手動建的、而且第一次接 Alembic 嗎？(y/N) " first
   if [[ "${first}" == "y" ]]; then
     run gcloud run jobs execute "${job}" --region="${REGION}" --project="${PROJECT}" \
       --args=stamp,0001_initial_schema --wait
