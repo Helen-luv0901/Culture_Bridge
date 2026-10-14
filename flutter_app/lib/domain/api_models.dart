@@ -24,15 +24,23 @@ class Profile {
     required this.id,
     required this.role,
     required this.preferredLocale,
+    this.nickname,
+    this.realName,
   });
   factory Profile.fromJson(Json json) => Profile(
     id: json['id'] as String,
     role: json['role'] as String,
     preferredLocale: json['preferred_locale'] as String,
+    nickname: json['nickname'] as String?,
+    realName: json['real_name'] as String?,
   );
   final String id;
   final String role;
   final String preferredLocale;
+
+  /// Optional; shown only on experiences the person chose to sign with them.
+  final String? nickname;
+  final String? realName;
   bool get isStaff => role == 'reviewer' || role == 'admin';
   bool get isAdmin => role == 'admin';
 }
@@ -234,6 +242,7 @@ class ExperienceItem {
     required this.differentCount,
     required this.myReactions,
     this.saved = false,
+    this.authorName,
   });
   factory ExperienceItem.fromJson(Json json) => ExperienceItem(
     id: json['id'] as String,
@@ -253,6 +262,7 @@ class ExperienceItem {
     differentCount: json['different_count'] as int,
     myReactions: List<String>.from(json['my_reactions'] as List),
     saved: json['saved'] as bool? ?? false,
+    authorName: json['author_name'] as String?,
   );
   final String id;
   final String topicId;
@@ -272,6 +282,9 @@ class ExperienceItem {
   /// In the reader's private "read later" list.
   final bool saved;
 
+  /// The nickname or real name the author chose to sign with; null means anonymous.
+  final String? authorName;
+
   ExperienceItem withSaved(bool value) => ExperienceItem(
     id: id,
     topicId: topicId,
@@ -288,6 +301,7 @@ class ExperienceItem {
     differentCount: differentCount,
     myReactions: myReactions,
     saved: value,
+    authorName: authorName,
   );
 
   /// Summary text (situation plus feeling), in the translation when [translated].

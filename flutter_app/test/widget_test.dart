@@ -91,7 +91,54 @@ void main() {
     await tester.enterText(find.byKey(const Key('dev-name')), 'mei');
     await tap(tester, find.byKey(const Key('dev-sign-in')));
     expect(app.vm.signedIn, isTrue);
+    // First sign-in without names: asked once, can skip.
+    expect(find.text('歡迎！要怎麼稱呼你？'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('names-later')));
     expect(find.byKey(const Key('start-action')), findsOneWidget);
+  });
+
+  testWidgets('Names set after sign-in sign a published experience', (
+    tester,
+  ) async {
+    final app = await mount(
+      tester,
+      '/share',
+      const Size(1024, 1600),
+      signedIn: false,
+    );
+    await tester.enterText(find.byKey(const Key('share-voice')), '第一次去夜市。');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tap(tester, find.byKey(const Key('review-draft')));
+    await tester.enterText(find.byKey(const Key('dev-name')), 'mei');
+    await tap(tester, find.byKey(const Key('dev-sign-in')));
+    await tester.enterText(find.byKey(const Key('nickname')), '  小  美 ');
+    await tap(tester, find.byKey(const Key('save-names')));
+    expect(app.repository.nickname, '小 美');
+    expect(app.repository.realName, isNull);
+    // Back on Share with the words kept.
+    expect(find.text('第一次去夜市。'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('review-draft')));
+    // Real name is not set, so it can't be chosen.
+    final realName = tester.widget<ChoiceChip>(
+      find.byKey(const Key('post-as-real_name')),
+    );
+    expect(realName.onSelected, isNull);
+    await tap(tester, find.byKey(const Key('post-as-nickname')));
+    await tap(tester, find.byKey(const Key('publish')));
+    expect(app.repository.lastPublish!['author_display'], 'nickname');
+  });
+
+  testWidgets('Signed experiences show the name, others stay anonymous', (
+    tester,
+  ) async {
+    await mount(
+      tester,
+      '/experiences/professor-see',
+      const Size(1024, 1400),
+      before: (app) async => app.repository.signAs('professor-see', '小美'),
+    );
+    expect(find.text('小美'), findsOneWidget);
+    expect(find.text('匿名分享'), findsNothing);
   });
 
   testWidgets('Share: blank check, AI summary, edit and publish', (

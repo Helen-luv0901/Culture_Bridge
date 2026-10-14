@@ -415,7 +415,7 @@ class ExperienceCard extends StatelessWidget {
             children: [
               PaperTag(vm.t(topicKey(experience.topicId))),
               PaperTag(vm.t(identityKey(experience.identityType))),
-              PaperTag(vm.t('anonymousShare')),
+              AuthorTag(item: experience),
             ],
           ),
           if (translated)
@@ -525,7 +525,7 @@ class _ExperienceDetail extends StatelessWidget {
                 children: [
                   PaperTag(vm.t(topicKey(item.topicId))),
                   PaperTag(vm.t(identityKey(item.identityType))),
-                  PaperTag(vm.t('anonymousShare')),
+                  AuthorTag(item: item),
                 ],
               ),
             ),
@@ -648,6 +648,19 @@ class _ExperienceDetail extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Who shared it: the nickname or real name the author chose to sign with, else anonymous.
+class AuthorTag extends StatelessWidget {
+  const AuthorTag({super.key, required this.item});
+  final ExperienceItem item;
+  @override
+  Widget build(BuildContext context) {
+    final name = item.authorName;
+    return name == null
+        ? PaperTag(BridgeScope.of(context).t('anonymousShare'))
+        : PaperTag(name, color: Palette.paleMoss);
   }
 }
 

@@ -22,7 +22,7 @@ Culture Bridge 把「該怎麼辦」和「別人怎麼經歷」放在一起：
 
 🌱 學生經驗，多一種理解
 ・依「生活適應」「文化與溝通」與身分（學位生、交換生、華語生）瀏覽
-・匿名分享一句話就好，AI 幫你整理成情境與給下一位學生的提醒，你確認後才發布
+・分享一句話就好，AI 幫你整理成情境與給下一位學生的提醒，你確認後才發布；可以匿名，也可以用暱稱或真名
 ・中英文切換，原文永遠保留
 
 💬 AI 助理
@@ -30,7 +30,7 @@ Culture Bridge 把「該怎麼辦」和「別人怎麼經歷」放在一起：
 ・不確定的事會直接說，並建議你向學校確認
 
 🔒 安心使用
-・分享一律匿名，不顯示姓名、學校或帳號
+・預設匿名分享，要不要顯示暱稱或真名由你決定；學校與帳號永遠不公開
 ・可檢舉不當內容、封鎖作者，也能隨時刪除帳號與所有資料
 
 學生經驗是個人觀點，不是官方規定；重要事項請以學校國際處與主管機關公告為準。
@@ -55,7 +55,7 @@ Culture Bridge puts "how to do it" next to "how others experienced it":
 
 🌱 Student experiences, more ways to understand
 • Browse by life adaptation or culture and communication, and by degree, exchange or language student
-• Share anonymously in a sentence; AI organizes it into the situation and a reminder for the next student, published only after you confirm
+• Share in a sentence; AI organizes it into the situation and a reminder for the next student, published only after you confirm, anonymously or under your nickname or real name
 • Switch between Chinese and English, always with the original kept
 
 💬 AI assistant
@@ -63,7 +63,7 @@ Culture Bridge puts "how to do it" next to "how others experienced it":
 • When it doesn't know, it says so and suggests checking with your school
 
 🔒 Safe to use
-• Everything you share is anonymous: no name, school or account shown
+• Anonymous by default; you decide whether to show a nickname or your real name, and your school and account are never shown
 • Report content, block authors, and delete your account and data at any time
 
 Student experiences are personal views, not official rules. For anything important, follow your school's international office and official announcements.

@@ -99,6 +99,8 @@ SQL 使用小寫表名；圖中為方便閱讀使用大寫。
 
 每人對同一經驗、同一反應最多一筆。取消有幫助就是刪除該反應；`public_experiences` 即時計算。自己的 impact 以去重讀者數和反應次數分別呈現，兩者不能混稱。
 
+`users.nickname`、`users.real_name`（migration `0007`，都可為空）只在作者發布時選擇署名才公開：`experiences.author_display` 為 `anonymous`（預設，既有經驗都是）、`nickname` 或 `real_name`，顯示時即時讀取帳號上的名字，所以改名、清空或刪除帳號都會同步。API 永遠不回傳作者帳號 ID；AI 助理與語意索引不使用名字。
+
 `saved_experiences`（migration `0006`）是讀者私人的「想再看」清單：每人每篇最多一筆、每人最多 200 筆，隨帳號或經驗刪除。收藏不計入任何公開數字，作者也看不到誰收藏。
 
 `experience_links` 是有方向的：原文 → 補充／相似經驗。查詢雙向相似關係時要同時查兩端；不同經驗數只計公開的補充經驗。

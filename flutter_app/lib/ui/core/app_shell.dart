@@ -39,6 +39,7 @@ class AppShell extends StatelessWidget {
     }
     if (uri.path == '/review') return vm.t('reviewBeforePublish');
     if (uri.path == '/signin') return vm.t('signIn');
+    if (uri.path == '/welcome') return vm.t('profileNames');
     if (uri.path.startsWith('/admin')) {
       return vm.pair('審查與管理', 'Review & admin');
     }

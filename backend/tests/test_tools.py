@@ -152,6 +152,8 @@ def test_app_help_answers_how_to_questions(ctx):
         ("en", "how do I delete my account", "delete-account"),
         ("zh-Hant", "怎麼收藏想再看的經驗", "saved"),
         ("en", "how do I bookmark an experience", "saved"),
+        ("zh-Hant", "可以用暱稱發文嗎", "names"),
+        ("en", "can I post with my real name", "names"),
     ],
 )
 def test_app_help_covers_account_and_safety(ctx, locale, query, expected):

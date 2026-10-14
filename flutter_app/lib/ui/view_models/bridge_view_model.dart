@@ -104,6 +104,29 @@ class BridgeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Save the optional names; blank clears one. Returns an error message, or null.
+  Future<String?> saveNames(String nickname, String realName) async {
+    String? clean(String value) {
+      final v = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+      return v.isEmpty ? null : v;
+    }
+
+    try {
+      profile = await repository.updateNames(
+        nickname: clean(nickname),
+        realName: clean(realName),
+      );
+    } on ApiException catch (e) {
+      return errorText(e);
+    }
+    // Signed experiences show the name, so cached lists may be stale.
+    _explore.clear();
+    _experiences.clear();
+    saved = const Resource();
+    notifyListeners();
+    return null;
+  }
+
   void _onAuthChanged() {
     if (auth.signedIn == _wasSignedIn) return;
     _wasSignedIn = auth.signedIn;
@@ -592,6 +615,7 @@ class BridgeViewModel extends ChangeNotifier {
     String? situation,
     String? feelingOrAttempt,
     String? reminder,
+    String authorDisplay = 'anonymous',
   }) async {
     final summary = _summary;
     final id = _draft.serverId;
@@ -603,6 +627,7 @@ class BridgeViewModel extends ChangeNotifier {
         situation: situation,
         feelingOrAttempt: feelingOrAttempt,
         reminder: reminder,
+        authorDisplay: authorDisplay,
       );
     } on ApiException catch (e) {
       return errorText(e);

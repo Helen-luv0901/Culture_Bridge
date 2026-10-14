@@ -41,6 +41,9 @@ class User(Base):
     auth_subject: Mapped[str] = mapped_column(Text, unique=True)
     preferred_locale: Mapped[str] = mapped_column(Text, default="zh-Hant", server_default="zh-Hant")
     role: Mapped[str] = mapped_column(Text, default="student", server_default="student")
+    # Optional; shown only on experiences the author chose to sign with them (migration 0007).
+    nickname: Mapped[str | None] = mapped_column(Text)
+    real_name: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = _created()
 
 
@@ -187,6 +190,10 @@ class Experience(Base):
     status: Mapped[str] = mapped_column(Text, default="draft", server_default="draft")
     confirmed_summary_id: Mapped[str | None] = mapped_column(Text)
     published_at: Mapped[datetime | None] = mapped_column(Timestamp)
+    # anonymous | nickname | real_name, chosen when publishing (migration 0007).
+    author_display: Mapped[str] = mapped_column(
+        Text, default="anonymous", server_default="anonymous"
+    )
     created_at: Mapped[datetime] = _created()
 
 

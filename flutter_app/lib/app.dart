@@ -75,6 +75,11 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             ],
           ),
           GoRoute(
+            path: '/welcome',
+            builder: (context, state) =>
+                WelcomePage(next: state.uri.queryParameters['next']),
+          ),
+          GoRoute(
             path: '/signin',
             builder: (context, state) =>
                 SignInPage(next: state.uri.queryParameters['next']),
