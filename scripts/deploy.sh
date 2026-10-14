@@ -10,6 +10,7 @@
 # Only for an existing setup: the first deployment, secrets and permissions are
 # scripts/gcp-setup.sh step 5. NO_PULL=1 deploys the checked-out commit as is; BUILD_WITH=docker
 # builds locally and pushes instead of using Cloud Build.
+# .github/workflows/deploy.yml runs it that way after CI passes on main (setup: gcp-setup.sh step 8).
 
 set -euo pipefail
 

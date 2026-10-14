@@ -30,6 +30,14 @@ cd ~/Culture_Bridge && bash scripts/deploy.sh
 
 它會自己拉最新的 `main`、建置映像檔（同一版已建過就略過）、更新資料表、部署；流程卡檔案有改才重新匯入；最後做健康檢查。第一次部署、改秘密或權限才需要 `bash scripts/gcp-setup.sh 5`。
 
+### 自動部署（設定一次，之後合併就上線）
+
+```bash
+cd ~/Culture_Bridge && git checkout main && git pull && bash scripts/gcp-setup.sh 8
+```
+
+確認時輸入 `yes`。跑完後到 GitHub：Settings → Secrets and variables → Actions → Variables → New repository variable，Name `AUTO_DEPLOY`、Value `true`。之後每次合併到 `main` 且 CI 通過，`.github/workflows/deploy.yml` 會自動執行 `scripts/deploy.sh`（GitHub → Actions → Deploy 看進度；失敗會寄信給 repo 擁有者）。暫停：把 `AUTO_DEPLOY` 改成 `false`；也可以在 Actions → Deploy → Run workflow 手動部署。
+
 - 建置期間登入過期的話，照提示執行 `gcloud config set account <Google 帳號>`（或重新整理頁面按「授權」）再重跑 `bash scripts/deploy.sh`，已經建置好的映像檔會自動略過
 - 流程卡匯入只會更新**沒有人動過**的草稿；審查者編輯過的卡會顯示 `skipped`，不會被覆蓋
 - 匯入明細：`gcloud logging read 'resource.type="cloud_run_job" AND labels."run.googleapis.com/execution_name"="<execution 名稱>"' --format='value(textPayload)' --limit=40`
