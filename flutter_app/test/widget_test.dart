@@ -164,6 +164,48 @@ void main() {
     expect(app.repository.executions, isEmpty);
   });
 
+  testWidgets('Save an experience and find it under My', (tester) async {
+    final app = await mount(
+      tester,
+      '/experiences/professor-see',
+      const Size(1024, 1400),
+    );
+    await tap(tester, find.byKey(const Key('save-professor-see')));
+    expect(app.repository.saved, ['professor-see']);
+    expect(find.text('已收藏，可以在「我的」找到。'), findsOneWidget);
+    final saved = tester.widget<IconButton>(
+      find.byKey(const Key('save-professor-see')),
+    );
+    expect(saved.isSelected, isTrue);
+    expect(saved.tooltip, '取消收藏');
+
+    await tester.pumpWidget(const SizedBox());
+    await mount(
+      tester,
+      '/profile',
+      const Size(1024, 1600),
+      before: (other) async {
+        await other.repository.setSaved('professor-see', true);
+      },
+    );
+    expect(find.text('收藏的經驗'), findsOneWidget);
+    expect(find.byKey(const Key('saved-professor-see')), findsOneWidget);
+    await tap(tester, find.text('取消收藏'));
+    expect(find.byKey(const Key('saved-professor-see')), findsNothing);
+    expect(find.textContaining('還沒有收藏'), findsOneWidget);
+  });
+
+  testWidgets('Guests are asked to sign in before saving', (tester) async {
+    await mount(
+      tester,
+      '/experiences/professor-see',
+      const Size(1024, 1400),
+      signedIn: false,
+    );
+    await tap(tester, find.byKey(const Key('save-professor-see')));
+    expect(find.byKey(const Key('dev-name')), findsOneWidget);
+  });
+
   testWidgets('Report and block from an experience', (tester) async {
     final app = await mount(
       tester,

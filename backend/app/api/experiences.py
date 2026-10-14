@@ -116,6 +116,26 @@ def remove_reaction(
     return svc.set_reaction(db, user, experience_id, kind, False)
 
 
+@router.put("/experiences/{experience_id}/saved")
+def save_experience(experience_id: str, user: RequiredUser, db: DbSession) -> svc.PublicExperience:
+    item = svc.set_saved(db, user, experience_id, True)
+    assert item is not None  # saving requires a public experience
+    return item
+
+
+@router.delete("/experiences/{experience_id}/saved", status_code=status.HTTP_204_NO_CONTENT)
+def unsave_experience(experience_id: str, user: RequiredUser, db: DbSession) -> Response:
+    svc.set_saved(db, user, experience_id, False)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/me/saved")
+def saved_experiences(
+    user: RequiredUser, db: DbSession, locale: svc.Locale | None = None
+) -> list[svc.PublicExperience]:
+    return svc.saved_experiences(db, user, locale)
+
+
 @router.get("/me/experiences")
 def my_experiences(user: RequiredUser, db: DbSession) -> list[svc.MyExperience]:
     return svc.my_experiences(db, user)

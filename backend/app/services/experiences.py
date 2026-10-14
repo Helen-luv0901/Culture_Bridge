@@ -23,6 +23,7 @@ from app.models import (
     ExperienceReaction,
     ExperienceSummary,
     ExperienceTranslation,
+    SavedExperience,
     UserBlock,
 )
 from app.rag.index import remove_content
@@ -111,6 +112,7 @@ class PublicExperience(BaseModel):
     experienced_too_count: int
     different_count: int
     my_reactions: list[ReactionKind]
+    saved: bool = False
 
 
 class ExperienceDetail(PublicExperience):
@@ -248,6 +250,15 @@ def _public_items(
             )
         ):
             mine.setdefault(experience_id, []).append(kind)
+    saved: set[str] = set()
+    if viewer is not None and ids:
+        saved = set(
+            db.scalars(
+                select(SavedExperience.experience_id).where(
+                    SavedExperience.experience_id.in_(ids), SavedExperience.user_id == viewer.id
+                )
+            )
+        )
     translations: dict[str, ExperienceTranslation] = {}
     if ids:
         for t in db.scalars(
@@ -286,6 +297,7 @@ def _public_items(
                 experienced_too_count=c.get("experienced_too", 0),
                 different_count=c.get("different", 0),
                 my_reactions=sorted(mine.get(experience.id, [])),  # type: ignore[arg-type]
+                saved=experience.id in saved,
             )
         )
     return items
@@ -515,6 +527,7 @@ def delete_experiences(db: Session, ids: list[str]) -> None:
     if not ids:
         return
     db.execute(delete(ExperienceReaction).where(ExperienceReaction.experience_id.in_(ids)))
+    db.execute(delete(SavedExperience).where(SavedExperience.experience_id.in_(ids)))
     db.execute(
         delete(ExperienceLink).where(
             or_(
@@ -585,6 +598,51 @@ def set_reaction(
         db.delete(existing)
     db.commit()
     return get_public(db, user, experience_id, None)
+
+
+# ---------- saved for later ----------
+
+MAX_SAVED = 200
+
+
+def set_saved(
+    db: Session, user: CurrentUser, experience_id: str, on: bool
+) -> PublicExperience | None:
+    """Save or unsave. Unsaving works even after the experience was hidden or deleted."""
+    existing = db.get(SavedExperience, (user.id, experience_id))
+    if on:
+        _require_public(db, experience_id)
+        if existing is None:
+            count = db.scalar(
+                select(func.count())
+                .select_from(SavedExperience)
+                .where(SavedExperience.user_id == user.id)
+            )
+            if (count or 0) >= MAX_SAVED:
+                raise conflict("too_many_saved")
+            db.add(SavedExperience(user_id=user.id, experience_id=experience_id))
+    elif existing is not None:
+        db.delete(existing)
+    db.commit()
+    if db.execute(_public_query(user).where(Experience.id == experience_id)).first() is None:
+        return None
+    return get_public(db, user, experience_id, None)
+
+
+def saved_experiences(
+    db: Session, user: CurrentUser, locale: Locale | None
+) -> list[PublicExperience]:
+    """Newest saves first; hidden, deleted and blocked authors' experiences drop out."""
+    rows = db.execute(
+        _public_query(user)
+        .join(
+            SavedExperience,
+            (SavedExperience.experience_id == Experience.id) & (SavedExperience.user_id == user.id),
+        )
+        .order_by(SavedExperience.created_at.desc(), Experience.id)
+        .limit(MAX_SAVED)
+    ).all()
+    return _public_items(db, rows, user, locale)
 
 
 # ---------- translations (B-11) ----------

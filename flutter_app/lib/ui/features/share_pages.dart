@@ -353,6 +353,12 @@ class ProfilePage extends StatelessWidget {
             load: (vm) => vm.loadMine(),
             builder: (context, mine) => _MyExperiences(items: mine),
           ),
+          PaperHeading(vm.t('savedExperiences')),
+          ResourceView<List<ExperienceItem>>(
+            resource: (vm) => vm.saved,
+            load: (vm) => vm.loadSaved(),
+            builder: (context, items) => _SavedExperiences(items: items),
+          ),
           const _AccountPanel(),
         ],
         Wrap(
@@ -485,6 +491,65 @@ class _MyExperiences extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _SavedExperiences extends StatelessWidget {
+  const _SavedExperiences({required this.items});
+  final List<ExperienceItem> items;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    if (items.isEmpty) {
+      return Text(
+        vm.t('noSaved'),
+        style: const TextStyle(color: Palette.muted),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final item in items)
+          Padding(
+            key: Key('saved-${item.id}'),
+            padding: const EdgeInsets.only(bottom: 12),
+            child: PaperCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '「${item.voice(vm.translated(item))}」',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    vm.t(topicKey(item.topicId)),
+                    style: const TextStyle(fontSize: 13, color: Palette.muted),
+                  ),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: () => vm.toggleSaved(item),
+                        child: Text(vm.t('unsave')),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push(
+                          '/experiences/${item.id}?from=${Uri.encodeComponent('/profile')}',
+                        ),
+                        child: Text(vm.t('openSaved')),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }

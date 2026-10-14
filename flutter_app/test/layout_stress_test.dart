@@ -36,6 +36,7 @@ void main() {
           final app = TestApp();
           if (english) app.vm.setEnglish(true);
           await app.vm.startAction('arc');
+          await app.repository.setSaved('first-rental', true);
           await tester.pumpWidget(
             CultureBridgeApp(viewModel: app.vm, initialLocation: route),
           );

@@ -119,6 +119,7 @@ class BridgeViewModel extends ChangeNotifier {
     executions = const Resource();
     mine = const Resource();
     blocks = const Resource();
+    saved = const Resource();
     // Lists and details carry "my reactions" and block filtering.
     _explore.clear();
     _experiences.clear();
@@ -369,6 +370,39 @@ class BridgeViewModel extends ChangeNotifier {
     }
   }
 
+  // ---------- saved for later ----------
+
+  Resource<List<ExperienceItem>> saved = const Resource();
+  Future<void> loadSaved() async {
+    if (!signedIn) return;
+    await _load(
+      () => saved,
+      (r) => saved = r,
+      () => repository.savedExperiences(locale: locale),
+    );
+  }
+
+  Future<void> toggleSaved(ExperienceItem item) async {
+    final on = !item.saved;
+    try {
+      await repository.setSaved(item.id, on);
+    } on ApiException catch (e) {
+      showNotice(errorText(e));
+      return;
+    }
+    final list = saved.data;
+    saved = on || list == null
+        ? const Resource() // reloads, newest first, next time the list is shown
+        : Resource(
+            data: [
+              for (final e in list)
+                if (e.id != item.id) e,
+            ],
+          );
+    if (on) showNotice(t('savedNotice'));
+    _updateItem(item.withSaved(on));
+  }
+
   final Set<String> _flipped = {};
 
   /// Whether the card shows the translation: by default when the reader's language differs
@@ -424,6 +458,7 @@ class BridgeViewModel extends ChangeNotifier {
     _explore.clear();
     _experiences.clear();
     blocks = const Resource();
+    saved = const Resource();
     showNotice(t('blocked'));
     return true;
   }

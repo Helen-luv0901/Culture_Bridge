@@ -30,6 +30,8 @@ abstract class CultureRepository {
   });
   Future<ExperienceDetail> experience(String id, {String? locale});
   Future<ExperienceItem> react(String id, String kind, bool on);
+  Future<void> setSaved(String id, bool on);
+  Future<List<ExperienceItem>> savedExperiences({String? locale});
   Future<ExperienceDetail> requestTranslation(String id, String locale);
   Future<MyExperience> createDraft({
     required String topic,
@@ -162,6 +164,15 @@ class ApiCultureRepository implements CultureRepository {
             ? await api.put('/experiences/$id/reactions/$kind')
             : await api.delete('/experiences/$id/reactions/$kind'),
       );
+  @override
+  Future<void> setSaved(String id, bool on) => on
+      ? api.put('/experiences/$id/saved')
+      : api.delete('/experiences/$id/saved');
+  @override
+  Future<List<ExperienceItem>> savedExperiences({String? locale}) async => [
+    for (final item in await api.get('/me/saved', {'locale': ?locale}) as List)
+      ExperienceItem.fromJson(item as Json),
+  ];
   @override
   Future<ExperienceDetail> requestTranslation(String id, String locale) async =>
       ExperienceDetail.fromJson(

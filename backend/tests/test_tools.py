@@ -150,6 +150,8 @@ def test_app_help_answers_how_to_questions(ctx):
         ("zh-Hant", "需要登入嗎", "sign-in"),
         ("en", "how do I block someone", "report-block"),
         ("en", "how do I delete my account", "delete-account"),
+        ("zh-Hant", "怎麼收藏想再看的經驗", "saved"),
+        ("en", "how do I bookmark an experience", "saved"),
     ],
 )
 def test_app_help_covers_account_and_safety(ctx, locale, query, expected):
