@@ -1,0 +1,1128 @@
+{
+ "accessed_at": "2026-10-14T00:00:00+08:00",
+ "note": "D-8 第一批流程卡草稿。內容由網路搜尋讀取官方頁面整理（政府與學校網站無法直接連線，沒有逐字核對原文）；匯入後是未發布草稿，需審查者逐一開啟來源核對、修正後才發布並記錄驗證。uncertain 是需要確認的地方。",
+ "cards": [
+  {
+   "slug": "arc-first",
+   "title_zh": "外國學生首次申請外僑居留證（ARC）",
+   "title_en": "First Alien Resident Certificate (ARC) Application for Foreign Students",
+   "description_zh": "外國學生入國後，須於入國翌日起算30日內，透過移民署學生線上申辦系統申請外僑居留證。持居留簽證或就學事由之停留簽證入國者都適用；持停留簽證者另須附健康檢查合格證明，並加收規費。核准後繳費，再列印電子居留證，或到指定服務站領取晶片居留證。",
+   "description_en": "Foreign students must apply for an ARC within 30 days, counted from the day after entry, through the NIA's online system for students. This applies to students who entered on a resident visa or on a visitor visa issued for study. Visitor-visa entrants must also submit a health certificate and pay an extra fee. After approval you pay the fee, then either print an e-ARC or collect a chip card at your designated service station.",
+   "applicable_to": "經各級主管教育行政機關核定得招收外國學生之學校許可在臺就學的外國學生（含持居留簽證，或持就學事由停留簽證入國者）；僑生適用同一送件須知，規費減半",
+   "applicable_to_en": "Foreign students admitted by a school approved to enroll foreign students, whether they entered on a resident visa or on a visitor visa issued for study. Overseas compatriot students follow the same guideline and pay half the fee.",
+   "location": "移民署學生線上申辦系統；晶片居留證到申請時指定的移民署服務站領取（例如臺中市第一服務站：臺中市南屯區文心南三路22號1樓）",
+   "location_en": "NIA online system for students; collect the chip card at the service station you choose (e.g. Taichung City First Service Station)",
+   "steps": [
+    {
+     "title_zh": "確認資格與申請期限",
+     "title_en": "Check eligibility and deadline",
+     "notes": "適用對象是經主管教育行政機關核定可招收外國學生的學校所許可就學的學生，以及僑生等[1][3]。應於入國翌日起算30日內申請居留[1][4]。沒有在期限內申請的，處新臺幣2,000元以上10,000元以下罰鍰[1][4]。"
+    },
+    {
+     "title_zh": "備妥文件電子檔",
+     "title_en": "Prepare scanned documents",
+     "notes": "共同文件：護照、最近二年內二吋半身脫帽正面相片（規格同國民身分證相片）[1][3]。個別文件：居留簽證或就學事由之停留簽證、入學許可或一個月內的在學證明（含學生證）、在臺居留住址證明[1][3]。持停留簽證者另附最近三個月內的健康檢查合格證明[1][3]。"
+    },
+    {
+     "title_zh": "線上註冊並送出申請",
+     "title_en": "Register and submit online",
+     "notes": "到移民署「外國與外僑、大陸與港澳、無戶籍國民學生線上申辦系統」註冊帳號，填寫申請書並上傳文件[1][2]。申請時要選定日後領證的服務站[1]。系統操作問題可洽移民署客服專線02-2796-7162（週一至週五8:30–17:30）或CSservice@immigration.gov.tw；案件問題請洽學校所在地服務站[3]。"
+    },
+    {
+     "title_zh": "等候審查並配合補正",
+     "title_en": "Wait for review; supplement if asked",
+     "notes": "審查約需五個工作天[1][2]。資料不符或欠缺時，應於接到通知後15日內補正，審查天數從補正後重新計算[1]。"
+    },
+    {
+     "title_zh": "核准後線上繳費",
+     "title_en": "Pay the fee after approval",
+     "notes": "審核通過後應於五個工作天內繳費[2]。規費為每件每一年效期新臺幣1,000元[1][2][3]。持停留簽證入國申請者加收新臺幣2,200元[1][2][3]；僑生減半[1][2]。"
+    },
+    {
+     "title_zh": "列印電子證或領取晶片卡",
+     "title_en": "Print the e-ARC or collect the chip card",
+     "notes": "居留效期六個月的電子居留證，可在系統上下載列印[1][2]。晶片居留證：在系統下載列印線上繳款收據，三個工作日後持收據到申請時指定的服務站領取[1][2]。臺中市第一服務站位於臺中市南屯區文心南三路22號1樓，電話(04)2472-5103[5]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（1150506版）",
+     "url": "https://www.immigration.gov.tw/media/118853/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5-1150506.pdf",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "適用對象、30日申請期限與罰鍰、應備文件、停留簽證者須附三個月內健康檢查證明、審查五個工作天、15日內補正、規費1,000元／年、停留簽證加收2,200元、僑生減半、電子證與晶片證領取方式"
+    },
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）",
+     "url": "https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "線上系統名稱、審查五個工作天、核准後五個工作天內繳費、規費、電子居留證與晶片卡領取、異動登記應備文件"
+    },
+    {
+     "title": "Guidelines for Online Application for Residence, Extension of Residence and Registration of Changes for Foreign Students and Overseas Compatriot Students",
+     "url": "https://www.immigration.gov.tw/5475/5478/141465/141808/417829/cp_news",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "英文版適用對象、應備文件（含健康檢查）、規費、客服專線與信箱"
+    },
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（前一版）",
+     "url": "https://www.immigration.gov.tw/media/101057/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5.pdf",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "入國翌日起30日內申請居留、逾期罰鍰2,000至10,000元、住址變更30日內登記"
+    },
+    {
+     "title": "移民署申辦地點（服務站）",
+     "url": "https://www.immigration.gov.tw/5385/7445/7889/7892/50767/",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "臺中市第一服務站地址與電話"
+    }
+   ],
+   "uncertain": [
+    "部分大學網頁寫入境後15日內申請，與移民署送件須知的「入國翌日起30日內」不一致；卡片採移民署的30日。",
+    "學生線上申辦系統網址只在大學轉載資料看到，未在移民署頁面直接確認，所以卡片沒有寫網址。",
+    "「外國學生不再受理臨櫃申請」只見於大學轉載，未確認；卡片沒有寫能否臨櫃。",
+    "逢甲大學（西屯區）學生應由哪個服務站負責無法確定；第一服務站只是示例。",
+    "逢甲國際處某頁面寫居留證3,000元（美籍4,000元），推測是停留簽證改辦的情況，需要確認。",
+    "居留健康檢查的項目來自教育部與疾管署資料，不是移民署原文，未寫入步驟。",
+    "以上依搜尋引擎讀取官方文件整理，沒有逐字核對PDF全文。"
+   ]
+  },
+  {
+   "slug": "arc-extension",
+   "title_zh": "外國學生外僑居留證延期",
+   "title_en": "Extending the ARC for Foreign Students",
+   "description_zh": "仍在學的外國學生，應在外僑居留證效期屆滿前三個月內，透過移民署學生線上申辦系統申請延期。需上傳護照、相片、在學證明及住址證明，核准後繳費並領取新證。逾期居留會被處罰，逾期30日以上還須出國重新申請簽證。",
+   "description_en": "Foreign students who are still enrolled should apply to extend their ARC within the three months before it expires, using the NIA online system for students. Upload your passport, a photo, an enrollment certificate and proof of address, then pay and collect the new card after approval. Overstaying is penalized; overstaying 30 days or more means leaving Taiwan and applying for a new visa.",
+   "applicable_to": "已持有外僑居留證、仍在核定學校就學的外國學生（僑生適用同一須知，規費減半）",
+   "applicable_to_en": "Foreign students who already hold an ARC and are still enrolled at an approved school (overseas compatriot students follow the same guideline at half the fee)",
+   "location": "移民署學生線上申辦系統；晶片居留證到申請時指定的移民署服務站領取",
+   "location_en": "NIA online system for students; chip cards are collected at the service station chosen during the application",
+   "steps": [
+    {
+     "title_zh": "在到期前三個月內申請",
+     "title_en": "Apply within 3 months before expiry",
+     "notes": "外僑居留證延期應在居留效期屆滿前三個月內申辦[1][4]。逾期居留未滿30日、原居留原因仍存在的，依規定處罰後可以重新申請居留；逾期30日以上的，處罰後須出國，再重新申請簽證入國[1][4]。"
+    },
+    {
+     "title_zh": "申請一個月內的在學證明",
+     "title_en": "Get an enrollment certificate (within 1 month)",
+     "notes": "需要入學許可或一個月內的在學證明（含學生證）、在臺居留住址證明，以及護照、最近二年內二吋半身脫帽正面相片[1][3]。在學證明有一個月時效，請在送件前不久再申請。"
+    },
+    {
+     "title_zh": "登入系統送出延期申請",
+     "title_en": "Submit the extension online",
+     "notes": "登入移民署「外國與外僑、大陸與港澳、無戶籍國民學生線上申辦系統」，填寫申請書並上傳文件[1][2]。審查約需五個工作天；資料欠缺時應於接到通知後15日內補正[1][2]。"
+    },
+    {
+     "title_zh": "核准後繳費",
+     "title_en": "Pay after approval",
+     "notes": "審核通過後五個工作天內繳費[2]。規費為每件每一年效期新臺幣1,000元，僑生減半[1][2][3]。"
+    },
+    {
+     "title_zh": "領取新證並繳回舊證",
+     "title_en": "Collect the new card and return the old one",
+     "notes": "居留效期六個月的電子居留證可線上下載列印[1][2]。晶片居留證：列印繳款收據，三個工作日後持收據到指定服務站領取；延期者領證時須繳回舊證[1]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（1150506版）",
+     "url": "https://www.immigration.gov.tw/media/118853/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5-1150506.pdf",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "延期應於效期屆滿前三個月內申辦、逾期未滿30日及30日以上的處理、應備文件、審查與補正、規費、領證方式及延期繳回舊證"
+    },
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）",
+     "url": "https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "線上系統、審查五個工作天、核准後五個工作天內繳費、規費、電子證及晶片卡領取"
+    },
+    {
+     "title": "Guidelines for Online Application for Residence, Extension of Residence and Registration of Changes for Foreign Students and Overseas Compatriot Students",
+     "url": "https://www.immigration.gov.tw/5475/5478/141465/141808/417829/cp_news",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "英文版應備文件與規費"
+    },
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（前一版）",
+     "url": "https://www.immigration.gov.tw/media/101057/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5.pdf",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "延期三個月內申辦及逾期處理、住址異動30日內登記與罰鍰"
+    }
+   ],
+   "uncertain": [
+    "申請時點：移民署送件須知寫「效期屆滿前三個月內」，但多所大學與一份服務站簡報寫「到期前30日內」；卡片採移民署的三個月。",
+    "延期是否須上傳現持居留證、是否須再附健康檢查，學生版須知摘錄中未確認。",
+    "每次延期核給的效期長度（一年或依在學期間）未能確認。",
+    "華語生延期另須最近一學期出缺勤紀錄（見國際生流程總覽研究），本卡未列入，需確認是否加註。",
+    "以上依搜尋引擎讀取官方文件整理，沒有逐字核對PDF全文。"
+   ]
+  },
+  {
+   "slug": "arc-replacement",
+   "title_zh": "外僑居留證遺失或污損補發",
+   "title_en": "Replacing a Lost or Damaged ARC",
+   "description_zh": "外僑居留證遺失、滅失或污損時，可以向移民署申請補發，補發須重新製證，每件規費新臺幣500元。遺失補發要附遺失具結書或報案證明。可以線上申辦，也可以臨櫃辦理，並可委託他人代辦。",
+   "description_en": "If your ARC is lost, destroyed or damaged, apply to the NIA for a replacement. A new card is produced and the fee is NT$500. For a lost card, attach a signed loss declaration or a police report. You can apply online or at a service counter, and someone else can apply on your behalf.",
+   "applicable_to": "外僑居留證遺失、滅失或污損的外國人（包含外國學生）",
+   "applicable_to_en": "Foreign nationals, including foreign students, whose ARC is lost, destroyed or damaged",
+   "location": "移民署線上申辦，或移民署各服務站臨櫃辦理",
+   "location_en": "NIA online application, or in person at an NIA service station",
+   "steps": [
+    {
+     "title_zh": "取得遺失具結書或報案證明",
+     "title_en": "Get a loss declaration or police report",
+     "notes": "申請遺失補發時，須附遺失具結書或報案證明（二擇一）[3]。"
+    },
+    {
+     "title_zh": "備妥護照與相片",
+     "title_en": "Prepare your passport and a photo",
+     "notes": "共同文件為護照及最近二年內二吋半身脫帽正面相片[1]。臨櫃申請時繳驗護照正本並留存影本[3]。"
+    },
+    {
+     "title_zh": "選擇線上或臨櫃送件",
+     "title_en": "Apply online or at a counter",
+     "notes": "線上以本人帳號申請視同本人申請，上傳護照電子檔，並附遺失具結書或報案證明[3]。以他人帳號申請時，另上傳委託書及受委託人身分證件[3]。臨櫃委託他人辦理時，須附委託書正本並出示受委託人身分證件[3]。"
+    },
+    {
+     "title_zh": "繳交補發規費",
+     "title_en": "Pay the replacement fee",
+     "notes": "外僑居留證污損、滅失或遺失補發，每件新臺幣500元，須重新製證[1][2]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（1150506版）",
+     "url": "https://www.immigration.gov.tw/media/118853/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5-1150506.pdf",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "補發規費每件500元並須重新製證、共同應備文件"
+    },
+    {
+     "title": "外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）",
+     "url": "https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "遺失或污損補發規費500元"
+    },
+    {
+     "title": "外國人居留證將屆期或遺失之延期、補發申請方式",
+     "url": "https://www.immigration.gov.tw/5385/7229/7232/368785/cp_news",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "遺失補發須附遺失具結書或報案證明、臨櫃繳驗護照正本、線上本人或他人帳號申請的上傳文件、委託書"
+    }
+   ],
+   "uncertain": [
+    "外國學生能否用學生線上申辦系統辦理遺失補發未能確認；補發文件與流程依一般外國人公告頁整理。",
+    "處理天數、污損補發是否須繳回原證、遺失具結書是否有官方範本，都未能確認。",
+    "以上依搜尋引擎讀取官方文件整理，沒有逐字核對原文。"
+   ]
+  },
+  {
+   "slug": "health-check",
+   "title_zh": "外籍生居留健康檢查與新生健檢",
+   "title_en": "Residence health certificate and freshman health check",
+   "description_zh": "申請居留簽證，或持就學目的停留簽證在臺改辦居留時，須繳交衛福部規定的「居留或定居健康檢查」合格證明，報告3個月內有效，可在疾管署公告的指定醫院受檢。另外，逢甲境外新生還要參加學校安排的新生健康檢查，兩者項目不同、不能互相替代。",
+   "description_en": "Students applying for a resident visa, or switching from a study-purpose visitor visa to residence in Taiwan, must submit a passing Health Certificate for Residence Application, valid for 3 months, from a CDC-designated hospital (or an authenticated overseas hospital). FCU's overseas freshmen must also take the university's own health check; the two cannot replace each other.",
+   "applicable_to": "申請居留簽證或在臺改辦居留的外籍學生（例如持就學目的停留簽證入境者）；逢甲境外新生（校內新生健檢）",
+   "applicable_to_en": "International students applying for a resident visa or switching to residence in Taiwan; FCU overseas freshmen (on-campus check)",
+   "location": "疾管署公告的外國人健檢指定醫院（臺中市有9家），或駐外館處認定的國外醫院；校內新生健檢依逢甲公告",
+   "location_en": "CDC-designated hospitals in Taiwan (9 in Taichung) or overseas hospitals recognized by Taiwan's missions; the freshman check follows FCU's notice",
+   "steps": [
+    {
+     "title_zh": "確認自己需要哪一種健檢",
+     "title_en": "Find out which health check you need",
+     "notes": "在國外申請居留簽證，或持就學目的停留簽證入境、在臺改辦居留的學生，都必須繳驗最近3個月內的合格健康證明[7]。用免簽、落地簽、電子簽證或非就學目的停留簽證入境的人，不能以就學為由改辦居留[7]。逢甲說明，持停留簽證的學生申辦居留證時需要附居留健檢報告[9]。"
+    },
+    {
+     "title_zh": "下載居留健康檢查項目表",
+     "title_en": "Download the residence health certificate form",
+     "notes": "使用疾管署公告的中英對照「居留或定居健康檢查項目表」[1][2]。檢查項目：胸部X光肺結核檢查、腸內寄生蟲糞便檢查、梅毒血清檢查、麻疹及德國麻疹抗體檢查或預防接種證明、漢生病檢查[2][3]。孕婦和12歲以下兒童免照胸部X光，15歲以下兒童免驗梅毒，附表所列國家或地區的人免驗糞便寄生蟲和漢生病[2][3]。"
+    },
+    {
+     "title_zh": "到指定醫院受檢",
+     "title_en": "Get examined at a designated hospital",
+     "notes": "在臺灣受檢須到疾管署公告的「外國人健檢指定醫院」[4][7]。臺中市名單包括：臺中榮民總醫院、中國醫藥大學附設醫院、衛生福利部臺中醫院、臺中慈濟醫院、衛生福利部豐原醫院、光田綜合醫院（沙鹿總院）、童綜合醫院（梧棲院區）、李綜合醫院大甲院區、仁愛醫院大里院區；部分醫院需要預約，請先確認受理時間[4]。在國外受檢的報告須經駐外館處驗證[1][7]。檢查不合格者應先治療或接種，取得合格證明再申辦[12]。"
+    },
+    {
+     "title_zh": "在3個月效期內送件",
+     "title_en": "Submit within the 3-month validity",
+     "notes": "須繳驗最近3個月內的合格健康證明；在臺改辦居留簽證約需8個工作天，須在停留期限屆滿前8個工作天以前送件[7]。拿到居留簽證後，要在30日內向移民署申請外僑居留證[7]。"
+    },
+    {
+     "title_zh": "完成逢甲校內新生健檢",
+     "title_en": "Complete FCU's on-campus freshman health check",
+     "notes": "逢甲規定所有境外新生都必須參加校內新生健檢，項目和居留健檢不同，不能互相替代[10][11]。2025年秋季班的作法：用NID帳號登入MYFCU填寫健康問題評估表；校內健檢費用新臺幣575元，須空腹6至8小時；錯過者可到合約醫院童綜合醫院梧棲院區補檢；在其他醫院受檢者須使用「逢甲大學學生健康資料表」[11]。每學年的日期與費用請以學校最新公告為準。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "外籍人士(含陸配)居留健檢",
+     "url": "https://www.cdc.gov.tw/Category/MPage/stSVgprnEAjd3LmsXeCTLA",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "居留健檢說明與表單；國外醫院由駐外館處認定"
+    },
+    {
+     "title": "居留或定居健康檢查項目表 Health Certificate for Residence Application",
+     "url": "https://www.cdc.gov.tw/Uploads/files/%E5%B1%85%E7%95%99%E6%88%96%E5%AE%9A%E5%B1%85%E5%81%A5%E5%BA%B7%E6%AA%A2%E6%9F%A5%E9%A0%85%E7%9B%AE%E8%A1%A8.pdf",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "五大檢查項目、免驗規定、判定標準、3個月效期"
+    },
+    {
+     "title": "Items Required for Health Certificate for Residence in Taiwan",
+     "url": "https://www.cdc.gov.tw/En/Category/ListContent/C4w0xUaCBCKzdd6BxDGWcA?uaid=y9n9sbUrcg_Pj6lGlPVDCA",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "英文版檢查項目與免驗規定"
+    },
+    {
+     "title": "外國人健檢指定醫院名單(國內)",
+     "url": "https://www.cdc.gov.tw/Category/Page/nU7y97g0GqJbB3kn5B-nPg",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "臺中市9家指定醫院；部分需預約"
+    },
+    {
+     "title": "外籍學位生(含陸生)健檢",
+     "url": "https://www.cdc.gov.tw/Category/MPage/NUbynnEb1y3sP6gVFFhDSg",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "外籍學位生健檢專頁與參考事項"
+    },
+    {
+     "title": "外籍短期研修生(含陸生)健檢",
+     "url": "https://www.cdc.gov.tw/Category/MPage/nrbBMmzmDq3ntpCtW4MTDQ",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "短期研修生健檢規定"
+    },
+    {
+     "title": "外國學生申請居留簽證手續說明",
+     "url": "https://www.boca.gov.tw/fp-9-186-c060a-1.html",
+     "publisher": "外交部領事事務局",
+     "kind": "official",
+     "evidence_note": "3個月內合格健康證明、國外證明須驗證、在臺改辦8個工作天、免簽等不得改辦、取得居留簽證後30日內申請居留證"
+    },
+    {
+     "title": "在臺健康檢查具結書",
+     "url": "https://www.immigration.gov.tw/media/19227/%E5%9C%A8%E8%87%BA%E5%81%A5%E5%BA%B7%E6%AA%A2%E6%9F%A5%E5%85%B7%E7%B5%90%E6%9B%B8.pdf",
+     "publisher": "內政部移民署",
+     "kind": "official",
+     "evidence_note": "可具結30日內補正健檢報告（是否適用學生未確認）"
+    },
+    {
+     "title": "Apply for an Alien Resident Certificate (ARC)",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/new/first-arc/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "持停留簽證者改辦居留時需附居留健檢報告"
+    },
+    {
+     "title": "Instruction for health checkup (Mandatory! On-Campus Health Checkup for Freshmen)",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/new-fall/health-fall/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "境外新生必須參加校內新生健檢"
+    },
+    {
+     "title": "境外新生健康檢查（秋季班）",
+     "url": "https://freshman.fcu.edu.tw/overseas-students/health-fall/",
+     "publisher": "逢甲大學新生專區",
+     "kind": "institution",
+     "evidence_note": "2025年校內健檢作法、費用575元、補檢醫院、學校健康資料表"
+    },
+    {
+     "title": "外籍學生居留健康檢查問答輯",
+     "url": "https://www.cdc.gov.tw/Uploads/files/91acc138-eb08-46b2-921d-c1356f9223e9.pdf",
+     "publisher": "衛生福利部疾病管制署",
+     "kind": "official",
+     "evidence_note": "在臺改辦居留可在國內指定醫院受檢；不合格須先治療再申辦"
+    }
+   ],
+   "uncertain": [
+    "衛福部健康檢查參考事項最新版中，短期研修生的月數門檻與入境後照X光規定未能確認。",
+    "臺中指定醫院名單是搜尋時的快照，各院效期不同，請以疾管署最新名單為準。",
+    "逢甲首次申辦居留證頁面的3,000元（美籍4,000元）是健檢費還是簽證規費無法確認。",
+    "移民署具結書（30日內補正健檢報告）是否適用外籍學生未確認。",
+    "2026學年度逢甲新生健檢日期與費用尚未找到正式公告；文中是2025年資料。"
+   ]
+  },
+  {
+   "slug": "nhi",
+   "title_zh": "加入全民健康保險（健保）與申辦健保卡",
+   "title_en": "Joining National Health Insurance (NHI) and getting your NHI card",
+   "description_zh": "持居留證在臺就學的外籍生，在臺居留滿6個月後，依法必須以就讀學校為投保單位加入全民健保。每月自付保費目前為新臺幣826元，學校在每學期註冊時一次代收半年保費。還沒有健保資格的期間，新生必須自備至少6個月的醫療及傷害保險，或參加學校的國際學生醫療保險。",
+   "description_en": "Foreign degree students with an ARC must join NHI through their university once they have lived in Taiwan for 6 months. The student pays NT$826 a month, collected six months at a time with each semester's registration. Until then, new students need medical and injury insurance covering at least 6 months, either their own policy or the school's International Student Medical Insurance.",
+   "applicable_to": "持有效居留證（ARC）在臺就學的外籍學位生（僑生、港澳生、陸生另有部分不同規定）",
+   "applicable_to_en": "Foreign degree students with a valid ARC (some rules differ for overseas Chinese, Hong Kong/Macau and mainland Chinese students)",
+   "location": "逢甲大學國際事務處（行政二館303室）代辦加保與健保卡申請；也可到健保署各分區業務組／聯絡辦公室臨櫃辦理健保卡",
+   "location_en": "FCU Office of International Affairs (Administration Building II, Room 303) handles enrollment and the first NHI card; NHI cards can also be applied for at NHIA counters",
+   "steps": [
+    {
+     "title_zh": "入學時先備妥醫療及傷害保險",
+     "title_en": "Have medical and injury insurance when you register",
+     "notes": "依《外國學生來臺就學辦法》第22條，新生註冊時要附上醫療及傷害保險證明，保單效期須從入境當天起算至少6個月；國外核發的保險證明須經我國駐外機構驗證[8]。逢甲為尚未具健保資格的外國學生與陸生提供國際學生醫療保險，每學期新臺幣3,000元或每月500元；理賠上限為門診、急診、病房費每日各1,000元，住院每次12萬元，校方建議另外在母國購買留學生保險[9][11]。"
+    },
+    {
+     "title_zh": "確認何時符合健保資格",
+     "title_en": "Work out when you become eligible",
+     "notes": "持居留證明文件的外籍人士，在臺居留滿6個月起應加入健保；「滿6個月」指連續居住6個月，或期間只出境1次且未超過30日，扣除出境天數後合計滿6個月[1][3]。例如2月1日入境都沒出境，8月1日符合資格；3月出境10天則延到8月11日[4]。受僱工作者從受僱日起由雇主加保[3]；外籍生經許可工作並受僱時，要改由工作單位投保，並向學校辦理轉出[1]。"
+    },
+    {
+     "title_zh": "由學校辦理加保",
+     "title_en": "Get enrolled through your school",
+     "notes": "經許可在臺就學的僑外生屬第6類第2目被保險人，由就讀學校擔任投保單位[1]。逢甲國際事務處依簽證種類和出入境紀錄推算加保日[9]。在臺沒有工作，且配偶、父母或子女是健保被保險人的，也可以眷屬身分依附加保[1]。逢甲提醒，符合資格卻沒有加保，可能被處新臺幣3,000至5,000元罰鍰[10]。"
+    },
+    {
+     "title_zh": "隨學雜費繳交保費",
+     "title_en": "Pay the premium with your tuition bill",
+     "notes": "在學外籍生每月自付保費826元，衛生福利部每月另補助551元；符合清寒資格的僑生由僑委會補助413元，自付413元[2]。學校在每學期註冊時一次代收半年保費：第一學期收9月至次年2月，第二學期收3月至8月；健保費率調整時金額會跟著調整[2]。逢甲把保費列在學雜費單中，每學期4,956元[9][10]。"
+    },
+    {
+     "title_zh": "申請健保卡",
+     "title_en": "Apply for your NHI card",
+     "notes": "完成加保後才能申請健保卡。填寫健保署「請領健保卡申請表」，黏貼一張近2年內拍攝的2吋半身、正面、脫帽、未戴有色眼鏡、五官清晰的大頭照[5][6]。首次投保時可由學校連同加保一起送件，也可以持居留證正本到健保署臨櫃辦理[5]。逢甲國際事務處會在加保後協助首次申請（校方較舊頁面寫需居留證正反面影本和照片1張）[13]。"
+    },
+    {
+     "title_zh": "維持居留效期，異動時退保",
+     "title_en": "Keep your ARC valid and report changes",
+     "notes": "居留證到期又沒有展延，健保就不能使用，請提前向移民署辦理展延[7]。居留證或簽證身分到期或變更時，需改向國際事務處申請學生團體保險；休學、退學或轉學時，要到國際事務處辦理退保與退費[9]。學校通常只投保到畢業當月，畢業後留在臺灣須自行到健保署或區公所加保[12]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "在臺僑生、外籍生參加全民健康保險須知",
+     "url": "https://www.nhi.gov.tw/ch/dl-72718-2f56651c5a814b4cae4b8176333914e7-1.pdf",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "第6類第2目、學校為投保單位；居留滿6個月的定義；受僱時轉出；眷屬依附加保"
+    },
+    {
+     "title": "在學僑生、外籍生應繳納多少保險費，如何繳納？",
+     "url": "https://www.nhi.gov.tw/ch/cp-3791-61e1b-3246-1.html",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "每月自付826元、補助551元、清寒僑生413元；學校每學期代收半年保費"
+    },
+    {
+     "title": "Foreign Nationals from Hong Kong, Macau, China, or Other Countries who Reside in Taiwan with an ARC",
+     "url": "https://eng.nhi.gov.tw/en/cp-49-fb4a6-24-2.html",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "居留滿6個月應加保；出境1次未逾30日扣除天數；受僱者從受僱日起加保"
+    },
+    {
+     "title": "Examples for foreign nationals to calculate their length of stay in order to enroll in the NHI",
+     "url": "https://www.nhi.gov.tw/en/cp-614-41d3b-113-2.html",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "居留天數計算範例"
+    },
+    {
+     "title": "如何申辦健保卡",
+     "url": "https://www.nhi.gov.tw/ch/np-2667-1.html",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "首次申請健保卡的管道；須已完成加保"
+    },
+    {
+     "title": "請領健保卡申請表",
+     "url": "https://www.nhi.gov.tw/ch/dl-67284-06928126dbb24356977da6fa1de1dae3-1.pdf",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "申請表與照片規格"
+    },
+    {
+     "title": "The NHIA Reminds Foreign Nationals to Renew their ARCs to Ensure their NHI Rights",
+     "url": "https://www.nhi.gov.tw/en/cp-1169-2d460-8-2.html",
+     "publisher": "衛生福利部中央健康保險署",
+     "kind": "official",
+     "evidence_note": "居留證到期未展延會使健保無法使用"
+    },
+    {
+     "title": "外國學生來臺就學辦法",
+     "url": "https://law.moj.gov.tw/LawClass/LawAll.aspx?PCode=H0110001",
+     "publisher": "教育部（全國法規資料庫）",
+     "kind": "official",
+     "evidence_note": "第22條：新生須附至少6個月效期的醫療及傷害保險；國外保單須經驗證"
+    },
+    {
+     "title": "境外學生保險",
+     "url": "https://oia.fcu.edu.tw/overseas-students/insurance/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "加保日推算；國際學生醫療保險費用；保費隨學雜費代收；居留失效改申請團保；休退轉學退保"
+    },
+    {
+     "title": "Insurance for Overseas Students",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/insurance/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "每學期4,956元；未加保可能被罰3,000至5,000元"
+    },
+    {
+     "title": "購買保險及清寒證明申請",
+     "url": "https://oia.fcu.edu.tw/overseas-students/new/lowincome/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "國際學生醫療保險理賠上限；建議另購母國留學生保險"
+    },
+    {
+     "title": "Overseas students stay in Taiwan after graduation",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/stayintaiwan/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "學校只投保到畢業當月，畢業後須自行加保"
+    },
+    {
+     "title": "Health 醫療資訊（華語教學中心）",
+     "url": "https://clc.fcu.edu.tw/en/health/",
+     "publisher": "逢甲大學華語教學中心",
+     "kind": "institution",
+     "evidence_note": "國際處協助首次申請健保卡；需居留證影本與照片（頁面較舊）"
+    }
+   ],
+   "uncertain": [
+    "每月826元是健保署自110年起的標準，2026年是否調整無法確認。",
+    "衛福部曾研議取消外籍生須居留滿6個月才能加保的限制，查不到正式施行公告，仍以6個月為準。",
+    "逢甲國際學生醫療保險的費用與理賠上限未標示適用學年，可能已調整。",
+    "首次申領健保卡是否免工本費、製卡天數，未在官方頁面確認。",
+    "罰鍰3,000至5,000元取自逢甲網頁，沒有直接核對健保法條文。"
+   ]
+  },
+  {
+   "slug": "work-permit",
+   "title_zh": "申請外國留學生工作許可（工讀）",
+   "title_en": "Applying for a Student Work Permit (Part-time Work)",
+   "description_zh": "在臺就讀的外國留學生要打工，必須先取得勞動部核發的工作許可。申請一律在「外國專業人員工作許可申辦網」線上辦理，每件審查費新臺幣100元。學期中每週最多工作20小時，寒暑假不受這項限制。",
+   "description_en": "International students must hold a work permit from the Ministry of Labor before taking any part-time job. Apply online through the EZ Work Permit system (ezwp.wda.gov.tw); the review fee is NT$100. During the semester you may work at most 20 hours a week; the cap does not apply during winter and summer breaks.",
+   "applicable_to": "正式入學修讀科、系、所課程的外國留學生（含港澳生、僑生），入學後即可申請；就讀語言課程者須修業滿6個月以上。高中（含）以下學生及大陸學生不得申請。",
+   "applicable_to_en": "Foreign (including Hong Kong/Macau and overseas Chinese) students formally enrolled in degree programs, once enrolled; language-program students after at least 6 months of study. Not open to students at senior high level or below, or to mainland Chinese students.",
+   "location": "外國專業人員工作許可申辦網（ezwp.wda.gov.tw）線上申辦；校內窗口：逢甲大學國際事務處（行政二館303室，04-24517250 分機2498，陸港澳生分機2493）",
+   "location_en": "Online at ezwp.wda.gov.tw; on campus: FCU Office of International Affairs (Admin Building II, Room 303, ext. 2498)",
+   "steps": [
+    {
+     "title_zh": "確認自己是否具申請資格",
+     "title_en": "Check your eligibility",
+     "notes": "正式入學修讀科、系、所課程的學生入學後就能申請；就讀語言課程的外國學生須修業滿6個月以上[1][3]。法規另規定須經就讀學校認定符合條件，例如財力不足無法維持學業生活，或學校教學研究單位需要協助[3]。高中（含）以下學生不能申請[11]，大陸學生目前不得申請學生工作許可[10]。"
+    },
+    {
+     "title_zh": "先填寫逢甲國際處的工讀問卷",
+     "title_en": "Fill out FCU OIA's work survey first",
+     "notes": "逢甲國際處要求先完成當學年度的境外生工讀問卷，沒有填寫的申請不受理[9]。港澳生在線上系統的身分欄位要選「華僑學生」[9]。"
+    },
+    {
+     "title_zh": "註冊帳號並線上送件",
+     "title_en": "Register and apply online",
+     "notes": "到外國專業人員工作許可申辦網選「僑外生工讀申請」申請學生帳號，登入後填寫 L00「外國留學生、僑生及華裔學生工作許可申請書」，上傳 PDF 檔案後送件[1][2]。依勞動部規定，學生只需填申請表並附護照影本，不必再附學生證或學校同意書[7]；逢甲國際處則要求上傳學生證正反面（須有當學期註冊章，或改附在學證明）、護照資料頁及居留證正反面[9]。許可期間會跨到下一學年時，要附次學年第一學期的註冊證明[1]。"
+    },
+    {
+     "title_zh": "繳交審查費新臺幣100元",
+     "title_en": "Pay the NT$100 review fee",
+     "notes": "外國人申請工作許可的審查費是每件新臺幣100元[4]。可用郵政劃撥繳費，再回系統登錄收據資料；也可以用 ATM 繳費，取得繳費序號後要儘快付款[2]。ATM 付款要等系統隔日中午對帳成功後才能送出；臺灣Pay 須在產生 QR code 後5分鐘內付款[12]。劃撥單可到國際處或郵局索取[9]。中途更換繳費方式可能造成重複繳費[12]。"
+    },
+    {
+     "title_zh": "8日內下載電子工作許可函",
+     "title_en": "Download the e-permit within 8 days of approval",
+     "notes": "核准後系統會寄電子郵件通知，請在8日內登入申辦網下載並列印電子工作許可函；逾期沒領取，改寄紙本公文[8]。勞動部已不再核發實體工作證卡[11]。需要補件時，勞動部會用電子郵件通知[9]。"
+    },
+    {
+     "title_zh": "遵守工時與許可期限",
+     "title_en": "Follow the hour limit and validity period",
+     "notes": "除寒暑假外，每週最多工作20小時；寒暑假不受20小時限制，但仍須遵守勞動基準法工時規定[3][6]。許可期間最長1年：上學期申請的，原則上可用到次年9月30日；下學期申請的，原則上到當年9月30日；附上註冊證明可不受9月30日限制，但最長仍是1年[2][3]。畢業後學生工作許可隨即失效[9]。未取得許可就工作，可處新臺幣3萬元以上15萬元以下罰鍰，並會被令出國[5]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "外國人在臺工作服務網－在臺求學期間工讀",
+     "url": "https://ezworktaiwan.wda.gov.tw/cp.aspx?n=99329239A3FBA2BB",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "申請資格（入學後即可申請、語言生滿6個月）、線上申辦、L00申請書、應備文件、跨學年須附次學年註冊證明"
+    },
+    {
+     "title": "僑外學生申請工作許可全面網路線上申辦問答集",
+     "url": "https://ezworktaiwan.wda.gov.tw/News_Content.aspx?n=77054B15FD1F5128&sms=2E02279676D3E77B&s=5C73DC0C790B04D9",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "全面線上申辦、郵政劃撥或ATM繳費、許可期間最長1年、9月30日迄日原則"
+    },
+    {
+     "title": "雇主聘僱外國人許可及管理辦法 第五章 第四類外國人聘僱許可之申請",
+     "url": "https://laws.mol.gov.tw/FLAW/FLAWDAT0201.aspx?id=FL028065&beginpos=5",
+     "publisher": "勞動部",
+     "kind": "official",
+     "evidence_note": "第50、51條資格；第54條許可期間最長1年、寒暑假外每週最長20小時"
+    },
+    {
+     "title": "就業服務法申請案件審查費及證照費收費標準",
+     "url": "https://laws.mol.gov.tw/FLAW/FLAWDAT0202.aspx?id=FL028068",
+     "publisher": "勞動部",
+     "kind": "official",
+     "evidence_note": "第4條：外國人申請工作許可審查費每件100元"
+    },
+    {
+     "title": "就業服務法 第68條",
+     "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?FLNO=68&Pcode=N0090001",
+     "publisher": "法務部全國法規資料庫",
+     "kind": "official",
+     "evidence_note": "未經許可工作處3萬至15萬元罰鍰並令出國"
+    },
+    {
+     "title": "僑外生申請工作許可，寒暑打工不限每週20小時",
+     "url": "https://www.wda.gov.tw/News_Content.aspx?n=31&s=3868",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "學期中每週最長20小時、寒暑假不受限但須遵守勞基法（此新聞稿的效期6個月為舊規定）"
+    },
+    {
+     "title": "友善在臺僑外學生，簡化申請工作許可文件",
+     "url": "https://www.mol.gov.tw/1607/1632/1640/20278/",
+     "publisher": "勞動部",
+     "kind": "official",
+     "evidence_note": "107年3月23日起免附學生證影本、學校同意書，只需申請表與護照影本"
+    },
+    {
+     "title": "僑外學生申請工作許可以電子公文方式送達工作許可函問答集（學生版）",
+     "url": "https://ezwp.wda.gov.tw/wcfonline/wSite/download/ForeignStudents_OfficialDocumentsElectronization(Q&A)-Student.pdf",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "核准後以電子郵件通知、8日內上網領取電子許可函、逾期改寄紙本"
+    },
+    {
+     "title": "Work Permit（境外生工作證）",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/work-permit/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "須先填工讀問卷；上傳學生證、護照、居留證；劃撥單；每週20小時；許可最長1年；畢業即失效；港澳生選華僑學生；聯絡分機"
+    },
+    {
+     "title": "大陸學生是否可申請學生工作證？",
+     "url": "https://ezworktaiwan.wda.gov.tw/News_Content.aspx?n=77054B15FD1F5128&sms=2E02279676D3E77B&s=A4A553DE179ED96F",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "大陸學生目前不得申請學生工作許可"
+    },
+    {
+     "title": "No 20-hour limit on summer vacation jobs for overseas Chinese and international students with working permits",
+     "url": "https://www.wda.gov.tw/en/News_Content.aspx?n=179&sms=10373&s=13639",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "寒暑假放寬20小時、不再核發實體工作證卡、高中以下不得申請"
+    },
+    {
+     "title": "外國專業人員工作許可申辦網操作手冊",
+     "url": "https://ezwp.wda.gov.tw/wcfonline/wSite/download/std20230311_060101.pdf",
+     "publisher": "勞動部勞動力發展署",
+     "kind": "official",
+     "evidence_note": "ATM隔日中午對帳後才能送件、臺灣Pay須5分鐘內付款、更換繳費方式可能重複繳費"
+    }
+   ],
+   "uncertain": [
+    "許可效期：現行辦法第54條、勞動部問答集與逢甲國際處都寫最長1年，但較舊新聞稿寫最長6個月；卡片採1年，以系統核定迄日為準。",
+    "學生工作許可的審核天數官方未寫明，所以卡片沒有寫。",
+    "交換學生是否適用、是否另有限制，未取得原文確認。",
+    "逢甲華語中心頁面寫華語生第一年不得工作、每週最多12小時，與現行法規（語言生滿6個月、每週20小時）不一致，疑為舊資料，需向華語中心或國際處確認。",
+    "逢甲國際處寫核發後3至5天到國際處領取，與電子許可函流程的關係未確認。",
+    "臺灣Pay繳費依據是2023年版操作手冊，現行介面未確認。"
+   ]
+  },
+  {
+   "slug": "enrollment-certificate",
+   "title_zh": "申請逢甲大學在學證明書",
+   "title_en": "Getting a Certificate of Enrollment at FCU",
+   "description_zh": "在學證明書可以證明你目前是逢甲大學的在學學生，常用在申請或延長居留證、申請工作許可等場合。由教務處註冊課務組受理，提供中文版和英文版，在校生每份工本費新臺幣10元。",
+   "description_en": "A Certificate of Enrollment shows that you are currently a registered FCU student. It is often needed for ARC applications and extensions and for work-permit paperwork. The Registration Section of the Office of Academic Affairs issues it in Chinese or English; current students pay NT$10 per copy.",
+   "applicable_to": "逢甲大學在校生（含境外學位生）",
+   "applicable_to_en": "Current FCU students, including international degree students",
+   "location": "逢甲大學教務處註冊課務組（資訊電機館123室；04-2451-7250 分機2111；registration@fcu.edu.tw）",
+   "location_en": "FCU Registration Section, Office of Academic Affairs (Room 123, Information & Electrical Engineering Building; +886-4-2451-7250 ext. 2111; registration@fcu.edu.tw)",
+   "steps": [
+    {
+     "title_zh": "確認用途與中文版或英文版",
+     "title_en": "Decide what it is for and which language you need",
+     "notes": "註冊課務組提供中文版和英文版的在學證明書[1]。境外生申請居留證時需要附在學證明[6]。辦學生工作許可時，學生證沒有當學期註冊章的，國際處接受改附在學證明[7]。"
+    },
+    {
+     "title_zh": "向註冊課務組申請",
+     "title_en": "Apply at the Registration Section",
+     "notes": "註冊課務組負責學籍、成績等相關文件的申請業務[3]，地點在資訊電機館123室，電話 04-2451-7250 分機2111，Email：registration@fcu.edu.tw[2]。官方頁面沒有寫明在校生能否線上或用自助機申請，建議出發前先打電話或寫信確認。"
+    },
+    {
+     "title_zh": "繳交工本費",
+     "title_en": "Pay the fee",
+     "notes": "在校生申請中文或英文在學證明書，每份新臺幣10元[1]。"
+    },
+    {
+     "title_zh": "領取並核對內容",
+     "title_en": "Collect it and check the details",
+     "notes": "拿到後請核對姓名、學號、系所和就讀期間，並依送件單位要求準備份數。華語中心學生如果需要「在學及出席證明」，要先填寫表格，並至少預留1個工作天製作，學生須主動事先聯絡華語中心[8]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "收費標準－註冊課務組",
+     "url": "https://registration.fcu.edu.tw/%E9%A6%96%E9%A0%81-2/%E6%9C%8D%E5%8B%99%E5%B0%8D%E8%B1%A1/%E6%94%B6%E8%B2%BB%E6%A8%99%E6%BA%96/",
+     "publisher": "逢甲大學教務處註冊課務組",
+     "kind": "institution",
+     "evidence_note": "在校生申請中、英文在學證明書每份10元"
+    },
+    {
+     "title": "註冊課務組首頁",
+     "url": "https://registration.fcu.edu.tw/en/",
+     "publisher": "逢甲大學教務處註冊課務組",
+     "kind": "institution",
+     "evidence_note": "辦公地點、電話分機、Email"
+    },
+    {
+     "title": "業務職掌－註冊課務組",
+     "url": "https://registration.fcu.edu.tw/en/%E9%A6%96%E9%A0%81-2/team/",
+     "publisher": "逢甲大學教務處註冊課務組",
+     "kind": "institution",
+     "evidence_note": "註冊課務組負責學籍、成績相關文件申請"
+    },
+    {
+     "title": "成績列印全自動繳費系統啟用（2009年逢甲週報）",
+     "url": "https://www.fcu.edu.tw/fcuweekly/en/news/2009111914/",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "2009年曾設自動繳費列印系統；現況未確認，未寫入步驟"
+    },
+    {
+     "title": "學籍及成績網路申請作業",
+     "url": "https://service132-sds.fcu.edu.tw/w3119/alumniLogin.aspx",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "線上申請系統（主要對象為校友）；在校生能否使用未確認"
+    },
+    {
+     "title": "Alien Resident Certificate (ARC)",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/arc/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "境外生申請居留證須附在學證明"
+    },
+    {
+     "title": "Work Permit（境外生工作證）",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/work-permit/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "工作許可可改附在學證明"
+    },
+    {
+     "title": "ADMISSIONS（華語中心）",
+     "url": "https://clc.fcu.edu.tw/en/admissions-2/",
+     "publisher": "逢甲大學華語教學中心",
+     "kind": "institution",
+     "evidence_note": "華語中心在學及出席證明須填表、至少預留1個工作天"
+    }
+   ],
+   "uncertain": [
+    "在校生申請在學證明的實際方式（臨櫃、線上或自助機）官方頁面沒有說明。",
+    "註冊課務組核發需要多久，官方未寫。",
+    "收費標準頁面可能是舊資料，送件前建議再確認。",
+    "境外學位生是否可以改向國際事務處申請，沒有官方資料。"
+   ]
+  },
+  {
+   "slug": "bank-account",
+   "title_zh": "外籍學生在臺開立銀行／郵局帳戶",
+   "title_en": "Opening a Bank or Post Office Account as an International Student",
+   "description_zh": "逢甲是無現金校園，工讀金、獎學金、助學金都要匯入學生本人的帳戶，所以入學後應盡早開戶。外籍學生通常要帶居留證和第二身分證件（例如護照），親自到銀行或郵局臨櫃辦理。每家機構的居留期限門檻、開戶金額和是否接受沒有居留證的人開戶都不同，去之前請先確認。",
+   "description_en": "FCU is a cashless campus: work-study pay, scholarships and grants go into an account in the student's own name, so open one soon after arrival. International students usually apply in person with their ARC plus a second photo ID such as a passport. Residence-period limits, opening deposits and whether people without an ARC are accepted differ between banks and the post office, so check before you go.",
+   "applicable_to": "在逢甲就讀、年滿18歲的外籍學位生、交換生及華語生（最好已取得居留證）",
+   "applicable_to_en": "International degree, exchange and Chinese-language students at FCU aged 18 or over, ideally already holding an ARC",
+   "location": "台新銀行逢甲分行（臺中市西屯區河南路二段201號，04-2451-7890）、其他銀行分行或郵局",
+   "location_en": "Taishin Bank Fengjia Branch (No. 201, Sec. 2, Henan Rd., Xitun Dist., Taichung; 04-2451-7890), other banks, or a post office",
+   "steps": [
+    {
+     "title_zh": "先申請居留證",
+     "title_en": "Get your ARC first",
+     "notes": "持居留簽證入境者，須在入境翌日起30天內向移民署申請居留證[11]。持居留證的外國人，開戶時用居留證加另一種能辨識身分的證件[1][3]。沒有居留證的外籍學生，依法規也可以用合法入境的護照加「中華民國統一證號基資表」開戶[1][2][3]；但郵局自2025年6月13日起暫停受理這種方式，只有請領教育部華語文獎學金或外交部台歐連結獎學金、並附學校證明者例外[8]。"
+    },
+    {
+     "title_zh": "備齊證件與資料",
+     "title_en": "Prepare documents",
+     "notes": "準備居留證和第二身分證件（護照、健保卡或駕照等）[1][4][8]。台新銀行要求居留原因是就學的人另外提供學生證或相關證明[4]。年滿18歲者不必附法定代理人同意書[1]。國發會網站建議準備臺灣手機號碼，供聯絡與驗證使用[10]。郵局開戶要留存印鑑或本人簽名[8]。"
+    },
+    {
+     "title_zh": "選擇銀行或郵局",
+     "title_en": "Choose a bank or post office",
+     "notes": "逢甲新生專區說明，沒有銀行帳戶的學生可以到台新銀行逢甲分行開戶[7]，分行電話04-2451-7890，分行代碼051[6]。學校登錄帳戶時也接受郵局及農漁會帳戶[7][13]。各銀行有自己的內規，例如台新銀行規定從申請日起算居留期限不足3個月的人不能開戶[4]。"
+    },
+    {
+     "title_zh": "親自臨櫃辦理並存入開戶金額",
+     "title_en": "Apply in person and make the opening deposit",
+     "notes": "郵局規定外籍人士必須本人親自辦理，要填寫立帳申請書、存款單和CRS自我證明表格，具美國身分者另填W-9[8]。銀行會查核雙重身分證明文件；居留證在期滿前已被註銷或屬逾期居留的，銀行應拒絕開戶[9]。最低開戶金額：台新新臺幣活期性存款1,000元[5]，郵局存簿儲金頁面列為10元[8]。"
+    },
+    {
+     "title_zh": "（選擇性）線上開立數位帳戶",
+     "title_en": "(Optional) Open a digital account online",
+     "notes": "金管會已開放持晶片居留證的外國人線上開戶[12]。以台新Richart為例，自2025年6月16日起的條件是：年滿18歲、持有效居留證且核發日到有效日超過一年、申辦時距居留證到期不少於90天、尚無台新新臺幣存款帳戶[14]。"
+    },
+    {
+     "title_zh": "開戶後到MyFCU登錄帳戶",
+     "title_en": "Register the account in MyFCU",
+     "notes": "拿到存摺後，到MyFCU「銀行帳號維護」填寫帳號並上傳存摺封面，供學校撥款使用（見「在MyFCU登錄撥款銀行帳戶」流程卡）[7]。居留證換發後，請盡快帶新證到銀行更新資料，否則可能被暫時限制交易[4]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "銀行局業務問答集（114年7月版，外籍學生開戶）",
+     "url": "https://www.banking.gov.tw/websitedowndoc?file=chbanking%2F202507281654100.pdf&filedisplay=1140724+%E6%9C%AC%E5%B1%80QA%E5%95%8F%E9%A1%8C%E9%9B%86.pdf",
+     "publisher": "金融監督管理委員會銀行局",
+     "kind": "official",
+     "evidence_note": "外籍學生可用護照搭配居留證或統一證號基資表開戶；居留證持有者需另一種證件；成年者免附同意書"
+    },
+    {
+     "title": "銀行辦理來臺就學之海外學生開設非支票存款之一般存款帳戶規定",
+     "url": "https://law.fsc.gov.tw/LawContent.aspx?id=FE220621",
+     "publisher": "金融監督管理委員會",
+     "kind": "official",
+     "evidence_note": "來臺就學海外學生開戶的法規依據與應備文件"
+    },
+    {
+     "title": "Opening of Deposit Account",
+     "url": "https://www.banking.gov.tw/en/home.jsp?id=201&parentpath=0,179",
+     "publisher": "金融監督管理委員會銀行局",
+     "kind": "official",
+     "evidence_note": "外國自然人開戶文件（英文）"
+    },
+    {
+     "title": "外籍客戶開戶須知",
+     "url": "https://www.taishinbank.com.tw/TSB/personal/common/important-notice/TSBankImportantNotice-001191/",
+     "publisher": "台新國際商業銀行",
+     "kind": "partner",
+     "evidence_note": "居留證加第二證件；就學者需學生證；居留期限不足3個月不受理；換發居留證後須更新資料"
+    },
+    {
+     "title": "活期性存款",
+     "url": "https://www.taishinbank.com.tw/TSB/personal/deposit/twd/demand-deposit/TSBankGridPage-000034-00001/",
+     "publisher": "台新國際商業銀行",
+     "kind": "partner",
+     "evidence_note": "最低開戶金額新臺幣1,000元"
+    },
+    {
+     "title": "分行據點（逢甲分行）",
+     "url": "https://www.taishinbank.com.tw/TSB/service-and-support/branch-finder/?page=12",
+     "publisher": "台新國際商業銀行",
+     "kind": "partner",
+     "evidence_note": "逢甲分行地址、電話、分行代碼"
+    },
+    {
+     "title": "新生上傳銀行帳本說明",
+     "url": "https://freshman.fcu.edu.tw/upload_bankbook_cover/",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "無現金校園；沒有帳戶可到台新逢甲分行開戶；可登錄郵局帳戶"
+    },
+    {
+     "title": "儲匯專區－開戶及憑辦文件",
+     "url": "https://www.post.gov.tw/post/internet/B_saving/index.jsp?ID=3010102",
+     "publisher": "中華郵政股份有限公司",
+     "kind": "official",
+     "evidence_note": "外籍人士須本人親辦；暫停受理護照加基資表開戶（獎學金生例外）；CRS表格；印鑑；開戶金額"
+    },
+    {
+     "title": "存款帳戶及其疑似不法或顯屬異常交易管理辦法",
+     "url": "https://law.fsc.gov.tw/LawContent.aspx?id=FL039015",
+     "publisher": "金融監督管理委員會",
+     "kind": "official",
+     "evidence_note": "居留證遭註銷或逾期居留時銀行應拒絕開戶"
+    },
+    {
+     "title": "Banking and Finance（Guide to Taiwan）",
+     "url": "https://goldcard.nat.gov.tw/en/guide-to-taiwan/banking-and-finance/",
+     "publisher": "國家發展委員會",
+     "kind": "official",
+     "evidence_note": "建議準備臺灣手機號碼"
+    },
+    {
+     "title": "Apply for an Alien Resident Certificate (ARC)",
+     "url": "https://oia.fcu.edu.tw/en/overseas-students/new/first-arc/",
+     "publisher": "逢甲大學國際事務處",
+     "kind": "institution",
+     "evidence_note": "入境翌日起30天內申請居留證"
+    },
+    {
+     "title": "金管會持續推動友善外國人在臺之金融服務措施",
+     "url": "https://www.fsc.gov.tw/ch/home.jsp?id=96&parentpath=0%2C2&mcustomize=news_view.jsp&dataserno=202302090004&dtable=News",
+     "publisher": "金融監督管理委員會",
+     "kind": "official",
+     "evidence_note": "開放持晶片居留證外國人線上開戶"
+    },
+    {
+     "title": "115學年度碩士在職專班開學前應辦事項檢核表（銀行帳號登錄）",
+     "url": "https://webadmi.fcu.edu.tw/115/research/army/115master_army_P02.pdf",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "學校接受本人郵局、農漁會或銀行帳戶"
+    },
+    {
+     "title": "Richart 重要公告（外籍人士數位帳戶申請資格）",
+     "url": "https://richart.tw/TSDIB_RichartWeb/announcements/details?type=important&announceNo=34327",
+     "publisher": "台新國際商業銀行",
+     "kind": "partner",
+     "evidence_note": "外籍人士線上開立數位帳戶的資格"
+    }
+   ],
+   "uncertain": [
+    "沒有統一規定「居留未滿6個月不得開戶」，只確認了個別銀行門檻（台新臨櫃3個月、Richart距到期90天）；其他銀行可能不同。",
+    "開戶需要臺灣手機號碼並非法規明文，只是國發會網站建議。",
+    "郵局暫停受理護照加基資表開戶的措施何時恢復，沒有找到公告。",
+    "逢甲國際處沒有專門開戶指南，學校沒有指定撥款銀行。",
+    "台新外籍客戶開戶須知約兩年前更新，現行條件請向分行確認。"
+   ]
+  },
+  {
+   "slug": "fcu-bank-binding",
+   "title_zh": "在MyFCU登錄撥款銀行帳戶",
+   "title_en": "Registering Your Bank Account in MyFCU",
+   "description_zh": "逢甲是無現金校園，工讀金、獎學金、助學金等款項都匯入學生在MyFCU「銀行帳號維護」登錄的本人帳戶。學生要填寫帳號並上傳存摺封面，由財務處出納組人工審核。郵局、農漁會和銀行帳戶都可以登錄。",
+   "description_en": "FCU is a cashless campus: work-study pay, scholarships and grants go into the account in your own name that you register under 'Bank Account Maintenance' in MyFCU. Enter the account number and upload the passbook cover; the Cashier Section checks it by hand. Post office, farmers'/fishermen's association and bank accounts are all accepted.",
+   "applicable_to": "所有逢甲在學學生（含境外生），尤其是要領工讀金、獎助學金或生活助學金的人",
+   "applicable_to_en": "All FCU students, including international students, especially anyone receiving work-study pay, scholarships or grants",
+   "location": "線上：MyFCU；承辦單位為財務處出納組",
+   "location_en": "Online in MyFCU; handled by the Cashier Section, Office of Financial Affairs",
+   "steps": [
+    {
+     "title_zh": "準備本人金融帳戶",
+     "title_en": "Have an account in your own name",
+     "notes": "帳戶必須是學生本人的郵局、農漁會或銀行帳戶[3]。沒有帳戶的人，新生專區建議申請網路銀行，或到台新銀行逢甲分行開戶[1]。"
+    },
+    {
+     "title_zh": "登入MyFCU進入「銀行帳號維護」",
+     "title_en": "Open 'Bank Account Maintenance' in MyFCU",
+     "notes": "用學號或NID登入MyFCU[7]，路徑是「校園生活」→「帳務」→「銀行帳號維護」[2][4]；也可以在MyFCU搜尋欄輸入「銀行」直接進入[1]。"
+    },
+    {
+     "title_zh": "填寫帳號資料",
+     "title_en": "Enter the account details",
+     "notes": "郵局存簿：選「郵局」，填14碼帳號。銀行存簿：從下拉選單選銀行和分行，依7碼金融代碼填寫（前3碼是銀行，後4碼是分行），再照存摺填帳號[1]。"
+    },
+    {
+     "title_zh": "上傳存摺封面",
+     "title_en": "Upload the passbook cover",
+     "notes": "上傳存摺封面圖檔，畫面上要看得到學生本人的戶名、分行和帳號[1][3][4]。"
+    },
+    {
+     "title_zh": "等候出納組審核",
+     "title_en": "Wait for the Cashier's review",
+     "notes": "送出後由出納組人工審核[1]。在「銀行帳號維護」裡可以查詢已使用的帳號和申請歷程[2]。生活助學金等款項要先建立個人匯款帳戶才能撥款[5]。有問題可洽出納組（總機04-2451-7250）[3][6]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "新生上傳銀行帳本說明",
+     "url": "https://freshman.fcu.edu.tw/upload_bankbook_cover/",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "無現金校園；搜尋「銀行」進入；郵局14碼與銀行7碼填法；上傳帳本封面；出納組人工審核"
+    },
+    {
+     "title": "建立逢甲大學個人帳戶示範（網頁版）",
+     "url": "https://service825.fcu.edu.tw/infofiles/F2017019080.pdf",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "校園生活→帳務→銀行帳號維護；可查詢申請歷程"
+    },
+    {
+     "title": "115學年度碩士在職專班開學前應辦事項檢核表",
+     "url": "https://webadmi.fcu.edu.tw/115/research/army/115master_army_P02.pdf",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "需本人郵局、農漁會或銀行帳戶並上傳存摺影本；承辦出納組"
+    },
+    {
+     "title": "112學年度寒假轉學生開學前應辦事項重要日程檢核表",
+     "url": "https://webadmi.fcu.edu.tw/113/college/transfer/112transfer_05.pdf",
+     "publisher": "逢甲大學註冊課務組",
+     "kind": "institution",
+     "evidence_note": "NID登入→校園生活→帳務→銀行帳號維護"
+    },
+    {
+     "title": "生活助學金",
+     "url": "https://student.fcu.edu.tw/%E7%94%9F%E6%B4%BB%E5%8A%A9%E5%AD%B8%E9%87%91/",
+     "publisher": "逢甲大學學務處生活輔導組",
+     "kind": "institution",
+     "evidence_note": "需先建立個人匯款帳戶才能撥款"
+    },
+    {
+     "title": "出納組",
+     "url": "https://ga.fcu.edu.tw/%E5%87%BA%E7%B4%8D%E7%B5%84/",
+     "publisher": "逢甲大學財務處",
+     "kind": "institution",
+     "evidence_note": "出納組業務與聯絡資訊"
+    },
+    {
+     "title": "MyFCU",
+     "url": "https://its.fcu.edu.tw/myfcu-0",
+     "publisher": "逢甲大學資訊處",
+     "kind": "institution",
+     "evidence_note": "MyFCU用學號或NID登入"
+    }
+   ],
+   "uncertain": [
+    "出納組分機有2361與2301兩個版本，未確認現行分機，所以卡片只寫總機。",
+    "學雜費退費是否也匯入這個帳戶，沒有找到明文。",
+    "是否接受外幣帳戶、純數位帳戶要上傳什麼文件，未確認。",
+    "部分路徑說明來自2017、2023年的文件，MyFCU選單名稱可能已調整。",
+    "審核需要多少工作天，沒有找到。"
+   ]
+  },
+  {
+   "slug": "leave-request",
+   "title_zh": "逢甲大學學生請假",
+   "title_en": "Requesting Leave from Classes at FCU",
+   "description_zh": "逢甲學生請假要用MyFCU的線上請假系統申請，並依請假原因上傳證明文件。事假和病假由任課教師核准，公假由學務長核准；公假必須事前請，事後不能補。因特殊事故沒辦法事先請假的人，要在3個工作日內補辦。",
+   "description_en": "FCU students request leave through the online leave system in MyFCU and upload proof for the reason. Personal and sick leave are approved by each course instructor; official leave is approved by the Dean of Student Affairs and must be arranged in advance. If an emergency prevented you from applying in advance, apply within 3 working days.",
+   "applicable_to": "逢甲大學所有在學學生（含境外生）",
+   "applicable_to_en": "All FCU students, including international students",
+   "location": "線上：MyFCU→九宮格選單→課程學習→請假系統；承辦單位為學務處（student@fcu.edu.tw）",
+   "location_en": "Online: MyFCU → menu → Course Learning → Leave System; Office of Student Affairs (student@fcu.edu.tw)",
+   "steps": [
+    {
+     "title_zh": "確認假別",
+     "title_en": "Choose the leave type",
+     "notes": "學生請假辦法列有事假、病假、喪假、公假、生理假、原住民族歲時祭儀假等假別[2]。學務處學生請假頁面整理了假別、流程、證明和假單更正方式[1]。"
+    },
+    {
+     "title_zh": "登入請假系統",
+     "title_en": "Log in to the leave system",
+     "notes": "用個人NID帳號登入MyFCU，點左上角九宮格選單→「課程學習」→「請假系統」[1]。"
+    },
+    {
+     "title_zh": "填寫假單並上傳證明",
+     "title_en": "Fill in the form and upload proof",
+     "notes": "請假要經請假系統完成，並依請假原因上傳證明文件[1][2]。病假2日以內可用醫療院所的診療單，超過2日要診斷證明書；事假要家長或監護人證明或其他證明；喪假可附訃文或死亡證明；生理假不需要證明[2]。"
+    },
+    {
+     "title_zh": "注意申請時限",
+     "title_en": "Meet the deadlines",
+     "notes": "原則上事前申請。因特殊事故沒辦法事先請假的人，要在3個工作日內說明理由並附證明補辦。公假和原住民族歲時祭儀假必須事前完成手續，事後不能補請[2]。沒辦法登入系統的人可請生活導師協助，但要在請假日起一個月內辦理[1][2]。"
+    },
+    {
+     "title_zh": "等候核准",
+     "title_en": "Wait for approval",
+     "notes": "事假和病假由各科任課教師核准，公假由學務長核准[2]；教師在系統中批核假單[5]。未請假或請假未經核准就不上課，以曠課論[2]。因學校活動請公假的，由承辦的教職員在系統中提出[4]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "學生請假",
+     "url": "https://student.fcu.edu.tw/en/%E5%AD%B8%E7%94%9F%E8%AB%8B%E5%81%87/",
+     "publisher": "逢甲大學學務處",
+     "kind": "institution",
+     "evidence_note": "系統路徑、NID登入、上傳證明、生活導師協助一個月內辦理"
+    },
+    {
+     "title": "逢甲大學學生請假辦法（1130708核定公布）",
+     "url": "https://s3.ap-southeast-1.amazonaws.com/web-content.fcu.edu.tw/wp-content/uploads/sites/93/2024/09/24170319/%E9%80%A2%E7%94%B2%E5%A4%A7%E5%AD%B8%E5%AD%B8%E7%94%9F%E8%AB%8B%E5%81%87%E8%BE%A6%E6%B3%95_1130708%E6%A0%B8%E5%AE%9A%E5%85%AC%E5%B8%83.pdf",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "假別、證明文件、核准權責、曠課、3個工作日內補辦、公假須事前辦理"
+    },
+    {
+     "title": "逢甲大學學生請假辦法（2021年舊版）",
+     "url": "https://s3.ap-southeast-1.amazonaws.com/web-content.fcu.edu.tw/wp-content/uploads/sites/45/2021/11/03145006/f1511167899122.pdf",
+     "publisher": "逢甲大學",
+     "kind": "institution",
+     "evidence_note": "舊版條文，供比對版本差異"
+    },
+    {
+     "title": "學生公假申請流程（由教職員申請）",
+     "url": "https://s3.ap-southeast-1.amazonaws.com/web-content.fcu.edu.tw/wp-content/uploads/sites/93/2021/05/16102901/%E5%85%AC%E5%81%87%E7%94%B3%E8%AB%8B%E6%B5%81%E7%A8%8B.pdf",
+     "publisher": "逢甲大學學務處",
+     "kind": "institution",
+     "evidence_note": "公假由教職員在系統中申請"
+    },
+    {
+     "title": "教師批核學生假單流程",
+     "url": "https://s3.ap-southeast-1.amazonaws.com/web-content.fcu.edu.tw/wp-content/uploads/sites/93/2021/05/16102902/%E6%95%99%E5%B8%AB%E6%89%B9%E6%A0%B8%E6%B5%81%E7%A8%8B.pdf",
+     "publisher": "逢甲大學學務處",
+     "kind": "institution",
+     "evidence_note": "教師在系統中批核假單"
+    }
+   ],
+   "uncertain": [
+    "沒有找到境外生學期中出境（離開臺灣）的請假或通報規定，建議向國際事務處確認。",
+    "華語生出缺勤（請假也計入缺課，不得超過總時數1/4）會影響居留，華語中心是否另有請假規定未確認。",
+    "心理健康假（新聞報導每學期3天）沒有在官方頁面確認。",
+    "生理假天數上限、請假是否影響扣考，沒有逐字確認。"
+   ]
+  },
+  {
+   "slug": "student-id-replacement",
+   "title_zh": "補發逢甲學生證（逢甲卡）",
+   "title_en": "Replacing a Lost FCU Student ID (FCU Card)",
+   "description_zh": "逢甲學生證（逢甲卡）遺失、被竊、被搶、被騙取或被他人占有時，可以在MyFCU的「成績及學籍文件申請」選「補發學生證」線上申請。在校生補發的工本費是新臺幣250元。逢甲卡同時是悠遊卡，遺失後應盡快處理。",
+   "description_en": "If your FCU Card is lost, stolen or held by someone else, apply online in MyFCU under the transcript and student record document service, choosing 'Student ID Reissue'. The fee for enrolled students is NT$250. The card also works as an EasyCard, so act quickly.",
+   "applicable_to": "逢甲大學在校生（含境外生）",
+   "applicable_to_en": "Enrolled FCU students, including international students",
+   "location": "線上：MyFCU；承辦單位為教務處註冊課務組（04-2451-7250分機2111，registration@fcu.edu.tw）",
+   "location_en": "Online via MyFCU; Registration Section, Office of Academic Affairs (04-2451-7250 ext. 2111, registration@fcu.edu.tw)",
+   "steps": [
+    {
+     "title_zh": "盡快處理遺失的卡片",
+     "title_en": "Act quickly on the lost card",
+     "notes": "逢甲卡兼具悠遊卡功能。遺失、被竊、被搶、被騙取或被他人占有時，都可以申請補發，應盡快辦理[1]。"
+    },
+    {
+     "title_zh": "在MyFCU線上申請補發",
+     "title_en": "Apply online in MyFCU",
+     "notes": "登入MyFCU，進入「成績及學籍文件申請」服務，選「補發學生證」[1]。"
+    },
+    {
+     "title_zh": "繳交工本費",
+     "title_en": "Pay the fee",
+     "notes": "註冊課務組收費標準：在校生申請補發學生證，工本費250元[2]。申請時請以系統顯示的金額為準。"
+    },
+    {
+     "title_zh": "向註冊課務組確認領取",
+     "title_en": "Confirm pickup with the Registration Section",
+     "notes": "領取時間和方式請洽註冊課務組：電話04-2451-7250分機2111，信箱registration@fcu.edu.tw，週一至週五9:00–17:00[3]。"
+    }
+   ],
+   "sources": [
+    {
+     "title": "逢甲卡",
+     "url": "https://its.fcu.edu.tw/fcucard",
+     "publisher": "逢甲大學資訊處",
+     "kind": "institution",
+     "evidence_note": "遺失等情形可在MyFCU申請補發學生證；逢甲卡同時是悠遊卡"
+    },
+    {
+     "title": "收費標準－註冊課務組",
+     "url": "https://registration.fcu.edu.tw/%E9%A6%96%E9%A0%81-2/%E6%9C%8D%E5%8B%99%E5%B0%8D%E8%B1%A1/%E6%94%B6%E8%B2%BB%E6%A8%99%E6%BA%96/",
+     "publisher": "逢甲大學教務處註冊課務組",
+     "kind": "institution",
+     "evidence_note": "在校生補發學生證工本費250元"
+    },
+    {
+     "title": "業務職掌－註冊課務組",
+     "url": "https://registration.fcu.edu.tw/en/%E9%A6%96%E9%A0%81-2/team/",
+     "publisher": "逢甲大學教務處註冊課務組",
+     "kind": "institution",
+     "evidence_note": "聯絡電話、信箱、服務時間"
+    }
+   ],
+   "uncertain": [
+    "補發所需工作天數、領取地點、繳費方式，官方資料沒有寫。",
+    "補發是否要重新上傳照片，未確認。",
+    "悠遊卡餘額能否轉移、是否要另外向悠遊卡公司掛失，沒有找到逢甲說明。",
+    "收費標準頁面沒有更新日期。"
+   ]
+  }
+ ]
+}

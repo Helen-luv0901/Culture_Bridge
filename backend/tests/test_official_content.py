@@ -1,9 +1,10 @@
+import json
 from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.official_content import _importer, import_card
+from app.official_content import DEFAULT_PATH, _importer, import_card
 
 REVIEWER = {"Authorization": "Bearer dev:rita:reviewer"}
 WHEN = datetime(2026, 10, 14, tzinfo=UTC)
@@ -61,3 +62,23 @@ def test_import_creates_unpublished_drafts_with_sources(db):
     api.post(f"/api/admin/versions/{draft['id']}/publish", headers=REVIEWER)
     assert import_card(db, CARD, WHEN) == "new draft v2"
     assert len(api.get("/api/admin/sources", headers=REVIEWER).json()) == 2
+
+
+def test_bundled_cards_import_cleanly(db):
+    """The researched first batch (D-8) imports as drafts; nothing becomes public."""
+    data = json.loads(DEFAULT_PATH.read_text(encoding="utf-8"))
+    slugs = [c["slug"] for c in data["cards"]]
+    assert len(slugs) == len(set(slugs)) >= 8
+    when = datetime.fromisoformat(data["accessed_at"])
+    _importer(db)
+    for card in data["cards"]:
+        assert card["sources"] and all(s["url"].startswith("https://") for s in card["sources"])
+        assert import_card(db, card, when) == "new draft"
+        assert import_card(db, card, when).startswith("skipped")
+
+    api = TestClient(app)
+    assert api.get("/api/actions").json() == []
+    versions = api.get("/api/admin/actions/work-permit/versions", headers=REVIEWER).json()
+    assert "[" not in versions[0]["steps"][0]["notes"]  # markers became publisher names
+    urls = {s["url"] for c in data["cards"] for s in c["sources"]}
+    assert len(api.get("/api/admin/sources", headers=REVIEWER).json()) == len(urls)  # shared

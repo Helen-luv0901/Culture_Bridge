@@ -83,12 +83,17 @@ gcloud run jobs execute culture-bridge-migrate --region=$REGION --wait   # upgra
 之後每次部署新版本，先 `gcloud run jobs update culture-bridge-migrate --image=$IMAGE:$TAG` 再執行一次 `execute`。
 （`0004` 會執行 `CREATE EXTENSION vector`；Cloud SQL 的 `postgres` 帳號屬於 `cloudsqlsuperuser`，可以建立。）
 
-測試站要示範資料時：
+測試站要示範資料時，另建一個執行 `python` 的 job（`gcloud run jobs execute` 只能覆寫參數，不能換指令）：
 
 ```sh
-gcloud run jobs execute culture-bridge-migrate --region=$REGION \
-  --command=python --args=-m,app.seed,--force --wait
+gcloud run jobs create culture-bridge-seed --image=$IMAGE:$TAG --region=$REGION \
+  --service-account=$SA --set-cloudsql-instances=$CONN \
+  --set-secrets=DATABASE_URL=database-url:latest \
+  --command=python --args=-m,app.seed,--force
+gcloud run jobs execute culture-bridge-seed --region=$REGION --wait
 ```
+
+第一批官方流程卡草稿（D-8）：`bash scripts/gcp-setup.sh 7`，說明見 [D-8 流程卡](../content/d8-official-procedures.md)。
 
 ## 5. 部署服務
 

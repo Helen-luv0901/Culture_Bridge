@@ -15,6 +15,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from pydantic import HttpUrl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -71,7 +72,8 @@ def _content(card: dict) -> svc.NewAction:
 
 
 def _source_id(db: Session, source: dict, accessed_at: datetime) -> str:
-    existing = db.scalar(select(Source.id).where(Source.url == source["url"]))
+    url = str(HttpUrl(source["url"]))  # stored the way the admin API stores it
+    existing = db.scalar(select(Source.id).where(Source.url == url))
     if existing:
         return existing
     created = svc.create_source(
