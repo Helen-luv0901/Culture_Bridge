@@ -143,11 +143,14 @@ class _AssistantPanelState extends State<AssistantPanel> {
                   style: displayStyle(22),
                 ),
               ),
+              // Icons, not text buttons: with large text a labelled button squeezed the title
+              // into a tall column and pushed the input off a phone screen.
               if (vm.chat.isNotEmpty)
-                TextButton(
+                IconButton(
                   key: const Key('assistant-clear'),
+                  tooltip: vm.pair('清除對話', 'Clear conversation'),
                   onPressed: vm.clearChat,
-                  child: Text(vm.pair('清除對話', 'Clear')),
+                  icon: const Icon(Icons.delete_sweep_outlined),
                 ),
               IconButton(
                 tooltip: vm.pair('關閉', 'Close'),
@@ -207,6 +210,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
                       '例如：工作證要準備什麼？',
                       'e.g. What do I need for a work permit?',
                     ),
+                    hintMaxLines: 2,
                     counterText: '',
                   ),
                   onSubmitted: (_) => _send(),
