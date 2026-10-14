@@ -8,6 +8,7 @@
 - ✅ 步驟 4 Firebase 登入：Google 登入已啟用，公開名稱「Culture Bridge」；兩個 `run.app` 網域都已加入 Authorized domains
 - ✅ 步驟 5 部署：第一次 revision `culture-bridge-00001-j21`（`bf91e54`）；2026-10-14 重新部署 `main` 為 `culture-bridge-00002-bx2`（`986a231`，含 migration `0005_usage_metrics`）
 - ✅ 再部署 `culture-bridge-00003-bmt`（`main` `47a8220`）；✅ 步驟 7 第一次匯入 11 張官方流程卡草稿
+- ✅ 2026-10-14 再部署 `culture-bridge-00004-mp5`（`main` `5492d34`：新圖示、助理說明、大字體修正）；✅ 步驟 7 第二次匯入，共 18 張草稿（execution `culture-bridge-import-lqs2t`）。下一步是 D 在網頁版「管理 → 流程」審查並發布
 - ✅ 步驟 6 監控：uptime check `culture-bridge-uptime`（檢查 `/api/config`），Email 警報政策「culture-bridge is down」
 - ✅ 步驟 1 費用警報：每月 1000TWD
 - ✅ 第 6 節 第一位管理者：已設定
@@ -19,19 +20,18 @@
 - 新專案的 Cloud Build 用 `<專案編號>-compute@developer.gserviceaccount.com` 執行，`gcloud builds submit` 會 403 `storage.objects.get`：步驟 5c 先授予 `roles/cloudbuild.builds.builder`
 - Cloud Run 保留了 `/healthz`（回 Google 自己的 404，不會到後端）：健康檢查改用 `/health`。目前線上版本（`986a231`）還沒有 `/health`，這個修正合併進 `main` 並重新部署之後才能用；在那之前 uptime check 維持 `/api/config`
 
-## 下一次要做的（A 在 Cloud Shell 執行）
-
-`main` 之後又合併了：第二批 7 張流程卡（共 18 張）、引用來源去重、編輯器保留步驟備註、助理說明新增條目、管理介面與助理面板的大字體修正、新的 App 圖示。照順序：
+## 以後重新部署
 
 ```bash
 cd ~/Culture_Bridge && git checkout main && git pull
 bash scripts/gcp-setup.sh 5          # 「第一次接 Alembic 嗎？」回答 N；部署確認輸入 yes
-AUTO=1 bash scripts/gcp-setup.sh 7   # 更新原本 11 張草稿（引用去重）並新增 7 張
-curl -s https://culture-bridge-z7gcp33vjq-de.a.run.app/health   # 應該看到 {"status":"ok"}
+AUTO=1 bash scripts/gcp-setup.sh 7   # 只有流程卡檔案有更新時才需要
 ```
 
-- 步驟 7 只會更新**沒有人動過**的草稿；D 已經編輯過的卡會顯示 `skipped`，不會被覆蓋
-- `/health` 回 `{"status":"ok"}` 之後，可以把 uptime check 從 `/api/config` 改成 `/health`：主控台 → Monitoring → Uptime checks → `culture-bridge-uptime` → 編輯路徑
+- 腳本每一步會先檢查 Cloud Shell 有沒有登入；建置期間登入過期的話，照提示執行 `gcloud config set account <Google 帳號>`（或重新整理頁面按「授權」）再重跑，已經建置好的映像檔會自動略過
+- 步驟 7 只會更新**沒有人動過**的草稿；審查者編輯過的卡會顯示 `skipped`，不會被覆蓋
+- 匯入明細：`gcloud logging read 'resource.type="cloud_run_job" AND labels."run.googleapis.com/execution_name"="<execution 名稱>"' --format='value(textPayload)' --limit=40`
+- `/health` 已在線上（00004 起）；uptime check 可以從 `/api/config` 改成 `/health`：主控台 → Monitoring → Uptime checks → `culture-bridge-uptime` → 編輯路徑
 
 所有指令在 Google Cloud Shell（https://shell.cloud.google.com ，帳號 candy950712@gmail.com）的 `~/Culture_Bridge` 執行。腳本以 `main` 為準。
 
