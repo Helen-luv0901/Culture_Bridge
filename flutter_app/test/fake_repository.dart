@@ -273,7 +273,27 @@ class FakeCultureRepository implements CultureRepository {
       experiencedTooCount: e.experiencedTooCount,
       differentCount: e.differentCount,
       myReactions: reactions.toList()..sort(),
+      saved: e.saved,
     );
+  }
+
+  /// Newest first, like the API.
+  final List<String> saved = [];
+
+  @override
+  Future<void> setSaved(String id, bool on) async {
+    _requireLogin();
+    final e = _experiences[id];
+    if (on && e == null) throw const ApiException(404, 'experience_not_found');
+    saved.remove(id);
+    if (on) saved.insert(0, id);
+    if (e != null) _experiences[id] = e.withSaved(on);
+  }
+
+  @override
+  Future<List<ExperienceItem>> savedExperiences({String? locale}) async {
+    _requireLogin();
+    return [for (final id in saved) ?_experiences[id]];
   }
 
   @override

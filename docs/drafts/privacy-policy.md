@@ -16,6 +16,7 @@ Culture Bridge 是協助在台國際學生辦理生活流程、分享生活經�
 | 語言偏好 | 你在 App 中設定 | 顯示介面語言 |
 | 你分享的經驗（原話、主題、身分類型）與 AI 整理、翻譯 | 你在「分享」輸入 | 匿名公開給其他使用者；用於搜尋與 AI 助理引用 |
 | 反應（有幫助、我也遇過）、「我的經驗不同」 | 你的操作 | 顯示統計、讓你看到自己的影響 |
+| 收藏的經驗 | 你的操作 | 讓你之後再看；只有你看得到，不計入任何公開數字 |
 | 辦理進度、卡關與差異回報（含你填寫的說明） | 你的操作 | 記錄你的進度；經審查後用來改善流程內容，回報中的原話經審查採納後可能被助理以「學生回報」引用 |
 | 檢舉、封鎖名單 | 你的操作 | 維護社群安全；封鎖只影響你看到的內容 |
 | AI 助理對話 | 你在助理輸入 | 產生回答。對話只暫存在伺服器記憶體中（約 2 小時、最近幾輪），**不寫入資料庫** |
@@ -50,7 +51,7 @@ AI 產生的摘要在你確認前不會公開；翻譯會標示「AI 翻譯」�
 ## 6. 你的權利
 
 - **查閱與更正**：在「我的」查看你分享的經驗；可在發布前修改，或刪除已發布的經驗
-- **刪除帳號**：在「我的」→「帳號」→「刪除帳號」，會刪除帳號與上述所有資料（經驗、反應、辦理紀錄、回報、檢舉、封鎖、助理對話）。說明頁：`/account-deletion`
+- **刪除帳號**：在「我的」→「帳號」→「刪除帳號」，會刪除帳號與上述所有資料（經驗、反應、收藏、辦理紀錄、回報、檢舉、封鎖、助理對話）。說明頁：`/account-deletion`
 - 若你是審查者，你對官方流程的審查紀錄會保留但改為不具名，以維持流程驗證可追溯
 - 無法登入時可來信要求刪除：【待確認：聯絡方式】，我們會在 30 天內處理
 
@@ -74,7 +75,7 @@ Last updated: [TBC]
 
 **Who we are.** Culture Bridge helps international students in Taiwan with everyday procedures and shared experiences, operated by [TBC]. Contact: [TBC].
 
-**What we collect and why.** Your Firebase sign-in ID (Google sign-in is handled by Firebase Authentication, which keeps your Google email and name for signing in; our database stores only the internal ID, never your password, email or name, and deleting your account also removes the Firebase login); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
+**What we collect and why.** Your Firebase sign-in ID (Google sign-in is handled by Firebase Authentication, which keeps your Google email and name for signing in; our database stores only the internal ID, never your password, email or name, and deleting your account also removes the Firebase login); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; experiences you save to read later (visible only to you); your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
 
 **Anonymity.** Shared experiences are public but never show your name, school, account, or anything linking several posts to the same person. Please do not write identifying details in your words.
 

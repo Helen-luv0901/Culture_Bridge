@@ -226,6 +226,15 @@ class ExperienceReaction(Base):
     created_at: Mapped[datetime] = _created()
 
 
+class SavedExperience(Base):
+    """A reader's private "read later" list (migration 0006)."""
+
+    __tablename__ = "saved_experiences"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id"), primary_key=True)
+    created_at: Mapped[datetime] = _created()
+
+
 class ExperienceLink(Base):
     __tablename__ = "experience_links"
     from_experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id"), primary_key=True)

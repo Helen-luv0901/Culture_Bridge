@@ -233,6 +233,7 @@ class ExperienceItem {
     required this.experiencedTooCount,
     required this.differentCount,
     required this.myReactions,
+    this.saved = false,
   });
   factory ExperienceItem.fromJson(Json json) => ExperienceItem(
     id: json['id'] as String,
@@ -251,6 +252,7 @@ class ExperienceItem {
     experiencedTooCount: json['experienced_too_count'] as int,
     differentCount: json['different_count'] as int,
     myReactions: List<String>.from(json['my_reactions'] as List),
+    saved: json['saved'] as bool? ?? false,
   );
   final String id;
   final String topicId;
@@ -266,6 +268,27 @@ class ExperienceItem {
   final int experiencedTooCount;
   final int differentCount;
   final List<String> myReactions;
+
+  /// In the reader's private "read later" list.
+  final bool saved;
+
+  ExperienceItem withSaved(bool value) => ExperienceItem(
+    id: id,
+    topicId: topicId,
+    identityType: identityType,
+    sourceLocale: sourceLocale,
+    originalVoice: originalVoice,
+    situation: situation,
+    feelingOrAttempt: feelingOrAttempt,
+    reminder: reminder,
+    translation: translation,
+    publishedAt: publishedAt,
+    helpfulCount: helpfulCount,
+    experiencedTooCount: experiencedTooCount,
+    differentCount: differentCount,
+    myReactions: myReactions,
+    saved: value,
+  );
 
   /// Summary text (situation plus feeling), in the translation when [translated].
   String summaryText(bool translated) {

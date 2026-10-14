@@ -127,7 +127,7 @@
     "blockedAuthors": "已封鎖的作者",
     "unblock": "解除封鎖",
     "deleteAccount": "刪除帳號",
-    "deleteAccountConfirm": "這會永久刪除你的帳號、分享的經驗、反應、辦理紀錄與助理對話，無法復原。",
+    "deleteAccountConfirm": "這會永久刪除你的帳號、分享的經驗、反應、收藏、辦理紀錄與助理對話，無法復原。",
     "cancel": "取消",
     "confirm": "確認",
     "delete": "刪除",
@@ -153,7 +153,13 @@
     "continueAction": "繼續辦理",
     "respondingTo": "你正在分享和另一則經驗不同的經驗。",
     "account": "帳號",
-    "visitAccountDeletion": "刪除帳號說明"
+    "visitAccountDeletion": "刪除帳號說明",
+    "save": "收藏",
+    "unsave": "取消收藏",
+    "savedExperiences": "收藏的經驗",
+    "noSaved": "還沒有收藏。看到想再看的經驗，按書籤圖示就會存在這裡。",
+    "savedNotice": "已收藏，可以在「我的」找到。",
+    "openSaved": "再看一次"
   },
   "en": {
     "home": "Home",
@@ -283,7 +289,7 @@
     "blockedAuthors": "Blocked authors",
     "unblock": "Unblock",
     "deleteAccount": "Delete account",
-    "deleteAccountConfirm": "This permanently deletes your account, shared experiences, reactions, procedure progress and assistant conversations. It can't be undone.",
+    "deleteAccountConfirm": "This permanently deletes your account, shared experiences, reactions, saved experiences, procedure progress and assistant conversations. It can't be undone.",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
@@ -309,6 +315,12 @@
     "continueAction": "Continue",
     "respondingTo": "You're sharing an experience that differs from another one.",
     "account": "Account",
-    "visitAccountDeletion": "How to delete your account"
+    "visitAccountDeletion": "How to delete your account",
+    "save": "Save",
+    "unsave": "Remove from saved",
+    "savedExperiences": "Saved experiences",
+    "noSaved": "Nothing saved yet. Tap the bookmark on an experience to keep it here.",
+    "savedNotice": "Saved. You can find it under My.",
+    "openSaved": "Read again"
   }
 }

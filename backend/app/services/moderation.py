@@ -25,6 +25,7 @@ from app.models import (
     ExperienceReaction,
     ExperienceSummary,
     Report,
+    SavedExperience,
     User,
     UserBlock,
     VerificationRecord,
@@ -278,6 +279,7 @@ def delete_account(db: Session, user: CurrentUser) -> None:
         db, list(db.scalars(select(Experience.id).where(Experience.author_id == uid)))
     )
     db.execute(delete(ExperienceReaction).where(ExperienceReaction.user_id == uid))
+    db.execute(delete(SavedExperience).where(SavedExperience.user_id == uid))
     # Summaries they confirmed belong to their own experiences, already removed above.
     db.execute(delete(ExperienceSummary).where(ExperienceSummary.confirmed_by == uid))
     executions = list(db.scalars(select(Execution.id).where(Execution.user_id == uid)))

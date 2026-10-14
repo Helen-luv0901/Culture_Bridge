@@ -448,6 +448,7 @@ class ExperienceCard extends StatelessWidget {
                 '${experience.differentCount} ${vm.t('reactions')}',
                 style: const TextStyle(fontSize: 13, color: Palette.muted),
               ),
+              SaveButton(item: experience),
               TextButton.icon(
                 onPressed: () {
                   if (ensureSignedIn(context)) {
@@ -528,6 +529,7 @@ class _ExperienceDetail extends StatelessWidget {
                 ],
               ),
             ),
+            SaveButton(item: item),
             ModerationMenu(experienceId: item.id),
           ],
         ),
@@ -645,6 +647,27 @@ class _ExperienceDetail extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Bookmark: keeps an experience in the reader's private "read later" list under My.
+class SaveButton extends StatelessWidget {
+  const SaveButton({super.key, required this.item});
+  final ExperienceItem item;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return IconButton(
+      key: Key('save-${item.id}'),
+      tooltip: item.saved ? vm.t('unsave') : vm.t('save'),
+      isSelected: item.saved,
+      color: Palette.moss,
+      icon: const Icon(Icons.bookmark_border),
+      selectedIcon: const Icon(Icons.bookmark),
+      onPressed: () {
+        if (ensureSignedIn(context)) vm.toggleSaved(item);
+      },
     );
   }
 }

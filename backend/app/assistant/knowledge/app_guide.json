@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-14",
+  "version": "2026-10-14b",
   "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: procedure facts, steps, fees and dates always come from the tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
   "entries": [
     {
@@ -138,8 +138,8 @@
       "keywords": ["我的", "我的經驗", "影響", "語言", "切換語言", "英文", "中文", "刪除經驗", "my", "profile", "impact", "language", "english", "chinese", "delete experience"],
       "title": {"zh-Hant": "我的", "en": "My"},
       "body": {
-        "zh-Hant": "「我的」會列出你分享過的經驗和你的影響，例如有多少人覺得有幫助。每則經驗都可以按「刪除」移除。你也可以在這裡切換語言：繁中或 English；第一次開啟時會依照手機或瀏覽器的語言。",
-        "en": "My lists the experiences you shared and your impact, such as how many people found them helpful. Each experience has a Delete button. You can also switch language here between 繁中 and English; the first time you open the app it follows your phone or browser language."
+        "zh-Hant": "「我的」會列出你分享過的經驗和你的影響，例如有多少人覺得有幫助，以及你收藏的經驗。每則經驗都可以按「刪除」移除。你也可以在這裡切換語言：繁中或 English；第一次開啟時會依照手機或瀏覽器的語言。",
+        "en": "My lists the experiences you shared and your impact, such as how many people found them helpful, and the experiences you saved. Each experience has a Delete button. You can also switch language here between 繁中 and English; the first time you open the app it follows your phone or browser language."
       }
     },
     {
@@ -198,8 +198,8 @@
       "keywords": ["刪除帳號", "刪除資料", "註銷", "個資", "delete account", "delete my data", "remove account", "privacy"],
       "title": {"zh-Hant": "怎麼刪除帳號？", "en": "How do I delete my account?"},
       "body": {
-        "zh-Hant": "到「我的」→「帳號」→「刪除帳號」並確認。這會永久刪除你的帳號、分享的經驗、反應、辦理紀錄與助理對話，無法復原。只想移除某一則經驗的話，在「我的」那則經驗按「刪除」即可。沒有登入也可以在網站的 /account-deletion 頁面看刪除說明。",
-        "en": "Go to My → Account → Delete account and confirm. This permanently deletes your account, shared experiences, reactions, procedure progress and assistant conversations, and can't be undone. To remove just one experience, tap Delete on it in My. The /account-deletion page on the website explains this without signing in."
+        "zh-Hant": "到「我的」→「帳號」→「刪除帳號」並確認。這會永久刪除你的帳號、分享的經驗、反應、收藏、辦理紀錄與助理對話，無法復原。只想移除某一則經驗的話，在「我的」那則經驗按「刪除」即可。沒有登入也可以在網站的 /account-deletion 頁面看刪除說明。",
+        "en": "Go to My → Account → Delete account and confirm. This permanently deletes your account, shared experiences, reactions, saved experiences, procedure progress and assistant conversations, and can't be undone. To remove just one experience, tap Delete on it in My. The /account-deletion page on the website explains this without signing in."
       }
     },
     {
@@ -210,6 +210,16 @@
       "body": {
         "zh-Hant": "流程卡由團隊的審查者（reviewer）與管理者依官方資料編輯、審查後發布；學生的卡關與差異回報、檢舉也由他們處理。審查者登入後會在「我的」→「帳號」看到 Admin 入口。一般使用者沒有這個入口，也不能直接修改流程卡，請用回報功能告訴我們。",
         "en": "Reviewers and admins on the team edit procedure cards from official sources, review them and publish them; they also handle stuck and difference reports and content reports. Reviewers see an Admin link under My → Account. Other users don't, and can't edit cards directly; please send a report instead."
+      }
+    },
+    {
+      "id": "saved",
+      "kind": "feature",
+      "keywords": ["收藏", "書籤", "存起來", "想再看", "稍後再看", "儲存", "save", "saved", "bookmark", "read later", "keep"],
+      "title": {"zh-Hant": "收藏想再看的經驗", "en": "Saving experiences to read later"},
+      "body": {
+        "zh-Hant": "在經驗頁或探索的卡片上按書籤圖示就能收藏（需要登入），再按一次取消。收藏的經驗會列在「我的」→「收藏的經驗」，最新的在最上面，也可以在那裡按「取消收藏」。收藏只有你自己看得到，作者和其他人都不會知道；經驗被隱藏、刪除或作者被你封鎖後，會自動從清單消失。",
+        "en": "Tap the bookmark on an experience page or an Explore card to save it (sign-in needed); tap again to remove it. Saved experiences are listed under My → Saved experiences, newest first, where you can also remove them. Only you can see what you saved; authors and other people are never told. If an experience is hidden, deleted or its author is blocked, it drops off the list."
       }
     }
   ]
