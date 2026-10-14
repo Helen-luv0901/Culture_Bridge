@@ -68,6 +68,32 @@ Culture Bridge puts "how to do it" next to "how others experienced it":
 
 Student experiences are personal views, not official rules. For anything important, follow your school's international office and official announcements.
 
+## 資訊來源與聲明（接在中英文完整說明的最後）
+
+Google Play 要求：整理政府資訊、但不是政府機關開發的 App，商店說明要寫明沒有隸屬關係並附上資訊來源（見 [play-console-declarations.md](play-console-declarations.md) 第 5 節）。來源只列流程卡實際引用的主要網站；流程卡增減時一起更新。
+
+【待確認】學校名稱的寫法：若沒有取得逢甲大學同意合作或掛名，維持下面「學生團隊開發、非學校官方」的寫法。
+
+**繁體中文**
+
+> Culture Bridge 由學生團隊開發，**不是**政府機關或學校的官方 App，也不代表任何機關。流程卡整理自下列公開資訊，每張卡都附上原始網址與最後確認日期；規定以各機關最新公告為準：
+> ・內政部移民署 https://www.immigration.gov.tw
+> ・勞動部勞動力發展署（外國人工作許可）https://ezworktaiwan.wda.gov.tw
+> ・衛生福利部中央健康保險署 https://www.nhi.gov.tw
+> ・衛生福利部疾病管制署 https://www.cdc.gov.tw
+> ・外交部領事事務局 https://www.boca.gov.tw
+> ・逢甲大學國際事務處 https://oia.fcu.edu.tw
+
+**English**
+
+> Culture Bridge is built by a student team. It is **not** an official app of any government agency or university and does not represent them. Procedure cards summarize the public information below; every card links to its original source and shows when it was last checked. Official announcements always take precedence:
+> • National Immigration Agency: https://www.immigration.gov.tw
+> • Workforce Development Agency, Ministry of Labor (work permits): https://ezworktaiwan.wda.gov.tw
+> • National Health Insurance Administration: https://www.nhi.gov.tw
+> • Taiwan Centers for Disease Control: https://www.cdc.gov.tw
+> • Bureau of Consular Affairs, Ministry of Foreign Affairs: https://www.boca.gov.tw
+> • Feng Chia University Office of International Affairs: https://oia.fcu.edu.tw
+
 ## 分類與聯絡（待填）
 
 - 類別：教育【待確認】
