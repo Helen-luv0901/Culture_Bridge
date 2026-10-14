@@ -73,6 +73,14 @@ bash scripts/gcp-setup.sh 1
 
 - 「每月預算」輸入例如 `1000TWD`（幣別要和帳單帳戶相同；不確定先問 A）
 
+## 5.5 匯入第一批官方流程卡草稿（D-8，部署後）
+
+```bash
+AUTO=1 bash scripts/gcp-setup.sh 7
+```
+
+只建立未發布草稿；審查與發布方式見 [D-8 流程卡](../content/d8-official-procedures.md)。
+
 ## 6. 第一位管理者
 
 1. 用 Google 登入步驟 5 印出的網址 →「我的」→「帳號」複製帳號編號
