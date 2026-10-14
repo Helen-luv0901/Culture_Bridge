@@ -78,6 +78,7 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 - [A-5 Gemini 金鑰](docs/runbooks/a5-gemini-api-key.md)
 - [A-7 部署到 Cloud Run](docs/runbooks/a7-deploy-cloud-run.md)
 - [剩下的 Google Cloud 步驟（交接）](docs/runbooks/next-steps-gcp.md)
+- [Android 版建置、Google 登入與簽署](docs/runbooks/c2-android-build.md)
 
 密碼與金鑰只放在 Secret Manager，不要寫進 repo 或貼到群組。
 
