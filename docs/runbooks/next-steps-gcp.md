@@ -73,7 +73,7 @@ bash scripts/gcp-setup.sh 1
 
 - 「每月預算」輸入例如 `1000TWD`（幣別要和帳單帳戶相同；不確定先問 A）
 
-## 5.5 匯入第一批官方流程卡草稿（D-8，部署後）
+## 5.5 匯入官方流程卡草稿（D-8，部署後；新增卡片後再跑一次）
 
 ```bash
 AUTO=1 bash scripts/gcp-setup.sh 7

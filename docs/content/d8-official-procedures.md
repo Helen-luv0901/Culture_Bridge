@@ -1,4 +1,4 @@
-# D-8 第一批官方流程卡（草稿，待審查）
+# D-8 官方流程卡（草稿，待審查）
 
 資料檔：[`backend/app/content/official_procedures.json`](../../backend/app/content/official_procedures.json)（2026-10-14 整理）
 
@@ -14,21 +14,28 @@
 
 ## 流程卡一覽
 
-| 流程卡 | 對象 | 步驟 | 來源 |
+| 流程卡 | 批次 | 步驟 | 來源 |
 |---|---|---|---|
-| 外國學生首次申請外僑居留證（ARC）（`arc-first`） | 經各級主管教育行政機關核定得招收外國學生之學校許可在臺就學的外國學生（含持居留簽… | 6 | 5 |
-| 外國學生外僑居留證延期（`arc-extension`） | 已持有外僑居留證、仍在核定學校就學的外國學生（僑生適用同一須知，規費減半） | 5 | 4 |
-| 外僑居留證遺失或污損補發（`arc-replacement`） | 外僑居留證遺失、滅失或污損的外國人（包含外國學生） | 4 | 3 |
-| 外籍生居留健康檢查與新生健檢（`health-check`） | 申請居留簽證或在臺改辦居留的外籍學生（例如持就學目的停留簽證入境者）；逢甲境外新… | 5 | 12 |
-| 加入全民健康保險（健保）與申辦健保卡（`nhi`） | 持有效居留證（ARC）在臺就學的外籍學位生（僑生、港澳生、陸生另有部分不同規定） | 6 | 13 |
-| 申請外國留學生工作許可（工讀）（`work-permit`） | 正式入學修讀科、系、所課程的外國留學生（含港澳生、僑生），入學後即可申請；就讀語… | 6 | 12 |
-| 申請逢甲大學在學證明書（`enrollment-certificate`） | 逢甲大學在校生（含境外學位生） | 4 | 8 |
-| 外籍學生在臺開立銀行／郵局帳戶（`bank-account`） | 在逢甲就讀、年滿18歲的外籍學位生、交換生及華語生（最好已取得居留證） | 6 | 14 |
-| 在MyFCU登錄撥款銀行帳戶（`fcu-bank-binding`） | 所有逢甲在學學生（含境外生），尤其是要領工讀金、獎助學金或生活助學金的人 | 5 | 7 |
-| 逢甲大學學生請假（`leave-request`） | 逢甲大學所有在學學生（含境外生） | 5 | 5 |
-| 補發逢甲學生證（逢甲卡）（`student-id-replacement`） | 逢甲大學在校生（含境外生） | 4 | 3 |
+| 外國學生首次申請外僑居留證（ARC）（`arc-first`） | 1 | 6 | 5 |
+| 外國學生外僑居留證延期（`arc-extension`） | 1 | 5 | 4 |
+| 外僑居留證遺失或污損補發（`arc-replacement`） | 1 | 4 | 3 |
+| 外籍生居留健康檢查與新生健檢（`health-check`） | 1 | 5 | 12 |
+| 加入全民健康保險（健保）與申辦健保卡（`nhi`） | 1 | 6 | 13 |
+| 申請外國留學生工作許可（工讀）（`work-permit`） | 1 | 6 | 12 |
+| 申請逢甲大學在學證明書（`enrollment-certificate`） | 1 | 4 | 8 |
+| 外籍學生在臺開立銀行／郵局帳戶（`bank-account`） | 1 | 6 | 14 |
+| 在MyFCU登錄撥款銀行帳戶（`fcu-bank-binding`） | 1 | 5 | 7 |
+| 逢甲大學學生請假（`leave-request`） | 1 | 5 | 5 |
+| 補發逢甲學生證（逢甲卡）（`student-id-replacement`） | 1 | 4 | 3 |
+| 境外新生報到（國際事務處）（`fcu-newcomer-registration`） | 2 | 6 | 6 |
+| MyFCU 新生報到檢核表（`myfcu-checklist`） | 2 | 5 | 6 |
+| 停留簽證改辦就學居留簽證（`visitor-to-resident-visa`） | 2 | 5 | 6 |
+| 華語生申請居留（外僑居留證）（`mandarin-student-residence`） | 2 | 5 | 4 |
+| 外僑居留證異動登記（住址變更等）（`arc-address-change`） | 2 | 4 | 4 |
+| 加入健保前的學生醫療保險（醫保／僑保）（`student-medical-insurance`） | 2 | 5 | 5 |
+| 畢業後延期居留在臺覓職（`post-graduation-stay`） | 2 | 5 | 7 |
 
-工作分配 D-8 指定的 8 項都有對應：工作證（work-permit）、ARC（arc-first、arc-extension）、健保（nhi）、開銀行帳戶（bank-account）、在學證明（enrollment-certificate）、請假（leave-request）、綁定逢甲銀行帳戶（fcu-bank-binding）、補辦學生證／ARC（student-id-replacement、arc-replacement）；另加居留健康檢查（health-check）。
+第一批涵蓋工作分配 D-8 指定的 8 項；第二批（2026-10-14 補）是研究時發現的常見流程：停留簽證改辦居留、華語生居留、住址變更登記、畢業後延期居留、境外新生報到、MyFCU 檢核表、健保前的學生醫療保險。
 
 ## 需要確認的地方（審查時優先處理）
 
@@ -237,19 +244,111 @@
 2. [收費標準－註冊課務組](https://registration.fcu.edu.tw/%E9%A6%96%E9%A0%81-2/%E6%9C%8D%E5%8B%99%E5%B0%8D%E8%B1%A1/%E6%94%B6%E8%B2%BB%E6%A8%99%E6%BA%96/)（逢甲大學教務處註冊課務組）
 3. [業務職掌－註冊課務組](https://registration.fcu.edu.tw/en/%E9%A6%96%E9%A0%81-2/team/)（逢甲大學教務處註冊課務組）
 
-## 常見但還沒做成卡片的流程
+### 境外新生報到（國際事務處）
 
-研究時找到、之後可以補的流程（都有官方頁面）：
+- 2026秋季班的確切報到日期與時段未能確認；秋季班時段表可能是2025年的。
+- 國際處 email 有兩個版本，未確認現行信箱。
+- 港澳生證明文件名稱中英文不一致；「滿20歲」計算日未說明。
 
-| 流程 | 誰需要 | 官方頁面 |
-|---|---|---|
-| 停留簽證改辦居留簽證 | 持就學停留簽證入境者 | [領事事務局](https://www.boca.gov.tw/fp-9-186-c060a-1.html) |
-| 華語生申請居留（研習中文） | 華語中心學生，連續就讀滿4個月 | [領事事務局](https://www.boca.gov.tw/cp-402-190-93573-1.html) |
-| 居留證異動登記（住址變更，30日內） | 搬家或護照換發者 | [移民署](https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/) |
-| 畢業後覓職延期居留 | 畢業後想留臺找工作的學位生 | [逢甲國際處](https://oia.fcu.edu.tw/en/overseas-students/stayintaiwan/) |
-| 健保前的國際學生醫療保險／僑保 | 新生（前6個月） | [逢甲國際處](https://oia.fcu.edu.tw/overseas-students/insurance/) |
-| 境外新生報到 | 所有境外新生 | [逢甲國際處](https://oia.fcu.edu.tw/overseas-students/new-fall/registration-fall/) |
-| MyFCU 新生報到檢核表 | 所有新生 | [新生專區](https://freshman.fcu.edu.tw/en/overseas-students/myfcu-checklist/) |
+來源：
+
+1. [境外新生報到（秋季班）](https://oia.fcu.edu.tw/overseas-students/new-fall/registration-fall/)（逢甲大學國際事務處）
+2. [Registration (Spring Semester)](https://oia.fcu.edu.tw/en/overseas-students/new-spring/registration-spring/)（逢甲大學國際事務處）
+3. [New Overseas Students](https://freshman.fcu.edu.tw/en/overseas-students/)（逢甲大學新生專區）
+4. [Alien Resident Certificate (ARC)](https://oia.fcu.edu.tw/en/overseas-students/arc/)（逢甲大學國際事務處）
+5. [More Than 4,000 Freshmen Gather at Feng Chia University](https://ga.fcu.edu.tw/en/news-detail/?id=51940)（逢甲大學）
+6. [New Overseas Students (Fall Semester)](https://oia.fcu.edu.tw/en/overseas-students/new-fall/)（逢甲大學國際事務處）
+
+### MyFCU 新生報到檢核表
+
+- 檢核表完整項目清單未取得，各學年可能不同，請以 MyFCU 實際顯示為準。
+- 選單名稱英文版本寫法不一（For New Student／New Students）。
+- 2026秋季班的照片、繳費、健檢期限未確認；參考頁面多為2025秋季班。
+
+來源：
+
+1. [Review the registration checklist](https://freshman.fcu.edu.tw/en/overseas-students/myfcu-checklist/)（逢甲大學新生專區）
+2. [新生報到流程檢核說明](https://freshman.fcu.edu.tw/news/new_st_checklist/)（逢甲大學新生專區）
+3. [Registration (Spring Semester)](https://oia.fcu.edu.tw/en/overseas-students/new-spring/registration-spring/)（逢甲大學國際事務處）
+4. [境外新生報到（秋季班）](https://oia.fcu.edu.tw/overseas-students/new-fall/registration-fall/)（逢甲大學國際事務處）
+5. [境外新生健康檢查（秋季班）](https://freshman.fcu.edu.tw/overseas-students/health-fall/)（逢甲大學新生專區）
+6. [境外新生繳交學雜費](https://oia.fcu.edu.tw/overseas-students/new/payment/)（逢甲大學國際事務處）
+
+### 停留簽證改辦就學居留簽證
+
+- 美國護照在國內改辦居留簽證的確切金額未查證。
+- 正式班學位生是否一律直接向移民署申請、不必再向領務局改辦，官方寫「得」，兩條管道可能並存，請向國際處確認。
+- 持停留簽證直接向移民署申請居留時是否加收2,200元，只看到摘要。
+- 有學校網頁寫7個工作天，本卡採領務局的8個工作天。
+
+來源：
+
+1. [外國學生申請居留簽證手續說明（正式班外國學生）](https://www.boca.gov.tw/cp-402-185-35222-1.html)（外交部領事事務局）
+2. [Resident Visas for Foreign Students](https://www.boca.gov.tw/cp-166-283-c4da3-2.html)（外交部領事事務局）
+3. [外國護照簽證收費標準](https://www.boca.gov.tw/cp-212-4293-63c3a-1.html)（外交部領事事務局）
+4. [外交部中部辦事處](https://www.boca.gov.tw/cp-105-203-40dfe-1.html)（外交部領事事務局）
+5. [外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）](https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/)（內政部移民署）
+6. [Alien Resident Certificate (ARC)](https://oia.fcu.edu.tw/en/overseas-students/arc/)（逢甲大學國際事務處）
+
+### 華語生申請居留（外僑居留證）
+
+- 延期居留是否每次都要附出席紀錄，未看到全文確認。
+- 直接向移民署申請時是否必附財力證明、研習計畫書，無法確認。
+- 規費1,000元／加收2,200元是否適用華語生，未看到全文確認。
+- 華語中心「到期前10天內延期」未與移民署現行規定交叉核對。
+
+來源：
+
+1. [外籍人士在台研習中文申請居留簽證手續說明](https://www.boca.gov.tw/cp-402-190-93573-1.html)（外交部領事事務局）
+2. [外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）](https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/)（內政部移民署）
+3. [Student Visa 簽證（華語中心）](https://clc.fcu.edu.tw/student-visa/)（逢甲大學華語教學中心）
+4. [臺中市第一服務站](https://servicestation.immigration.gov.tw/1473/)（內政部移民署）
+
+### 外僑居留證異動登記（住址變更等）
+
+- 單純變更住址是否免費，須知沒有明確寫。
+- 借住時的文件要求可能出自一般外國人須知，未確認是否為學生專用。
+- 轉學是否要辦異動登記、要附哪些文件，沒有查到。
+- 逢甲畢業生搬遷頁與舊版須知寫15日，本卡採移民署現行30日。
+
+來源：
+
+1. [外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）](https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/)（內政部移民署）
+2. [外國人於居留期間，須於幾日內辦理變更居留住址或服務處所？](https://www.immigration.gov.tw/5385/12162/12197/371903/)（內政部移民署）
+3. [Alien Resident Certificate (ARC)](https://oia.fcu.edu.tw/en/overseas-students/arc/)（逢甲大學國際事務處）
+4. [臺中市第一服務站](https://servicestation.immigration.gov.tw/1473/)（內政部移民署）
+
+### 加入健保前的學生醫療保險（醫保／僑保）
+
+- 逢甲保險頁面未標示更新日期；較舊資料寫醫保 NT$2,500，本卡採國際處現行頁面的 NT$3,000。
+- 醫保保費的繳交方式與時間（是否隨學雜費代收）未確認。
+- 理賠申請期限與不保事項未確認。
+- 僑保自付金額可能依僑委會通知每年調整。
+
+來源：
+
+1. [外國學生來臺就學辦法（第22條）](https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=H0110001)（法務部全國法規資料庫）
+2. [境外學生保險](https://oia.fcu.edu.tw/overseas-students/insurance/)（逢甲大學國際事務處）
+3. [Insurance for Overseas Students](https://oia.fcu.edu.tw/en/overseas-students/insurance/)（逢甲大學國際事務處）
+4. [僑務委員會僑生傷病醫療保險作業要點](https://law.ocac.gov.tw/law/LawContent.aspx?id=GL000156)（僑務委員會）
+5. [在臺僑生、外籍生參加全民健康保險須知](https://www.nhi.gov.tw/ch/dl-72718-2f56651c5a814b4cae4b8176333914e7-1.pdf)（衛生福利部中央健康保險署）
+
+### 畢業後延期居留在臺覓職
+
+- 延期長度：舊版教育部與移民署問答寫「6個月加1次，最長1年」，較新的教育部、國發會、勞動部與逢甲說明是「1年加1次，最長2年」；本卡採新版。
+- 申請期限：逢甲頁面同時寫領取畢業證書後10日內與15天內，官方只說居留期限屆滿前。
+- 延期居留規費、能否用學生線上系統申請（逢甲說要臨櫃），未確認。
+- 畢業後第6類投保依搜尋摘要整理，未看到原頁全文。
+
+來源：
+
+1. [境外學生輔導資訊交流平台常見問答：畢業後延期居留](https://www.nisa.moe.gov.tw/faq.new/view/menu_sn/0/sn/895)（教育部）
+2. [2026年起僑外生畢業2年內工作免許可](https://www.ndc.gov.tw/nc_16183_39953)（國家發展委員會）
+3. [應屆畢業生延期居留期間免申請工作許可](https://ezworktaiwan.wda.gov.tw/cp.aspx?n=511766BD9E956242)（勞動部勞動力發展署）
+4. [Overseas students stay in Taiwan after graduation](https://oia.fcu.edu.tw/en/overseas-students/stayintaiwan/)（逢甲大學國際事務處）
+5. [外國學生與僑生線上申請居留或延期居留及異動登記（移民署居留業務頁）](https://www.immigration.gov.tw/5385/7244/7250/7317/%E5%B1%85%E7%95%99/362168/)（內政部移民署）
+6. [境外學生輔導資訊交流平台常見問答：僑外生畢業後健保](https://www.nisa.moe.gov.tw/faq.new/view/menu_sn/0/sn/807)（教育部）
+7. [在臺僑生、外籍生參加全民健康保險須知](https://www.nhi.gov.tw/ch/dl-72718-2f56651c5a814b4cae4b8176333914e7-1.pdf)（衛生福利部中央健康保險署）
 
 ## 研究中發現的說法不一致
 
@@ -257,4 +356,5 @@
 - 居留證延期時點：移民署寫到期前 3 個月內，部分學校寫 30 日內 → 卡片採 3 個月
 - 工作許可效期：現行辦法與逢甲寫最長 1 年，舊新聞稿寫 6 個月 → 卡片採 1 年
 - 華語生工作許可：法規是語言生滿 6 個月、每週 20 小時；逢甲華語中心頁面寫第一年不得工作、每週 12 小時（疑為舊資料）
-- 畢業後覓職延期：教育部 FAQ 寫 6 個月可延一次，移民署新聞寫 1 年可延一次 → 尚未做成卡片
+- 畢業後覓職延期：舊版問答寫 6 個月可延一次，教育部、國發會、勞動部新資料寫 1 年可延一次（最長 2 年），且 2026 年起延期期間免工作許可 → 卡片採新版
+- 住址變更期限：舊版須知與逢甲畢業生頁寫 15 日，移民署現行寫 30 日 → 卡片採 30 日

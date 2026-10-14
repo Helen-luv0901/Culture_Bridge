@@ -78,6 +78,7 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 - [A-5 Gemini 金鑰](docs/runbooks/a5-gemini-api-key.md)
 - [A-7 部署到 Cloud Run](docs/runbooks/a7-deploy-cloud-run.md)
 - [剩下的 Google Cloud 步驟（交接）](docs/runbooks/next-steps-gcp.md)
+- [Android 版建置、Google 登入與簽署](docs/runbooks/c2-android-build.md)
 
 密碼與金鑰只放在 Secret Manager，不要寫進 repo 或貼到群組。
 
@@ -86,9 +87,9 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 - 產品：[Product Map](docs/product-map.md)、[Experience-Led MVP](docs/experience-led-mvp.md)、[設計](design.md)、[響應式 UI](docs/responsive-ui.md)
 - 資料：[Database Schema 與範例查詢](docs/database-schema.md)、[PostgreSQL Schema](database/schema_postgres.sql)
 - 團隊：[工作分配表](docs/work-assignment.md)、[Flutter 遷移紀錄](docs/flutter-migration.md)
-- 內容：[D-8 第一批官方流程卡（待審查）](docs/content/d8-official-procedures.md)
+- 內容：[D-8 官方流程卡（18 張，待審查）](docs/content/d8-official-procedures.md)
 - 測試與試用：[手動測試清單](docs/manual-test-checklist.md)、[PMP 試用任務腳本](docs/pmp-pilot-script.md)
-- 上架草稿（需審閱）：[隱私權政策](docs/drafts/privacy-policy.md)、[服務條款與社群規範](docs/drafts/terms-and-community-guidelines.md)、[商店頁文案](docs/drafts/store-listing.md)
+- 上架草稿（需審閱）：[隱私權政策](docs/drafts/privacy-policy.md)、[服務條款與社群規範](docs/drafts/terms-and-community-guidelines.md)、[商店頁文案](docs/drafts/store-listing.md)、[Play 資料安全性表單](docs/drafts/play-data-safety.md)
 
 ## 協作規則
 
