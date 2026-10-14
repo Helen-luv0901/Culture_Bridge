@@ -74,6 +74,8 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 
 在 [Google Cloud Shell](https://shell.cloud.google.com) 執行 `bash scripts/gcp-setup.sh`，依選單完成專案、資料庫、Gemini 金鑰、Firebase、部署與監控。
 
+之後每次更新：`bash scripts/deploy.sh`（拉最新 `main`、建置、更新資料表、部署、必要時重新匯入流程卡，不會問問題）。
+
 - [A-3 Cloud SQL 搬遷](docs/runbooks/a3-cloud-sql-migration.md)
 - [A-5 Gemini 金鑰](docs/runbooks/a5-gemini-api-key.md)
 - [A-7 部署到 Cloud Run](docs/runbooks/a7-deploy-cloud-run.md)
