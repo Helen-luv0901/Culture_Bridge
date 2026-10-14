@@ -10,12 +10,14 @@
 - AI 助理（工具呼叫、語意搜尋、待確認操作）
 - Google 登入、刪除帳號、檢舉與封鎖、管理介面、數據
 - 18 張官方流程卡**草稿**（還不公開）
+- 收藏想再看的經驗、暱稱／真名與發文署名、新 App 圖示
+- AI 模型 `gemini-3.8-flash`（原本的 2.5-flash 已不開放給新使用者）
 
-已合併、**下一次部署才上線**：收藏、暱稱／真名與署名、新 App 圖示（`scripts/deploy.sh` 或設定好的自動部署）。
+**合併到 `main` 且 CI 通過就會自動部署**（GitHub → Actions → Deploy）。要暫停：把 GitHub 變數 `AUTO_DEPLOY` 改成 `false`；手動部署：`bash scripts/deploy.sh`。
 
 ## A（基礎設施、AI）
 
-- [ ] **自動部署**：`bash scripts/gcp-setup.sh 8`，再到 GitHub 加變數 `AUTO_DEPLOY=true`（[說明](../runbooks/next-steps-gcp.md)）
+- [x] 自動部署（2026-10-14 設定完成，Deploy #6 成功）
 - [ ] 刪除已合併的舊分支：`claude/assistant-next`、`claude/backend-api`、`docs/cloud-sql-and-work-plan`、`fix/gcp-setup-runbook-fixes`（GitHub → Branches；都已併入 `main`）
 - [ ] A-10 分支保護：`main` 要求 PR 且 CI 通過（GitHub → Settings → Branches）
 - [ ] A-4 網域與 HTTPS：決定是否買網域（目前用 `run.app`，已有 HTTPS）
