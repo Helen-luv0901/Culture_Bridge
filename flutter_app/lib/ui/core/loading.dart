@@ -125,6 +125,8 @@ class MissingContent extends StatelessWidget {
 /// True when signed in; otherwise opens the sign-in page, returning here afterwards.
 bool ensureSignedIn(BuildContext context) {
   if (BridgeScope.of(context).signedIn) return true;
+  // Close the keyboard first; leaving a focused field mid-layout trips a framework assert.
+  FocusManager.instance.primaryFocus?.unfocus();
   final here = GoRouterState.of(context).uri.toString();
   context.push('/signin?next=${Uri.encodeComponent(here)}');
   return false;

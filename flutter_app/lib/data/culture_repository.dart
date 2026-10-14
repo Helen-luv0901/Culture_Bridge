@@ -6,6 +6,7 @@ import 'api_client.dart';
 abstract class CultureRepository {
   Future<Profile> me();
   Future<Profile> updateLocale(String locale);
+  Future<Profile> updateNames({String? nickname, String? realName});
   Future<void> deleteAccount();
 
   Future<List<ActionSummary>> actions();
@@ -54,6 +55,7 @@ abstract class CultureRepository {
     String? situation,
     String? feelingOrAttempt,
     String? reminder,
+    String authorDisplay = 'anonymous',
   });
   Future<void> deleteExperience(String id);
   Future<List<MyExperience>> myExperiences();
@@ -83,6 +85,11 @@ class ApiCultureRepository implements CultureRepository {
   @override
   Future<Profile> updateLocale(String locale) async =>
       Profile.fromJson(await api.patch('/me', {'preferred_locale': locale}));
+  @override
+  Future<Profile> updateNames({String? nickname, String? realName}) async =>
+      Profile.fromJson(
+        await api.patch('/me', {'nickname': nickname, 'real_name': realName}),
+      );
   @override
   Future<void> deleteAccount() => api.delete('/me');
 
@@ -221,12 +228,14 @@ class ApiCultureRepository implements CultureRepository {
     String? situation,
     String? feelingOrAttempt,
     String? reminder,
+    String authorDisplay = 'anonymous',
   }) async => MyExperience.fromJson(
     await api.post('/experiences/$experienceId/publish', {
       'summary_id': summaryId,
       'situation': ?situation,
       'feeling_or_attempt': ?feelingOrAttempt,
       'reminder': ?reminder,
+      'author_display': authorDisplay,
     }),
   );
   @override

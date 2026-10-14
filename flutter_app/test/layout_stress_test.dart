@@ -20,6 +20,7 @@ void main() {
     '/actions/arc',
     '/actions/arc/progress',
     '/actions/arc/complete',
+    '/welcome',
   ];
 
   for (final english in [false, true]) {
@@ -37,6 +38,11 @@ void main() {
           if (english) app.vm.setEnglish(true);
           await app.vm.startAction('arc');
           await app.repository.setSaved('first-rental', true);
+          app.repository
+            ..nickname = 'A rather long nickname, 30 ch'
+            ..realName = '王大明 Alexander Christopher Montgomery'
+            ..signAs('first-rental', 'A rather long nickname, 30 ch');
+          await app.vm.loadProfile();
           await tester.pumpWidget(
             CultureBridgeApp(viewModel: app.vm, initialLocation: route),
           );

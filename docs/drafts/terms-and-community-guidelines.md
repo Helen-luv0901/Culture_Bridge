@@ -6,7 +6,7 @@
 
 1. **服務內容**：Culture Bridge 提供生活流程指引、學生經驗分享與 AI 助理。流程卡依官方資料整理並標示驗證狀態；**學生經驗是個人觀點，不是官方規定**；AI 助理的回答可能有誤。重要事項請以學校國際處或主管機關公告為準。
 2. **帳號**：以 Google 帳號登入。請勿冒用他人帳號或以自動化方式大量使用。
-3. **你分享的內容**：你保有原話的權利，並同意我們以匿名方式公開、整理、翻譯與供搜尋（含 AI 助理引用）。你可以隨時刪除。
+3. **你分享的內容**：你保有原話的權利，並同意我們依你選擇的署名方式（預設匿名，或你的暱稱、真名）公開，並整理、翻譯與供搜尋（含 AI 助理引用，引用時不帶名字）。暱稱不得冒用他人或使用不雅、歧視性字詞。你可以隨時刪除。
 4. **禁止行為**：違反下方社群規範、干擾服務運作、嘗試取得他人資料、以 AI 助理產生不當內容。
 5. **處置**：違規內容可能被隱藏；屢次違規【待確認：停權方式】。
 6. **免責**：本服務依現況提供。我們盡力維持資訊正確，但不保證流程內容即時、完整或適用你的個別情況，對依賴本服務做出的決定不負責任。
@@ -41,6 +41,6 @@
 
 > **Draft, not in effect.** Fill in [TBC] and review before launch.
 
-**Terms.** Culture Bridge offers procedure guides (with verification status), student experiences (personal views, not official rules) and an AI assistant (which can be wrong); confirm important matters with your school or the authority. Sign in with Google; no impersonation or automated mass use. You keep rights to your words and let us publish them anonymously, organize, translate and make them searchable, including assistant citations; delete them any time. Breaking the guidelines may get content hidden and [TBC]. Provided as is, without guarantees that procedures are current or fit your case. Changes are announced in the app. Governed by the laws of the Republic of China (Taiwan); [TBC: court]. Contact: [TBC].
+**Terms.** Culture Bridge offers procedure guides (with verification status), student experiences (personal views, not official rules) and an AI assistant (which can be wrong); confirm important matters with your school or the authority. Sign in with Google; no impersonation or automated mass use. You keep rights to your words and let us publish them anonymously or under the nickname or real name you choose (a nickname must not impersonate anyone or be offensive), organize, translate and make them searchable, including assistant citations; delete them any time. Breaking the guidelines may get content hidden and [TBC]. Provided as is, without guarantees that procedures are current or fit your case. Changes are announced in the app. Governed by the laws of the Republic of China (Taiwan); [TBC: court]. Contact: [TBC].
 
 **Guidelines.** Share your own experience and respect different ones. Don't post anything that identifies a person, harassment or hate (including on nationality, ethnicity, religion, gender, sexual orientation or disability), sexual, violent or illegal content, ads or spam, or deliberately false procedure information. Use "⋯" on an experience to report it or block its author (they aren't notified). Three reports hide an experience until a reviewer decides; reviewers hide violations and restore unfounded reports.

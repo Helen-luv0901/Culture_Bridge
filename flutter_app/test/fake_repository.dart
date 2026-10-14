@@ -115,11 +115,28 @@ class FakeCultureRepository implements CultureRepository {
   @override
   Future<Profile> me() async {
     _requireLogin();
-    return Profile(id: 'dev-test', role: role, preferredLocale: 'zh-Hant');
+    return Profile(
+      id: 'dev-test',
+      role: role,
+      preferredLocale: 'zh-Hant',
+      nickname: nickname,
+      realName: realName,
+    );
   }
 
   @override
   Future<Profile> updateLocale(String locale) => me();
+
+  String? nickname;
+  String? realName;
+
+  @override
+  Future<Profile> updateNames({String? nickname, String? realName}) {
+    _requireLogin();
+    this.nickname = nickname;
+    this.realName = realName;
+    return me();
+  }
 
   @override
   Future<void> deleteAccount() async {
@@ -274,6 +291,30 @@ class FakeCultureRepository implements CultureRepository {
       differentCount: e.differentCount,
       myReactions: reactions.toList()..sort(),
       saved: e.saved,
+      authorName: e.authorName,
+    );
+  }
+
+  /// Make an experience show [name] as its author (what the API does for signed posts).
+  void signAs(String id, String name) {
+    final e = _experiences[id]!;
+    _experiences[id] = ExperienceItem(
+      id: e.id,
+      topicId: e.topicId,
+      identityType: e.identityType,
+      sourceLocale: e.sourceLocale,
+      originalVoice: e.originalVoice,
+      situation: e.situation,
+      feelingOrAttempt: e.feelingOrAttempt,
+      reminder: e.reminder,
+      translation: e.translation,
+      publishedAt: e.publishedAt,
+      helpfulCount: e.helpfulCount,
+      experiencedTooCount: e.experiencedTooCount,
+      differentCount: e.differentCount,
+      myReactions: e.myReactions,
+      saved: e.saved,
+      authorName: name,
     );
   }
 
@@ -359,8 +400,13 @@ class FakeCultureRepository implements CultureRepository {
     String? situation,
     String? feelingOrAttempt,
     String? reminder,
+    String authorDisplay = 'anonymous',
   }) async {
-    lastPublish = {'situation': situation, 'reminder': reminder};
+    lastPublish = {
+      'situation': situation,
+      'reminder': reminder,
+      'author_display': authorDisplay,
+    };
     final draft = mine[experienceId]!;
     return mine[experienceId] = _mine(
       experienceId,

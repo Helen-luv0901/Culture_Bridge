@@ -50,10 +50,10 @@ uv run python -m app.quality.summary_review shares.json    # B-22：真實分享
 | 分組 | 路徑 | 說明 |
 |---|---|---|
 | 設定 | `GET /api/config` | 網頁版啟動時讀取的公開設定（Firebase web 設定、環境） |
-| 我 | `GET/PATCH/DELETE /api/me` | 個人資料、語言；刪除帳號與所有資料（B-17） |
+| 我 | `GET/PATCH/DELETE /api/me` | 個人資料（語言、暱稱、真實姓名）；刪除帳號與所有資料（B-17） |
 | 流程 | `GET /api/actions`、`/api/actions/{id}` | 最新已發布版本、驗證狀態、最後驗證日、近 30 天成功數、各步驟卡關數、來源 |
 | 辦理 | `POST /api/actions/{id}/executions`、`GET /api/me/executions`、`PUT /api/executions/{id}/steps/{step}`、`POST …/finish`、`POST …/feedback` | 綁定版本的辦理紀錄、步驟進度、結果、卡關／差異回報 |
-| 經驗 | `GET /api/experiences`、`/{id}`、`POST /api/experiences`、`PATCH`、`DELETE`、`POST …/summaries`、`POST …/publish`、`POST …/translations`、`PUT/DELETE …/reactions/{kind}`、`PUT/DELETE …/saved`、`GET /api/me/saved`、`GET /api/me/experiences` | 探索、草稿、AI 摘要、作者確認後發布、翻譯、反應、收藏（私人「想再看」清單）、我的經驗與影響 |
+| 經驗 | `GET /api/experiences`、`/{id}`、`POST /api/experiences`、`PATCH`、`DELETE`、`POST …/summaries`、`POST …/publish`、`POST …/translations`、`PUT/DELETE …/reactions/{kind}`、`PUT/DELETE …/saved`、`GET /api/me/saved`、`GET /api/me/experiences` | 探索、草稿、AI 摘要、作者確認後發布（`author_display`：匿名／暱稱／真名）、翻譯、反應、收藏（私人「想再看」清單）、我的經驗與影響 |
 | 搜尋 | `GET /api/search?q=` | 流程與經驗關鍵字搜尋（B-16） |
 | 檢舉／封鎖 | `POST /api/reports`、`POST /api/blocks`、`GET /api/me/blocks`、`DELETE /api/me/blocks/{id}` | 3 人檢舉自動隱藏待審；封鎖匿名作者（只回傳不透明 id） |
 | 助理 | `POST /api/assistant/message`、`DELETE /api/assistant/conversations/{id}`、`GET/POST /api/assistant/operations/{id}[/confirm|/cancel]` | 見下方 |

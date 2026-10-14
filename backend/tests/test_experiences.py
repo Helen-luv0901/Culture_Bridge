@@ -110,7 +110,9 @@ def test_draft_summary_publish_translate(api, ai):
 
     public = api.get(f"/api/experiences/{eid}").json()
     assert public["reminder"] == "作者改過的提醒"
-    assert "author" not in str(public.keys()) and "dev-mei" not in str(public)
+    # The account never leaks; a name appears only when the author signs with one.
+    assert "author_id" not in public and "dev-mei" not in str(public)
+    assert public["author_name"] is None
     # Translated in the background after publishing.
     assert ai.translations == 1
     assert public["translation"]["locale"] == "en" and public["translation"]["method"] == "ai"

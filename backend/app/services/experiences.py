@@ -1,8 +1,9 @@
 """Student experiences (B-8..B-16).
 
 Flow: draft -> AI summary of the current words -> author confirms (optionally edits) -> published
--> translated in the background. Experiences never carry a verification status, and nothing
-public ever exposes the author.
+-> translated in the background. Experiences never carry a verification status. Public payloads
+never expose the author's account; they show a name only when the author chose to sign with
+their nickname or real name, read live from the account.
 """
 
 import logging
@@ -24,6 +25,7 @@ from app.models import (
     ExperienceSummary,
     ExperienceTranslation,
     SavedExperience,
+    User,
     UserBlock,
 )
 from app.rag.index import remove_content
@@ -35,6 +37,7 @@ Locale = Literal["zh-Hant", "en"]
 TopicId = Literal["life_adaptation", "culture_communication"]
 IdentityType = Literal["degree_student", "exchange_student", "language_student", "other"]
 ReactionKind = Literal["helpful", "experienced_too"]
+AuthorDisplay = Literal["anonymous", "nickname", "real_name"]
 _TAIPEI = timezone(timedelta(hours=8))
 MAX_VOICE = 2000
 
@@ -86,6 +89,7 @@ class PublishIn(BaseModel):
     situation: str | None = Field(default=None, max_length=1000)
     feeling_or_attempt: str | None = Field(default=None, max_length=1000)
     reminder: str | None = Field(default=None, max_length=1000)
+    author_display: AuthorDisplay = "anonymous"
 
 
 class TranslationOut(BaseModel):
@@ -113,6 +117,8 @@ class PublicExperience(BaseModel):
     different_count: int
     my_reactions: list[ReactionKind]
     saved: bool = False
+    # The name the author chose to sign with; None means anonymous.
+    author_name: str | None = None
 
 
 class ExperienceDetail(PublicExperience):
@@ -139,6 +145,7 @@ class MyExperience(BaseModel):
     published_at: datetime | None
     latest_summary: SummaryOut | None
     impact: Impact
+    author_display: AuthorDisplay = "anonymous"
 
 
 class ExperiencePage(BaseModel):
@@ -259,6 +266,16 @@ def _public_items(
                 )
             )
         )
+    names: dict[str, str | None] = {}
+    signed = {e.author_id for e, _ in rows if e.author_display != "anonymous"}
+    if signed:
+        authors = {u.id: u for u in db.scalars(select(User).where(User.id.in_(signed)))}
+        for experience, _ in rows:
+            author = authors.get(experience.author_id)
+            if author is not None and experience.author_display == "nickname":
+                names[experience.id] = author.nickname
+            elif author is not None and experience.author_display == "real_name":
+                names[experience.id] = author.real_name
     translations: dict[str, ExperienceTranslation] = {}
     if ids:
         for t in db.scalars(
@@ -298,6 +315,7 @@ def _public_items(
                 different_count=c.get("different", 0),
                 my_reactions=sorted(mine.get(experience.id, [])),  # type: ignore[arg-type]
                 saved=experience.id in saved,
+                author_name=names.get(experience.id),
             )
         )
     return items
@@ -506,6 +524,11 @@ def publish(db: Session, user: CurrentUser, experience_id: str, body: PublishIn)
         )
         db.add(summary)
         db.flush()
+    if body.author_display != "anonymous":
+        account = db.get(User, user.id)
+        if account is None or not getattr(account, body.author_display):
+            raise ApiError(422, f"{body.author_display}_missing")
+    experience.author_display = body.author_display
     summary.confirmed_by = user.id
     summary.confirmed_at = now()
     db.flush()
@@ -562,6 +585,7 @@ def my_experience(db: Session, experience: Experience) -> MyExperience:
         created_at=experience.created_at,
         published_at=experience.published_at,
         latest_summary=_summary_out(summary, experience.original_voice) if summary else None,
+        author_display=experience.author_display,  # type: ignore[arg-type]
         impact=Impact(
             helpful_count=c.get("helpful", 0),
             experienced_too_count=c.get("experienced_too", 0),

@@ -56,7 +56,7 @@ class _SharePageState extends State<SharePage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PaperTag(vm.t('anonymousShare')),
+            PaperTag(vm.t('anonymousByDefault')),
             const SizedBox(height: 16),
             Text(vm.t('whatHappened'), style: displayStyle(28)),
             const SizedBox(height: 12),
@@ -146,6 +146,10 @@ class _SharePageState extends State<SharePage> {
               ? Text(vm.t('loading'))
               : Text(vm.t('askAiToOrganize')),
         ),
+        Text(
+          vm.t('aiOrganizeHelp'),
+          style: const TextStyle(fontSize: 14, color: Palette.muted),
+        ),
       ],
     );
   }
@@ -163,6 +167,7 @@ class _ReviewPageState extends State<ReviewPage> {
   late final TextEditingController _reminder;
   bool _publishing = false;
   String? _error;
+  String _authorDisplay = 'anonymous';
 
   @override
   void initState() {
@@ -210,6 +215,7 @@ class _ReviewPageState extends State<ReviewPage> {
       situation: _situation.text,
       feelingOrAttempt: _feeling.text,
       reminder: _reminder.text,
+      authorDisplay: _authorDisplay,
     );
     if (!mounted) return;
     setState(() {
@@ -284,6 +290,10 @@ class _ReviewPageState extends State<ReviewPage> {
             ],
           ),
         ),
+        _AuthorChoice(
+          value: _authorDisplay,
+          onChanged: (value) => setState(() => _authorDisplay = value),
+        ),
         if (_error != null) ErrorPanel(message: _error!),
         Wrap(
           spacing: 16,
@@ -300,6 +310,179 @@ class _ReviewPageState extends State<ReviewPage> {
               child: Text(vm.t('publishAnonymously')),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Sign an experience anonymously, with the nickname or with the real name.
+class _AuthorChoice extends StatelessWidget {
+  const _AuthorChoice({required this.value, required this.onChanged});
+  final String value;
+  final ValueChanged<String> onChanged;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final nickname = vm.profile?.nickname;
+    final realName = vm.profile?.realName;
+    final options = [
+      ('anonymous', vm.t('asAnonymous'), true),
+      (
+        'nickname',
+        nickname == null
+            ? vm.t('asNickname')
+            : '${vm.t('asNickname')}：$nickname',
+        nickname != null,
+      ),
+      (
+        'real_name',
+        realName == null
+            ? vm.t('asRealName')
+            : '${vm.t('asRealName')}：$realName',
+        realName != null,
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PaperHeading(vm.t('postAs')),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final (key, label, enabled) in options)
+              ChoiceChip(
+                key: Key('post-as-$key'),
+                label: Text(label),
+                selected: value == key,
+                onSelected: enabled ? (_) => onChanged(key) : null,
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (nickname == null || realName == null)
+          Text(
+            vm.t('needNameHint'),
+            style: const TextStyle(fontSize: 13, color: Palette.muted),
+          ),
+        if (value == 'real_name')
+          Text(
+            vm.t('realNameWarning'),
+            style: const TextStyle(fontSize: 13, color: Palette.brickDeep),
+          ),
+      ],
+    );
+  }
+}
+
+/// Optional nickname and real name (on My, and once after the first sign-in).
+class NamesForm extends StatefulWidget {
+  const NamesForm({super.key, required this.onSaved, this.later});
+  final VoidCallback onSaved;
+
+  /// Shown as a "Maybe later" button when set (the welcome page).
+  final VoidCallback? later;
+  @override
+  State<NamesForm> createState() => _NamesFormState();
+}
+
+class _NamesFormState extends State<NamesForm> {
+  late final _nickname = TextEditingController(
+    text: BridgeScope.of(context).profile?.nickname ?? '',
+  );
+  late final _realName = TextEditingController(
+    text: BridgeScope.of(context).profile?.realName ?? '',
+  );
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nickname.dispose();
+    _realName.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final error = await BridgeScope.of(context)
+        .saveNames(_nickname.text, _realName.text);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = error;
+    });
+    if (error == null) widget.onSaved();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          vm.t('namesNote'),
+          style: const TextStyle(fontSize: 14, color: Palette.muted),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          key: const Key('nickname'),
+          controller: _nickname,
+          maxLength: 30,
+          decoration: InputDecoration(labelText: vm.t('nickname')),
+        ),
+        TextField(
+          key: const Key('real-name'),
+          controller: _realName,
+          maxLength: 50,
+          decoration: InputDecoration(labelText: vm.t('realName')),
+        ),
+        if (_error != null) ErrorPanel(message: _error!),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          children: [
+            if (widget.later != null)
+              TextButton(
+                key: const Key('names-later'),
+                onPressed: widget.later,
+                child: Text(vm.t('welcomeLater')),
+              ),
+            FilledButton(
+              key: const Key('save-names'),
+              onPressed: _busy ? null : _save,
+              child: Text(vm.t('saveNames')),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Asked once right after signing in, while no name is set.
+class WelcomePage extends StatelessWidget {
+  const WelcomePage({super.key, this.next});
+  final String? next;
+  String get _next {
+    final n = next;
+    return n != null && n.startsWith('/') && !n.startsWith('//') ? n : '/';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return FlowBody(
+      children: [
+        Text(vm.t('welcomeTitle'), style: displayStyle(28)),
+        NamesForm(
+          onSaved: () => context.go(_next),
+          later: () => context.go(_next),
         ),
       ],
     );
@@ -327,11 +510,11 @@ class ProfilePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vm.t('anonymousShare'),
+                    vm.profile?.realName ?? vm.t('anonymousShare'),
                     style: const TextStyle(color: Palette.muted, fontSize: 14),
                   ),
                   Text(
-                    vm.pair('匿名學生', 'Anonymous student'),
+                    vm.profile?.nickname ?? vm.t('anonymousStudent'),
                     style: displayStyle(23),
                   ),
                 ],
@@ -352,6 +535,15 @@ class ProfilePage extends StatelessWidget {
             resource: (vm) => vm.mine,
             load: (vm) => vm.loadMine(),
             builder: (context, mine) => _MyExperiences(items: mine),
+          ),
+          PaperCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PaperHeading(vm.t('profileNames')),
+                NamesForm(onSaved: () => vm.showNotice(vm.t('namesSaved'))),
+              ],
+            ),
           ),
           PaperHeading(vm.t('savedExperiences')),
           ResourceView<List<ExperienceItem>>(
@@ -676,13 +868,23 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> _run(Future<void> Function() signIn) async {
+    final vm = BridgeScope.of(context);
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       await signIn();
-      if (mounted) context.go(_next);
+      await vm.loadProfile();
+      if (!mounted) return;
+      final profile = vm.profile;
+      final unnamed =
+          profile != null &&
+          profile.nickname == null &&
+          profile.realName == null;
+      context.go(
+        unnamed ? '/welcome?next=${Uri.encodeComponent(_next)}' : _next,
+      );
     } catch (_) {
       if (mounted) {
         setState(() => _error = BridgeScope.of(context).t('genericError'));
@@ -700,8 +902,8 @@ class _SignInPageState extends State<SignInPage> {
         Text(vm.t('signInNeeded')),
         Text(
           vm.pair(
-            '你分享的經驗一律匿名公開；我們不會顯示你的姓名、學校或帳號。',
-            'Everything you share is public but anonymous; we never show your name, school or account.',
+            '你分享的經驗預設匿名；只有你選擇時才會顯示暱稱或真名，學校和帳號永遠不會公開。',
+            'What you share is anonymous by default; a nickname or real name shows only if you choose, and your school and account never do.',
           ),
           style: const TextStyle(color: Palette.muted),
         ),

@@ -14,7 +14,8 @@ Culture Bridge 是協助在台國際學生辦理生活流程、分享生活經�
 |---|---|---|
 | 登入識別碼（Firebase 帳號的內部 ID）；Google 帳號的 Email 與名稱 | 你用 Google 登入時 | 辨識你的帳號。登入由 Google 的 Firebase Authentication 處理，Email 與名稱存在 Firebase，用於登入；我們的資料庫只存內部 ID，**不存**你的密碼、Email 或姓名，App 也不顯示。刪除帳號時一併刪除 Firebase 登入資料 |
 | 語言偏好 | 你在 App 中設定 | 顯示介面語言 |
-| 你分享的經驗（原話、主題、身分類型）與 AI 整理、翻譯 | 你在「分享」輸入 | 匿名公開給其他使用者；用於搜尋與 AI 助理引用 |
+| 暱稱、真實姓名（都可以不填） | 你在「我的」→「個人資料」或第一次登入時填寫 | 只有你發布經驗時選擇「用暱稱」或「用真名」，才會顯示在那則經驗上；改名或清空會同步更新已發布的經驗 |
+| 你分享的經驗（原話、主題、身分類型）與 AI 整理、翻譯 | 你在「分享」輸入 | 公開給其他使用者（預設匿名，或依你的選擇顯示暱稱／真名）；用於搜尋與 AI 助理引用 |
 | 反應（有幫助、我也遇過）、「我的經驗不同」 | 你的操作 | 顯示統計、讓你看到自己的影響 |
 | 收藏的經驗 | 你的操作 | 讓你之後再看；只有你看得到，不計入任何公開數字 |
 | 辦理進度、卡關與差異回報（含你填寫的說明） | 你的操作 | 記錄你的進度；經審查後用來改善流程內容，回報中的原話經審查採納後可能被助理以「學生回報」引用 |
@@ -27,7 +28,7 @@ Culture Bridge 是協助在台國際學生辦理生活流程、分享生活經�
 
 ## 3. 公開與匿名
 
-你分享的經驗會公開給所有使用者，但**不會顯示**你的姓名、學校、帳號或任何可以把多則經驗連到同一人的資訊。請不要在原話中寫入可識別你或他人的資料（姓名、電話、學號等）；AI 整理時也會被要求省略這類資訊，但你的原話會照你寫的內容公開。
+你分享的經驗會公開給所有使用者。**預設匿名**：不會顯示你的姓名、學校、帳號或任何可以把多則經驗連到同一人的資訊。發布時你可以改選「用暱稱」或「用真名」，那則經驗就會顯示你填的名字，其他人也能看出同一個名字發過哪些經驗；用真名發布前請想清楚，所有人都看得到。學校與帳號一律不顯示，AI 助理與搜尋索引也不會使用你的名字。請不要在原話中寫入可識別你或他人的資料（姓名、電話、學號等）；AI 整理時也會被要求省略這類資訊，但你的原話會照你寫的內容公開。
 
 ## 4. AI 處理（Google Gemini）
 
@@ -75,9 +76,9 @@ Last updated: [TBC]
 
 **Who we are.** Culture Bridge helps international students in Taiwan with everyday procedures and shared experiences, operated by [TBC]. Contact: [TBC].
 
-**What we collect and why.** Your Firebase sign-in ID (Google sign-in is handled by Firebase Authentication, which keeps your Google email and name for signing in; our database stores only the internal ID, never your password, email or name, and deleting your account also removes the Firebase login); your language preference; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; experiences you save to read later (visible only to you); your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
+**What we collect and why.** Your Firebase sign-in ID (Google sign-in is handled by Firebase Authentication, which keeps your Google email and name for signing in; our database stores only the internal ID, never your password, email or name, and deleting your account also removes the Firebase login); your language preference; an optional nickname and real name, shown only on experiences you choose to sign with them; experiences you share (published anonymously) with their AI summary and translation; your reactions and "different experience" answers; experiences you save to read later (visible only to you); your procedure progress and reports (reviewed reports may be quoted by the assistant as student reports); your content reports and blocked authors; assistant conversations (kept only in server memory for about two hours, never written to the database); server logs (IP address, time, errors) for abuse prevention and troubleshooting; and, once you are signed in, the dates you used the app and which experiences you opened (dates only), counted only as totals for the team (for example return and reading rates). No precise location, contacts, photos or advertising.
 
-**Anonymity.** Shared experiences are public but never show your name, school, account, or anything linking several posts to the same person. Please do not write identifying details in your words.
+**Anonymity.** Shared experiences are public and anonymous by default: no name, school, account, or anything linking several posts to the same person. When publishing you may choose to sign with your nickname or real name instead; that name is then shown on that experience, so posts signed with the same name can be linked. Your school and account are never shown, and the assistant and search index never use your name. Please do not write identifying details in your words.
 
 **AI processing (Google Gemini).** Words you ask the AI to organize, published experiences (for translation), assistant questions and the data it looks up, and public text indexed for semantic search are sent to the Gemini API. [TBC: Gemini plan and whether Google may use the content.] Nothing AI-generated is published until you confirm it, and translations are labeled.
 

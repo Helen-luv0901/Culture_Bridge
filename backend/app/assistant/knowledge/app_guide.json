@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-14b",
+  "version": "2026-10-14c",
   "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: procedure facts, steps, fees and dates always come from the tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
   "entries": [
     {
@@ -108,8 +108,8 @@
       "keywords": ["分享", "發布", "匿名", "share", "post", "publish", "anonymous"],
       "title": {"zh-Hant": "分享經驗", "en": "Sharing an experience"},
       "body": {
-        "zh-Hant": "在「分享」寫下發生了什麼，一句話就可以，再選主題和身分類型。按「請 AI 幫我整理」後，你會看到 AI 整理的情境和提醒；確認或修改後按「確認並匿名發布」。發布前你都可以修改原話。",
-        "en": "In Share, write what happened (one sentence is enough), then pick a topic and identity type. Tap \"Ask AI to organize\" to see the situation and reminder AI drafted, then confirm or edit and tap \"Confirm and publish anonymously\". You can edit your original words before publishing."
+        "zh-Hant": "在「分享」寫下發生了什麼，一句話就可以，再選主題和身分類型。按「下一步：請 AI 整理重點」後，AI 會把原話整理成情境、感受和給下一位學生的提醒，方便別人看懂、搜尋，也會自動翻譯；你可以修改，再選擇用匿名、暱稱或真名，按「確認並發布」。發布前你都可以修改原話，原話也會一起保留。",
+        "en": "In Share, write what happened (one sentence is enough), then pick a topic and identity type. Tap \"Next: let AI organize it\": the AI turns your words into a situation, a feeling and a tip for the next student so others can understand and find it, and translates it. Edit if needed, choose to sign anonymously, with your nickname or with your real name, then tap \"Confirm and publish\". You can edit your original words before publishing, and they are kept alongside."
       }
     },
     {
@@ -128,8 +128,8 @@
       "keywords": ["匿名", "隱私", "姓名", "學校", "公開", "privacy", "anonymous", "name", "school"],
       "title": {"zh-Hant": "別人看得到我是誰嗎？", "en": "Can others see who I am?"},
       "body": {
-        "zh-Hant": "不會。分享的經驗是匿名公開的，你的姓名與學校不會顯示給其他使用者。",
-        "en": "No. Shared experiences are public but anonymous; your name and school are not shown to other users."
+        "zh-Hant": "預設不會。分享的經驗預設匿名公開，不會顯示你的姓名、學校或帳號。發布時你可以自己選擇改用暱稱或真名署名，那則經驗才會顯示你填的名字；學校和帳號永遠不會公開。",
+        "en": "Not by default. Shared experiences are public and anonymous by default: no name, school or account. When publishing you can choose to sign with your nickname or real name instead, and only then is that name shown on the experience; your school and account are never shown."
       }
     },
     {
@@ -220,6 +220,16 @@
       "body": {
         "zh-Hant": "在經驗頁或探索的卡片上按書籤圖示就能收藏（需要登入），再按一次取消。收藏的經驗會列在「我的」→「收藏的經驗」，最新的在最上面，也可以在那裡按「取消收藏」。收藏只有你自己看得到，作者和其他人都不會知道；經驗被隱藏、刪除或作者被你封鎖後，會自動從清單消失。",
         "en": "Tap the bookmark on an experience page or an Explore card to save it (sign-in needed); tap again to remove it. Saved experiences are listed under My → Saved experiences, newest first, where you can also remove them. Only you can see what you saved; authors and other people are never told. If an experience is hidden, deleted or its author is blocked, it drops off the list."
+      }
+    },
+    {
+      "id": "names",
+      "kind": "feature",
+      "keywords": ["暱稱", "真名", "真實姓名", "名字", "署名", "改名", "匿名", "nickname", "real name", "name", "sign", "anonymous", "rename"],
+      "title": {"zh-Hant": "暱稱、真名與署名", "en": "Nickname, real name and signing"},
+      "body": {
+        "zh-Hant": "暱稱和真實姓名都可以不填，在「我的」→「個人資料」修改（第一次登入時也會問一次，可以「稍後再說」）。發布經驗時可以選擇「匿名」（預設）、「暱稱」或「真名」；只有選了才會顯示在那則經驗上，選真名時所有人都看得到。之後改名或清空，已發布的經驗也會跟著更新。學校和帳號永遠不會公開。",
+        "en": "Both a nickname and a real name are optional; edit them under My → Your names (you are also asked once after first signing in, and can skip). When publishing an experience you choose Anonymous (the default), Nickname or Real name; a name only appears on experiences you sign with it, and a real name is visible to everyone. Renaming or clearing it later updates those experiences. Your school and account are never shown."
       }
     }
   ]

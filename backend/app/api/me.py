@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.auth import RequiredUser
 from app.core.db import DbSession
@@ -15,24 +15,53 @@ class Profile(BaseModel):
     id: str
     role: Literal["student", "reviewer", "admin"]
     preferred_locale: Literal["zh-Hant", "en"]
+    # Optional; shown only on experiences the person chose to sign with them.
+    nickname: str | None
+    real_name: str | None
 
 
 class ProfileUpdate(BaseModel):
-    preferred_locale: Literal["zh-Hant", "en"]
+    """Only the fields sent are changed; send null or "" to clear a name."""
+
+    preferred_locale: Literal["zh-Hant", "en"] | None = None
+    nickname: str | None = Field(default=None, max_length=30)
+    real_name: str | None = Field(default=None, max_length=50)
+
+    @field_validator("nickname", "real_name")
+    @classmethod
+    def _blank_is_none(cls, value: str | None) -> str | None:
+        value = " ".join(value.split()) if value else None
+        return value or None
+
+
+def _profile(row: User) -> Profile:
+    return Profile(
+        id=row.id,
+        role=row.role,  # type: ignore[arg-type]
+        preferred_locale=row.preferred_locale,  # type: ignore[arg-type]
+        nickname=row.nickname,
+        real_name=row.real_name,
+    )
 
 
 @router.get("")
-def get_me(user: RequiredUser) -> Profile:
-    return Profile(id=user.id, role=user.role, preferred_locale=user.preferred_locale)
+def get_me(user: RequiredUser, db: DbSession) -> Profile:
+    row = db.get(User, user.id)
+    assert row is not None
+    return _profile(row)
 
 
 @router.patch("")
 def update_me(body: ProfileUpdate, user: RequiredUser, db: DbSession) -> Profile:
     row = db.get(User, user.id)
     assert row is not None
-    row.preferred_locale = body.preferred_locale
+    for field in body.model_fields_set:
+        value = getattr(body, field)
+        if field == "preferred_locale" and value is None:
+            continue
+        setattr(row, field, value)
     db.commit()
-    return Profile(id=row.id, role=row.role, preferred_locale=row.preferred_locale)
+    return _profile(row)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
