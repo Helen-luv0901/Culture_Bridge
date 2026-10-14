@@ -21,7 +21,7 @@
 - [ ] 刪除已合併的舊分支：`claude/assistant-next`、`claude/backend-api`、`docs/cloud-sql-and-work-plan`、`fix/gcp-setup-runbook-fixes`（GitHub → Branches；都已併入 `main`）
 - [ ] A-10 分支保護：`main` 要求 PR 且 CI 通過（GitHub → Settings → Branches）
 - [ ] A-4 網域與 HTTPS：決定是否買網域（目前用 `run.app`，已有 HTTPS）
-- [ ] A-5 Gemini 方案：免費方案可能被 Google 用來改善產品，會影響 Play「資料安全性」要不要填「分享」；也有每分鐘次數限制
+- [ ] A-5 Gemini 方案：原本的付費金鑰預付額度已用完（2026-10-14，AI 回 402）。不付費就改用免費金鑰：`bash scripts/set-gemini-key.sh`（[步驟](../runbooks/a5-gemini-api-key.md#不付費改用免費金鑰)）。免費方案可能被 Google 用來改善產品，會影響隱私權政策與 Play「資料安全性」；也有次數限制
 - [ ] A-8 App 閃退監控：Android 版做出來後再接 Crashlytics（伺服器監控與 Email 警報已完成）
 - [ ] A-18 訪客能不能用 AI 助理：目前正式環境只有登入者能用
 - [ ] A-24 檢索品質測試在正式資料上跑一次：`uv run python -m app.rag.evaluate`（需要 Gemini 金鑰）

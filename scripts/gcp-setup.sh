@@ -425,7 +425,7 @@ step_deploy() {
     --allow-unauthenticated --memory=512Mi --cpu=1 --min-instances=0 --max-instances=2 \
     --concurrency=40 \
     --set-secrets=DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest \
-    --set-env-vars="APP_ENV=production,FIREBASE_PROJECT_ID=${PROJECT},FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY:-},FIREBASE_WEB_APP_ID=${FIREBASE_WEB_APP_ID:-},FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN:-},FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID:-}"
+    --update-env-vars="APP_ENV=production,FIREBASE_PROJECT_ID=${PROJECT},FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY:-},FIREBASE_WEB_APP_ID=${FIREBASE_WEB_APP_ID:-},FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN:-},FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID:-}"
 
   SERVICE_URL="$(gcloud run services describe culture-bridge --region="${REGION}" \
     --project="${PROJECT}" --format='value(status.url)' 2>/dev/null || true)"

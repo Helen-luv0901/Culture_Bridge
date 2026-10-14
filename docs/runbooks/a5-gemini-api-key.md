@@ -11,6 +11,21 @@
 3. 【確認】方案：免費方案的條款可能允許 Google 用送出的內容改善產品。我們會送出學生分享的原文和助理對話，
    建議改用付費方案（費用從專案的帳單帳戶與試用額度扣），並把結果告訴 D 寫進隱私權政策（D-11）
 
+### 不付費：改用免費金鑰
+
+正式專案 `culture-bridge-511321` 已連結帳單（Cloud Run 需要），所以在它底下建的金鑰都走付費方案；預付額度用完時 Gemini 會回 `402 RESOURCE_EXHAUSTED ... prepayment credits are depleted`。不想付費時：
+
+1. [Google AI Studio](https://aistudio.google.com) → API keys → **Create API key** → 選 **Create project**（新專案，**不要**連結帳單）
+2. 在 API keys 列表確認這把金鑰的方案是 **Free tier**
+3. 在 Cloud Shell 執行 `cd ~/Culture_Bridge && git pull && bash scripts/set-gemini-key.sh`，把金鑰貼上（畫面不會顯示）。
+   指令會先測試這把金鑰能用哪個模型，確定能用才存進 Secret Manager、設定 `GEMINI_MODEL` 並重新啟動服務；不需要重新部署
+4. `bash scripts/check-ai.sh`，第 4、5 步顯示 OK 就完成
+
+免費方案的代價：
+
+- 每分鐘、每天的次數有限制，超過時 AI 功能會暫時無法使用（`429`），隔天恢復
+- Google 可能用送出的內容改善產品：上架前要在隱私權政策寫清楚，Play「資料安全性」也要重新評估（D-11、D-12）
+
 ## 2. 限制金鑰
 
 Google Cloud 主控台 → API 和服務 → 憑證 → 點這把金鑰：
