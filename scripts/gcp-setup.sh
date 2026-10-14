@@ -520,7 +520,7 @@ step_autodeploy() {
     --workload-identity-pool="${pool}" --project="${PROJECT}" >/dev/null 2>&1 \
     || run gcloud iam workload-identity-pools providers create-oidc "${provider}" \
       --location=global --workload-identity-pool="${pool}" --project="${PROJECT}" \
-      --display-name="GitHub ${GITHUB_REPO}" \
+      --display-name="GitHub Culture_Bridge" \
       --issuer-uri=https://token.actions.githubusercontent.com \
       --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
       --attribute-condition="assertion.repository=='${GITHUB_REPO}' && assertion.ref=='refs/heads/main'"
