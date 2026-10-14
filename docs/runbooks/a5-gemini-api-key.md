@@ -29,7 +29,7 @@ Google Cloud 主控台 → API 和服務 → 憑證 → 點這把金鑰：
 
 ```sh
 export GEMINI_API_KEY='<金鑰>'
-# 看有哪些模型可用，挑一個設成 GEMINI_MODEL（預設 gemini-2.5-flash）
+# 看有哪些模型可用，挑一個設成 GEMINI_MODEL（預設 gemini-3.8-flash；Google 會停止提供舊模型給新使用者，出現 404 NOT_FOUND 時就換成錯誤訊息建議的模型）
 curl -s https://generativelanguage.googleapis.com/v1beta/models \
   -H "x-goog-api-key: $GEMINI_API_KEY" | grep '"name"'
 ```
