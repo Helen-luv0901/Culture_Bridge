@@ -53,6 +53,7 @@ void main() {
       '/profile/settings',
       '/signin',
       '/guide/welcome',
+      '/official',
       '/experiences/first-rental',
       '/actions/arc',
       '/actions/arc/progress',
@@ -93,24 +94,35 @@ void main() {
     );
   });
 
-  testWidgets('Home: pinned welcome guide, then guides and posts', (
+  testWidgets('Home: the official account pinned, then only student posts', (
     tester,
   ) async {
     await mount(tester, '/', const Size(1280, 2400));
     final pinned = tester.getTopLeft(find.byKey(const Key('guide-welcome')));
-    final guide = tester.getTopLeft(find.byKey(const Key('guide-arc')));
     final post = tester.getTopLeft(find.byKey(const Key('post-first-rental')));
-    expect(pinned.dy, lessThan(guide.dy));
     expect(pinned.dy, lessThan(post.dy));
-    expect(find.text('初次來台灣？先看這篇'), findsOneWidget);
+    expect(find.text('初次來台灣？可以來這邊看看'), findsOneWidget);
+    // Official guides live on the official account's page, not in the feed.
+    expect(find.byKey(const Key('guide-arc')), findsNothing);
     // Official posts carry the seal, not a text badge or a check mark.
     expect(find.byType(OfficialSeal), findsWidgets);
     expect(find.text('官方'), findsNothing);
     expect(find.byIcon(Icons.verified), findsNothing);
   });
 
+  testWidgets('The pinned card opens the official account and its posts', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(375, 812));
+    await tap(tester, find.text('初次來台灣？可以來這邊看看'));
+    expect(find.byKey(const Key('official-account')), findsOneWidget);
+    expect(find.text('官方帳號'), findsWidgets);
+    expect(find.byKey(const Key('guide-arc')), findsOneWidget);
+    expect(find.byKey(const Key('post-first-rental')), findsNothing);
+  });
+
   testWidgets('Opened posts are dimmed and marked read', (tester) async {
-    final app = await mount(tester, '/', const Size(1280, 2400));
+    final app = await mount(tester, '/official', const Size(1280, 2400));
     await tap(tester, find.text('申請或更新 ARC').first);
     expect(app.vm.isRead('guide:arc'), isTrue);
     await tap(tester, find.byKey(const Key('back')));

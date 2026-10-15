@@ -67,7 +67,9 @@ class _AppShellState extends State<AppShell> {
       if (path.endsWith('/complete')) return vm.t('actionCompletion');
       return vm.pair('官方指南', 'Official guide');
     }
-    if (path.startsWith('/guide')) return vm.pair('官方指南', 'Official guide');
+    if (path == '/official' || path.startsWith('/guide')) {
+      return vm.pair('官方帳號', 'Official account');
+    }
     if (path == '/signin') return vm.t('signIn');
     if (path == '/welcome') return vm.t('profileNames');
     if (path.startsWith('/admin')) return vm.pair('審查與管理', 'Review & admin');
