@@ -24,6 +24,7 @@ from app.assistant.llm import (
 )
 from app.assistant.memory import ConversationStore
 from app.assistant.operations import OperationStore, PendingOperation
+from app.assistant.prefetch import Prefetched, cite_named_procedures, prefetch
 from app.assistant.prompts import build_system_prompt, build_user_message
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import ToolContext, ToolRegistry
@@ -90,7 +91,6 @@ class Assistant:
         owner = conversation_owner(user)
         conversation_id = request.conversation_id or uuid.uuid4().hex
         history: list[Turn] = self._memory.load(owner, conversation_id)
-        history.append(UserTurn(build_user_message(request.message, request.screen)))
 
         source = data or self._data
         assert source is not None, "Assistant needs a data source"
@@ -100,6 +100,9 @@ class Assistant:
             user=user,
             operations=operations or self._operations,
         )
+        # Run the obvious searches now, so most questions need one model call instead of several.
+        found = prefetch(request.message, ctx)
+        history.append(UserTurn(found.attach(build_user_message(request.message, request.screen))))
         system = build_system_prompt(request.locale, taipei_today())
         specs = self._registry.specs()
         tools_used: list[str] = []
@@ -113,7 +116,7 @@ class Assistant:
                 return self._fallback(conversation_id, request.locale, tools_used)
             history.append(turn)
             if not turn.tool_calls:
-                return self._finish(owner, conversation_id, history, turn, ctx, tools_used)
+                return self._finish(owner, conversation_id, history, turn, ctx, tools_used, found)
             if round_number == self._max_tool_rounds:
                 break
             results = tuple(
@@ -148,10 +151,12 @@ class Assistant:
         turn: ModelTurn,
         ctx: ToolContext,
         tools_used: list[str],
+        found: Prefetched,
     ) -> AssistantReply:
         if not turn.text:
             logger.warning("Assistant fallback: model returned an empty answer")
             return self._fallback(conversation_id, ctx.locale, tools_used)
+        cite_named_procedures(turn.text, found, ctx)
         self._memory.save(owner, conversation_id, history)
         return AssistantReply(
             conversation_id=conversation_id,
