@@ -33,7 +33,12 @@ class AssistantServices:
 def get_services() -> AssistantServices:
     settings = get_settings()
     llm: LLM = (
-        GeminiLLM(settings.gemini_api_key, settings.gemini_model, settings.gemini_timeout_seconds)
+        GeminiLLM(
+            settings.gemini_api_key,
+            settings.gemini_model,
+            settings.gemini_timeout_seconds,
+            settings.gemini_thinking_level,
+        )
         if settings.gemini_api_key
         else UnavailableLLM()
     )

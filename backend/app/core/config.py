@@ -23,6 +23,9 @@ class Settings:
     gemini_api_key: str | None
     gemini_model: str
     gemini_timeout_seconds: float
+    # How much Gemini "thinks" before the assistant and tag suggestions answer:
+    # minimal | low | medium | high, or empty for the model's default (slowest).
+    gemini_thinking_level: str
     assistant_max_tool_rounds: int
     assistant_memory_exchanges: int
     assistant_allow_guests: bool
@@ -74,6 +77,7 @@ def get_settings() -> Settings:
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),
+        gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "low").strip().lower(),
         assistant_max_tool_rounds=int(os.getenv("ASSISTANT_MAX_TOOL_ROUNDS", "5")),
         assistant_memory_exchanges=int(os.getenv("ASSISTANT_MEMORY_EXCHANGES", "6")),
         # Whether guests may chat is still undecided (tech-architecture §9.6): off outside dev.

@@ -140,8 +140,10 @@ def test_screen_context_is_passed_as_data(make_assistant):
         USER,
     )
     text = llm.calls[0]["history"][-1].text
-    assert text.startswith('[screen context: {"route": "/actions/arc", "action_id": "arc"}]')
-    assert text.endswith("這個流程要帶什麼？")
+    # Search results (if any) come first; the screen context sits right above the question.
+    assert text.endswith(
+        '[screen context: {"route": "/actions/arc", "action_id": "arc"}]\n這個流程要帶什麼？'
+    )
 
 
 def test_memory_trims_at_user_turns():
@@ -152,3 +154,37 @@ def test_memory_trims_at_user_turns():
     store.save("o", "c", turns)
     kept = store.load("o", "c")
     assert kept[0] == UserTurn("q2") and len(kept) == 6
+
+
+def test_searches_run_up_front_so_one_model_call_answers(make_assistant):
+    llm = ScriptedLLM(answer("依據「申請工作證」流程卡（已驗證）……"))
+    reply = make_assistant(llm).reply(ask("工作證要怎麼申請？"), USER)
+
+    assert len(llm.calls) == 1 and reply.tools_used == []
+    message = llm.calls[0]["history"][-1].text
+    assert message.startswith("[Search results for this message")
+    assert message.endswith("工作證要怎麼申請？")
+    assert '"action_id": "work-permit"' in message and '"steps"' in message
+    # The answer names the procedure, so its card shows as if get_action had run.
+    assert [c.model_dump()["action_id"] for c in reply.cards] == ["work-permit"]
+
+
+def test_prefetched_procedures_not_named_get_no_card(make_assistant):
+    reply = make_assistant(ScriptedLLM(answer("目前沒有相關資料。"))).reply(
+        ask("工作證要怎麼申請？"), USER
+    )
+    assert reply.cards == []
+
+
+def test_nothing_found_leaves_the_message_as_written(make_assistant):
+    llm = ScriptedLLM(answer("hi"))
+    make_assistant(llm).reply(ask("zzzz qqqq"), USER)
+    assert llm.calls[0]["history"] == [UserTurn("zzzz qqqq")]
+
+
+def test_thinking_level_maps_to_gemini_config():
+    from app.assistant.gemini import thinking_config
+
+    assert thinking_config("") is None
+    assert thinking_config("low").thinking_level.value == "LOW"
+    assert thinking_config("minimal").thinking_level.value == "MINIMAL"

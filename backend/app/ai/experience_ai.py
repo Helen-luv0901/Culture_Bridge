@@ -14,6 +14,7 @@ from typing import Literal, Protocol
 from google import genai
 from google.genai import types
 
+from app.assistant.gemini import thinking_config
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -119,12 +120,21 @@ MAX_SUGGESTED_TAGS = 6
 
 
 class GeminiExperienceAI:
-    def __init__(self, api_key: str, model: str, timeout_seconds: float, attempts: int = 2):
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        timeout_seconds: float,
+        attempts: int = 2,
+        thinking_level: str = "",
+    ):
         self._client = genai.Client(
             api_key=api_key, http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000))
         )
         self._model = model
         self._attempts = attempts
+        # Only tag suggestions run while someone waits; summaries and translations keep the default.
+        self._tag_thinking = thinking_config(thinking_level)
 
     def _json(self, prompt: str, schema: dict) -> dict[str, str]:
         config = types.GenerateContentConfig(
@@ -152,6 +162,7 @@ class GeminiExperienceAI:
             temperature=0.2,
             response_mime_type="application/json",
             response_json_schema=_TAGS_SCHEMA,
+            thinking_config=self._tag_thinking,
         )
         prompt = _TAGS_PROMPT.format(
             count=MAX_SUGGESTED_TAGS, language=_LANGUAGE[locale], title=title, text=text
@@ -209,5 +220,8 @@ def get_experience_ai() -> ExperienceAI:
     if not settings.gemini_api_key:
         return UnavailableExperienceAI()
     return GeminiExperienceAI(
-        settings.gemini_api_key, settings.gemini_model, settings.gemini_timeout_seconds
+        settings.gemini_api_key,
+        settings.gemini_model,
+        settings.gemini_timeout_seconds,
+        thinking_level=settings.gemini_thinking_level,
     )

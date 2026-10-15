@@ -18,13 +18,23 @@ from app.assistant.llm import (
 logger = logging.getLogger(__name__)
 
 
+def thinking_config(level: str) -> types.ThinkingConfig | None:
+    """Less thinking answers much faster; the assistant mostly reads search results it is given."""
+    if not level:
+        return None
+    return types.ThinkingConfig(thinking_level=types.ThinkingLevel(level.upper()))
+
+
 class GeminiLLM:
-    def __init__(self, api_key: str, model: str, timeout_seconds: float) -> None:
+    def __init__(
+        self, api_key: str, model: str, timeout_seconds: float, thinking_level: str = ""
+    ) -> None:
         self._client = genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000)),
         )
         self._model = model
+        self._thinking = thinking_config(thinking_level)
 
     def generate(self, system: str, history: list[Turn], tools: list[ToolSpec]) -> ModelTurn:
         config = types.GenerateContentConfig(
@@ -32,6 +42,7 @@ class GeminiLLM:
             temperature=0.2,
             tools=[types.Tool(function_declarations=[to_declaration(t) for t in tools])],
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            thinking_config=self._thinking,
         )
         try:
             response = self._client.models.generate_content(
