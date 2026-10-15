@@ -1,23 +1,35 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../view_models/bridge_view_model.dart';
 
+/// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
 abstract final class Palette {
-  static const paper = Color(0xFFF4EEE0),
-      high = Color(0xFFFBF6EA),
-      oat = Color(0xFFE4D8BE),
-      edge = Color(0xFFD6C6A6),
+  static const paper = Color(0xFFF1EADC),
+      grid = Color(0xFFE2D7C2),
+      header = Color(0xFFF3EDE1),
+      nav = Color(0xFFF4EEE0),
+      high =
+          Color(0xFFFBF6EA), // cards
+      readCard = Color(0xFFF2ECDF),
+      oat =
+          Color(0xFFE4D8BE), // card borders and their offset shadow
+      edge =
+          Color(0xFFD6C6A6), // dividers
       ink = Color(0xFF39362E),
+      readInk = Color(0xFF5E4A3C),
       muted = Color(0xFF6E6656),
+      control =
+          Color(0xFF8C8270), // borders of things you tap or type in
       moss = Color(0xFF4C5540),
       paleMoss = Color(0xFFDEE1CE),
-      slate = Color(0xFFDAE0E0),
       brick = Color(0xFF9E5B4A),
       brickDeep = Color(0xFF79392E),
-      ochre = Color(0xFFEFE1C3);
+      ochre = Color(0xFFEFE1C3),
+      ochreInk = Color(0xFF6B5320),
+      bubble = Color(0xFFEFE6D2),
+      danger = Color(0xFFB42318),
+      onMoss = Color(0xFFFFFFFF);
 }
 
 class BridgeScope extends InheritedNotifier<BridgeViewModel> {
@@ -30,70 +42,166 @@ class BridgeScope extends InheritedNotifier<BridgeViewModel> {
       context.dependOnInheritedWidgetOfExactType<BridgeScope>()!.notifier!;
 }
 
+const _serifFallback = ['NotoSerifTC'];
+const _underline = UnderlineInputBorder(
+  borderSide: BorderSide(color: Palette.control, width: 1.5),
+);
+
 ThemeData bridgeTheme() => ThemeData(
   useMaterial3: true,
   scaffoldBackgroundColor: Palette.paper,
   fontFamily: 'Spectral',
-  fontFamilyFallback: const ['NotoSerifTC'],
+  fontFamilyFallback: _serifFallback,
   colorScheme: ColorScheme.fromSeed(
     seedColor: Palette.moss,
     surface: Palette.high,
     onSurface: Palette.ink,
     primary: Palette.moss,
+    onPrimary: Palette.onMoss,
+    error: Palette.danger,
   ),
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(fontSize: 16, height: 1.6),
-    bodyMedium: TextStyle(fontSize: 16, height: 1.6),
-    bodySmall: TextStyle(fontSize: 13, height: 1.5),
+    bodyLarge: TextStyle(fontSize: 16, height: 1.6, color: Palette.ink),
+    bodyMedium: TextStyle(fontSize: 15, height: 1.6, color: Palette.ink),
+    bodySmall: TextStyle(fontSize: 13, height: 1.5, color: Palette.muted),
   ),
+  dividerTheme: const DividerThemeData(color: Palette.edge, space: 1),
   filledButtonTheme: FilledButtonThemeData(
     style: FilledButton.styleFrom(
       minimumSize: const Size(48, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       backgroundColor: Palette.moss,
-      foregroundColor: Palette.high,
-      shape: const RoundedRectangleBorder(),
+      foregroundColor: Palette.onMoss,
+      textStyle: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'Spectral',
+        fontFamilyFallback: _serifFallback,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     ),
   ),
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
-      minimumSize: const Size(48, 48),
+      minimumSize: const Size(44, 44),
       foregroundColor: Palette.brickDeep,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       minimumSize: const Size(48, 48),
-      shape: const RoundedRectangleBorder(),
-      side: const BorderSide(color: Palette.edge),
+      foregroundColor: Palette.ink,
+      backgroundColor: Palette.high,
+      textStyle: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'Spectral',
+        fontFamilyFallback: _serifFallback,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      side: const BorderSide(color: Palette.control),
     ),
   ),
-  chipTheme: const ChipThemeData(
-    backgroundColor: Palette.oat,
-    selectedColor: Palette.paleMoss,
-    side: BorderSide.none,
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-    shape: RoundedRectangleBorder(),
+  chipTheme: ChipThemeData(
+    backgroundColor: Palette.high,
+    selectedColor: Palette.moss,
+    side: const BorderSide(color: Palette.control),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
   ),
   inputDecorationTheme: const InputDecorationTheme(
-    filled: true,
-    fillColor: Palette.high,
-    border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Palette.brick, width: 2),
-      borderRadius: BorderRadius.zero,
+    filled: false,
+    border: _underline,
+    enabledBorder: _underline,
+    focusedBorder: UnderlineInputBorder(
+      borderSide: BorderSide(color: Palette.moss, width: 2),
     ),
+    hintStyle: TextStyle(color: Palette.muted),
+  ),
+  snackBarTheme: const SnackBarThemeData(
+    backgroundColor: Palette.ink,
+    contentTextStyle: TextStyle(color: Palette.onMoss, fontSize: 14),
+    behavior: SnackBarBehavior.floating,
+  ),
+  dialogTheme: DialogThemeData(
+    backgroundColor: Palette.high,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
   ),
 );
-TextStyle displayStyle(double size) => TextStyle(
+
+/// Young Serif headings (brand, page and card titles).
+TextStyle displayStyle(double size, {Color color = Palette.ink}) => TextStyle(
   fontFamily: 'YoungSerif',
-  fontFamilyFallback: const ['NotoSerifTC'],
+  fontFamilyFallback: _serifFallback,
   fontSize: size,
-  height: 1.3,
+  height: 1.4,
+  color: color,
+);
+
+/// Courier Prime section labels.
+const labelStyle = TextStyle(
+  fontFamily: 'CourierPrime',
+  fontFamilyFallback: _serifFallback,
+  fontSize: 13,
+  fontWeight: FontWeight.w700,
+  letterSpacing: 1.8,
   color: Palette.ink,
 );
 
+const mutedStyle = TextStyle(fontSize: 13, color: Palette.muted, height: 1.5);
+
+// ---------- icons (line drawings from the trial, 24×24) ----------
+
+const _iconPaths = {
+  'home': '<path d="M3.6 11.3 12 4.5l8.4 6.8"/><path d="M5.7 10.1v8.6c0 .5.4.9.9.9h10.8c.5 0 .9-.4.9-.9v-8.6"/><path d="M9.8 19.6v-4.3c0-.5.4-.9.9-.9h2.6c.5 0 .9.4.9.9v4.3"/>',
+  'explore': '<path d="M12 3.8a8.2 8.2 0 1 0 .1 0z"/><path d="M15.6 8.3 10.9 10.8 8.4 15.6 13.1 13.2z"/>',
+  'share': '<path d="M19.2 4.7C12.9 4.4 6.3 9.6 6 17.7c7-.2 13.5-4.5 13.2-13z"/><path d="M6 18c1.2-3 3.3-5.4 6.3-6.9"/><path d="M5 19.3 8 16.3"/>',
+  'me': '<circle cx="12" cy="8.5" r="3.7"/><path d="M5.4 19.6c0-4.2 3-6.5 6.6-6.5s6.6 2.3 6.6 6.5"/>',
+  'bookmark': '<path d="M6.5 3.8h11v16.4l-5.5-3.9-5.5 3.9z"/>',
+  'chat': '<path d="M4.5 6.8c0-1.3 1-2.3 2.3-2.3h10.4c1.3 0 2.3 1 2.3 2.3v7c0 1.3-1 2.3-2.3 2.3H11l-4.2 3.4v-3.4h0c-1.3 0-2.3-1-2.3-2.3z"/><path d="M8.6 10.3h.01M12 10.3h.01M15.4 10.3h.01" stroke-width="2.4"/>',
+  'bridge': '<path d="M2.8 16.5h18.4"/><path d="M4.6 16.5c1.6-4.3 4.4-6.5 7.4-6.5s5.8 2.2 7.4 6.5"/><path d="M8 16.5v-3.6M12 16.5v-6.5M16 16.5v-3.6"/>',
+  'search': '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  'close': '<path d="M6 6l12 12M18 6 6 18"/>',
+  'back': '<path d="M15 5l-7 7 7 7"/>',
+  'chevron': '<path d="M9 6l6 6-6 6"/>',
+  'spark': '<path d="M12 3.5v4M12 15.5v4M4.5 12h4M15.5 12h4M6.6 6.6l2.6 2.6M14.8 14.8l2.6 2.6M17.4 6.6l-2.6 2.6M9.2 14.8l-2.6 2.6"/>',
+  'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  'more': '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="2.6"/>',
+};
+
+String _hex(Color c) =>
+    '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+
+/// A line icon; [filled] also fills the shape (the saved bookmark).
+class AppIcon extends StatelessWidget {
+  const AppIcon(
+    this.name, {
+    super.key,
+    this.size = 22,
+    this.color = Palette.ink,
+    this.filled = false,
+    this.strokeWidth = 1.7,
+  });
+  final String name;
+  final double size;
+  final Color color;
+  final bool filled;
+  final double strokeWidth;
+  @override
+  Widget build(BuildContext context) {
+    final hex = _hex(color);
+    final svg =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+        'fill="${filled ? hex : 'none'}" stroke="$hex" stroke-width="$strokeWidth" '
+        'stroke-linecap="round" stroke-linejoin="round">${_iconPaths[name] ?? ''}</svg>';
+    return ExcludeSemantics(
+      child: SvgPicture.string(svg, width: size, height: size),
+    );
+  }
+}
+
+/// The asset icons of the first design (still used by a few admin screens).
 class InkIcon extends StatelessWidget {
   const InkIcon(
     this.name, {
@@ -115,203 +223,323 @@ class InkIcon extends StatelessWidget {
   );
 }
 
-class PaperBackground extends StatelessWidget {
-  const PaperBackground({super.key, required this.child});
+/// The official account's mark next to "Culture Bridge": a small moss square with the
+/// bridge, no text and no check mark. Screen readers hear "official account".
+class OfficialSeal extends StatelessWidget {
+  const OfficialSeal({super.key, this.size = 16});
+  final double size;
+  static const _svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+      '<rect x="1" y="1" width="22" height="22" rx="6" fill="#4C5540"/>'
+      '<path d="M4.5 16.5h15M6 16.5c1.4-3.8 3.6-5.6 6-5.6s4.6 1.8 6 5.6M9 16.5v-2.6M12 16.5v-5.4M15 16.5v-2.6" '
+      'fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: BridgeScope.of(context).pair('官方帳號', 'Official account'),
+    child: ExcludeSemantics(
+      child: SvgPicture.string(_svg, width: size, height: size),
+    ),
+  );
+}
+
+/// A round avatar: the bridge for the official account, else the author's initial.
+class Avatar extends StatelessWidget {
+  const Avatar({super.key, this.initial, this.size = 32});
+  final String? initial;
+  final double size;
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: Palette.paleMoss,
+        shape: BoxShape.circle,
+      ),
+      child: initial == null
+          ? AppIcon('bridge', size: size * .56, color: Palette.moss)
+          : Text(
+              initial!,
+              style: TextStyle(
+                fontSize: size * .4,
+                fontWeight: FontWeight.w700,
+                color: Palette.moss,
+                height: 1,
+              ),
+            ),
+    ),
+  );
+}
+
+// ---------- paper ----------
+
+/// Warm paper with a flat 1px notebook grid every 20px.
+class NotebookBackground extends StatelessWidget {
+  const NotebookBackground({super.key, required this.child});
   final Widget child;
   @override
   Widget build(BuildContext context) =>
-      CustomPaint(painter: const _GrainPainter(), child: child);
+      CustomPaint(painter: const _GridPainter(), isComplex: true, child: child);
 }
 
-class _GrainPainter extends CustomPainter {
-  const _GrainPainter();
+class _GridPainter extends CustomPainter {
+  const _GridPainter();
+  static const step = 20.0;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = Palette.paper);
-    final paint = Paint()
-      ..color = Palette.muted.withValues(alpha: .055)
-      ..strokeWidth = .5;
-    for (double x = 0; x < size.width; x += 3.5) {
-      canvas.drawLine(Offset(x, 0), Offset(x + 12, size.height), paint);
+    final line = Paint()
+      ..color = Palette.grid
+      ..strokeWidth = 1;
+    for (double x = .5; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
     }
-    final random = math.Random(42);
-    for (int i = 0; i < 1600; i++) {
-      canvas.drawCircle(
-        Offset(
-          random.nextDouble() * size.width,
-          random.nextDouble() * size.height,
+    for (double y = .5; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter old) => false;
+}
+
+/// A sheet of paper: hairline border and a flat offset shadow. [read] dims it.
+class NoteCard extends StatelessWidget {
+  const NoteCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.read = false,
+    this.color,
+    this.borderColor,
+  });
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final bool read;
+  final Color? color;
+  final Color? borderColor;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 4, bottom: 5),
+    // The shadow sits behind; the sheet itself is a Material so list rows and
+    // ink splashes inside it paint correctly.
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: const [BoxShadow(color: Palette.oat, offset: Offset(4, 5))],
+      ),
+      child: Material(
+        color: color ?? (read ? Palette.readCard : Palette.high),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(2),
+          side: BorderSide(color: borderColor ?? Palette.oat),
         ),
-        random.nextDouble() * .7,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GrainPainter old) => false;
+        clipBehavior: Clip.antiAlias,
+        child: Padding(padding: padding, child: child),
+      ),
+    ),
+  );
 }
 
-class TornEdge extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final p = Path()..moveTo(0, 3);
-    for (double x = 0; x <= size.width; x += 8) {
-      p.lineTo(x, 2 + math.sin(x * .7) * 1.5);
-    }
-    p.lineTo(size.width, size.height - 3);
-    for (double x = size.width; x >= 0; x -= 8) {
-      p.lineTo(x, size.height - 2 - math.sin(x * .6) * 1.5);
-    }
-    return p
-      ..lineTo(0, 3)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(TornEdge old) => false;
-}
-
+/// Older screens' name for a card.
 class PaperCard extends StatelessWidget {
   const PaperCard({
     super.key,
     required this.child,
     this.color = Palette.high,
-    this.tape = false,
-    this.padding = const EdgeInsets.all(24),
+    this.padding = const EdgeInsets.all(20),
   });
   final Widget child;
   final Color color;
-  final bool tape;
   final EdgeInsets padding;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(top: tape ? 14 : 0, bottom: 8, right: 5),
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          left: 4,
-          top: 6,
-          right: -4,
-          bottom: -6,
-          child: ClipPath(
-            clipper: TornEdge(),
-            child: const ColoredBox(color: Palette.edge),
-          ),
-        ),
-        ClipPath(
-          clipper: TornEdge(),
-          child: Material(
-            color: color,
-            child: Padding(padding: padding, child: child),
-          ),
-        ),
-        if (tape)
-          Positioned(
-            top: -9,
-            left: 24,
-            child: IgnorePointer(
-              child: Transform.rotate(
-                angle: -.24,
-                child: CustomPaint(
-                  size: const Size(80, 25),
-                  painter: _TapePainter(color == Palette.slate),
-                ),
-              ),
-            ),
-          ),
-      ],
-    ),
+    padding: const EdgeInsets.only(bottom: 8),
+    child: NoteCard(color: color, padding: padding, child: child),
   );
 }
 
-class _TapePainter extends CustomPainter {
-  _TapePainter(this.gingham);
-  final bool gingham;
+/// A typewriter section label with an optional muted note after it.
+class SectionLabel extends StatelessWidget {
+  const SectionLabel(this.title, {super.key, this.note});
+  final String title;
+  final String? note;
   @override
-  void paint(Canvas canvas, Size size) {
-    final color = gingham ? Palette.brick : const Color(0xFF7E93A0);
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = color.withValues(alpha: .6),
-    );
-    for (double x = 0; x < size.width; x += 12) {
-      canvas.drawRect(
-        Rect.fromLTWH(x, 0, 6, size.height),
-        Paint()..color = Palette.high.withValues(alpha: .28),
-      );
-    }
-    if (gingham) {
-      for (double y = 0; y < size.height; y += 12) {
-        canvas.drawRect(
-          Rect.fromLTWH(0, y, size.width, 6),
-          Paint()..color = Palette.high.withValues(alpha: .3),
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_TapePainter old) => old.gingham != gingham;
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 2,
+    crossAxisAlignment: WrapCrossAlignment.end,
+    children: [
+      Semantics(
+        header: true,
+        child: Text(title.toUpperCase(), style: labelStyle),
+      ),
+      if (note != null) Text(note!, style: mutedStyle),
+    ],
+  );
 }
 
+/// Older screens' section heading.
 class PaperHeading extends StatelessWidget {
   const PaperHeading(this.title, {super.key, this.badge});
   final String title;
   final String? badge;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 18),
+    padding: const EdgeInsets.only(bottom: 14),
     child: Wrap(
       spacing: 12,
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontFamily: 'CourierPrime',
-            fontFamilyFallback: ['NotoSerifTC'],
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
+        Text(title.toUpperCase(), style: labelStyle),
         if (badge != null) PaperTag(badge!),
       ],
     ),
   );
 }
 
+/// A small italic label, e.g. a post's category.
 class PaperTag extends StatelessWidget {
-  const PaperTag(this.text, {super.key, this.color = Palette.oat});
+  const PaperTag(this.text, {super.key, this.color = Palette.ochre});
   final String text;
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-    color: color,
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(4),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 13, height: 1.4, color: Palette.muted),
+      style: const TextStyle(
+        fontSize: 12,
+        height: 1.3,
+        fontStyle: FontStyle.italic,
+        color: Palette.ochreInk,
+      ),
     ),
   );
 }
 
+/// "#tag" in brick ink; tapping searches for it. The tap area stays 44px tall.
+class TagLink extends StatelessWidget {
+  const TagLink(this.tag, {super.key, this.onTap, this.large = false});
+  final String tag;
+  final VoidCallback? onTap;
+  final bool large;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return Semantics(
+      button: onTap != null,
+      label: onTap == null ? tag : vm.pair('搜尋 $tag', 'Search $tag'),
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: large ? 10 : 6),
+            child: Center(
+              widthFactor: 1,
+              child: Text(
+                tag,
+                style: TextStyle(
+                  fontSize: large ? 14 : 13,
+                  color: Palette.brickDeep,
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A choice chip: moss when chosen, paper with a control border when not.
+class NoteChip extends StatelessWidget {
+  const NoteChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.dense = false,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+  final bool dense;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: Material(
+      color: selected ? Palette.moss : Palette.high,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+        side: BorderSide(color: selected ? Palette.moss : Palette.control),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: dense ? 12 : 14),
+            child: Center(
+              widthFactor: 1,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: dense ? 13 : 14,
+                  color: selected ? Palette.onMoss : Palette.ink,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The page's own heading (Young Serif).
+class PageTitle extends StatelessWidget {
+  const PageTitle(this.text, {super.key, this.size = 22});
+  final String text;
+  final double size;
+  @override
+  Widget build(BuildContext context) =>
+      Semantics(header: true, child: Text(text, style: displayStyle(size)));
+}
+
+/// A vertical list with even gaps, capped to a comfortable reading width.
 class FlowBody extends StatelessWidget {
-  const FlowBody({super.key, required this.children, this.maxWidth = 760});
+  const FlowBody({
+    super.key,
+    required this.children,
+    this.maxWidth = 880,
+    this.gap = 18,
+  });
   final List<Widget> children;
   final double maxWidth;
+  final double gap;
   @override
   Widget build(BuildContext context) => Align(
-    alignment: Alignment.topLeft,
+    alignment: Alignment.topCenter,
     child: ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (int i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(height: 24),
+            if (i > 0) SizedBox(height: gap),
             children[i],
           ],
         ],
@@ -320,39 +548,7 @@ class FlowBody extends StatelessWidget {
   );
 }
 
-class RingIcon extends StatelessWidget {
-  const RingIcon(this.name, {super.key, required this.selected});
-  final String name;
-  final bool selected;
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: selected ? const _RingPainter() : null,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: InkIcon(name),
-    ),
-  );
-}
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawOval(
-      Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
-      Paint()
-        ..color = Palette.brick
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) => false;
-}
-
-/// A form field with its label above the box instead of floating on the border, so stacked
-/// fields never overlap and long text wraps instead of being cut off.
+/// A form field with its label above the line, so stacked fields never overlap.
 class LabeledField extends StatelessWidget {
   const LabeledField({
     super.key,
@@ -371,15 +567,7 @@ class LabeledField extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Palette.muted,
-          ),
-        ),
-        const SizedBox(height: 6),
+        Text(label, style: mutedStyle),
         TextField(
           controller: controller,
           minLines: minLines,
@@ -390,4 +578,19 @@ class LabeledField extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// How long ago, in the reader's language ("3 小時前" / "3 h ago").
+String timeAgo(BridgeViewModel vm, DateTime when, {DateTime? now}) {
+  final minutes = (now ?? DateTime.now()).difference(when).inMinutes;
+  if (minutes < 1) return vm.pair('剛剛', 'just now');
+  if (minutes < 60) return vm.pair('$minutes 分鐘前', '$minutes min ago');
+  final hours = minutes ~/ 60;
+  if (hours < 24) return vm.pair('$hours 小時前', '$hours h ago');
+  final days = hours ~/ 24;
+  if (days < 7) return vm.pair('$days 天前', '$days d ago');
+  final weeks = days ~/ 7;
+  if (weeks < 9) return vm.pair('$weeks 週前', '$weeks wk ago');
+  return '${when.year}-${when.month.toString().padLeft(2, '0')}-'
+      '${when.day.toString().padLeft(2, '0')}';
 }

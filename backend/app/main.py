@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import actions, admin, assistant, experiences, me, moderation
+from app.api import actions, admin, assistant, comments, experiences, me, moderation
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.web import mount_web_app
@@ -29,6 +29,7 @@ api = APIRouter(prefix="/api")
 api.include_router(me.router)
 api.include_router(actions.router)
 api.include_router(experiences.router)
+api.include_router(comments.router)
 api.include_router(moderation.router)
 api.include_router(assistant.router)
 api.include_router(admin.router)

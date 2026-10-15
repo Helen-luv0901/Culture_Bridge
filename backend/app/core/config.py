@@ -17,6 +17,7 @@ class Settings:
     firebase_web: dict[str, str] | None
     web_dir: Path | None
     ai_summaries_per_day: int
+    ai_tag_suggestions_per_day: int
     embedding_model: str
     semantic_max_distance: float
     gemini_api_key: str | None
@@ -65,6 +66,8 @@ def get_settings() -> Settings:
         # Built Flutter web app (flutter build web); served at / when present.
         web_dir=Path(os.environ["WEB_DIR"]) if os.getenv("WEB_DIR") else None,
         ai_summaries_per_day=int(os.getenv("AI_SUMMARIES_PER_DAY", "20")),
+        # Past this, suggestions come from keyword rules instead of the model.
+        ai_tag_suggestions_per_day=int(os.getenv("AI_TAG_SUGGESTIONS_PER_DAY", "60")),
         embedding_model=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"),
         # Cosine distance cut-off; tune with `python -m app.rag.evaluate` on real embeddings.
         semantic_max_distance=float(os.getenv("SEMANTIC_MAX_DISTANCE", "0.6")),

@@ -37,8 +37,13 @@ class FakeCultureRepository implements CultureRepository {
             _ => 'verified',
           },
           lastVerifiedAt: DateTime.parse(c['verifiedAt'] as String),
+          publishedAt: DateTime.parse(c['verifiedAt'] as String),
           recentSuccessCount: c['recentCompletions'] as int,
         ),
+        documents: const [
+          Text2('護照正本', 'Passport'),
+          Text2('在學證明', 'Certificate of enrollment'),
+        ],
         steps: [
           for (final (i, title) in steps.indexed)
             ActionStepInfo(
@@ -87,11 +92,12 @@ class FakeCultureRepository implements CultureRepository {
           reminder: en['reminder'] as String,
           method: 'human',
         ),
-        publishedAt: DateTime(2026, 10, 1),
+        publishedAt: DateTime(2026, 10, 1 + _experiences.length),
         helpfulCount: e['helpfulCount'] as int,
         experiencedTooCount: 0,
         differentCount: 0,
         myReactions: const [],
+        tags: const ['#居留證'],
       );
     }
   }
@@ -246,16 +252,43 @@ class FakeCultureRepository implements CultureRepository {
 
   @override
   Future<ExperiencePage> explore({
-    String? topic,
+    String? category,
     String? query,
     String? locale,
+    String? actionId,
+    String sort = 'new',
     int offset = 0,
-  }) async => ExperiencePage([
-    for (final e in _experiences.values)
-      if ((topic == null || e.topicId == topic) &&
-          (query == null || query.isEmpty || e.originalVoice.contains(query)))
-        e,
-  ], null);
+  }) async {
+    final items = [
+      for (final e in _experiences.values)
+        if ((category == null || e.categoryKey == category) &&
+            (actionId == null || e.actionId == actionId) &&
+            (query == null || query.isEmpty || _matches(e, query)))
+          e,
+    ]..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+    if (sort == 'hot') {
+      int heat(ExperienceItem e) => e.experiencedTooCount + 2 * e.commentCount;
+      items.sort((a, b) => heat(b).compareTo(heat(a)));
+    }
+    return ExperiencePage(items, null);
+  }
+
+  bool _matches(ExperienceItem e, String query) =>
+      '${e.title} ${e.originalVoice} ${e.tags.join(' ')}'.contains(
+        query.trim(),
+      );
+
+  @override
+  Future<SearchResults> search(String query, {String? locale}) async =>
+      SearchResults([
+        for (final a in _actions.values)
+          if (a.summary.title.zh.contains(query.trim()) ||
+              a.summary.title.en.toLowerCase().contains(query.toLowerCase()))
+            a.summary,
+      ], (await explore(query: query)).items);
+
+  @override
+  Future<List<String>> popularTags() async => const ['#居留證', '#夜市'];
 
   @override
   Future<ExperienceDetail> experience(String id, {String? locale}) async =>
@@ -275,48 +308,51 @@ class FakeCultureRepository implements CultureRepository {
     final delta =
         (reactions.contains('helpful') ? 1 : 0) -
         (e.myReactions.contains('helpful') ? 1 : 0);
-    return _experiences[id] = ExperienceItem(
-      id: e.id,
-      topicId: e.topicId,
-      identityType: e.identityType,
-      sourceLocale: e.sourceLocale,
-      originalVoice: e.originalVoice,
-      situation: e.situation,
-      feelingOrAttempt: e.feelingOrAttempt,
-      reminder: e.reminder,
-      translation: e.translation,
-      publishedAt: e.publishedAt,
+    return _experiences[id] = _copy(
+      e,
       helpfulCount: e.helpfulCount + delta,
-      experiencedTooCount: e.experiencedTooCount,
-      differentCount: e.differentCount,
+      experiencedTooCount:
+          e.experiencedTooCount +
+          (reactions.contains('experienced_too') ? 1 : 0) -
+          (e.myReactions.contains('experienced_too') ? 1 : 0),
       myReactions: reactions.toList()..sort(),
-      saved: e.saved,
-      authorName: e.authorName,
     );
   }
 
+  ExperienceItem _copy(
+    ExperienceItem e, {
+    int? helpfulCount,
+    int? experiencedTooCount,
+    List<String>? myReactions,
+    String? authorName,
+  }) => ExperienceItem(
+    id: e.id,
+    topicId: e.topicId,
+    identityType: e.identityType,
+    sourceLocale: e.sourceLocale,
+    originalVoice: e.originalVoice,
+    situation: e.situation,
+    feelingOrAttempt: e.feelingOrAttempt,
+    reminder: e.reminder,
+    translation: e.translation,
+    publishedAt: e.publishedAt,
+    helpfulCount: helpfulCount ?? e.helpfulCount,
+    experiencedTooCount: experiencedTooCount ?? e.experiencedTooCount,
+    differentCount: e.differentCount,
+    myReactions: myReactions ?? e.myReactions,
+    saved: e.saved,
+    authorName: authorName ?? e.authorName,
+    title: e.title,
+    category: e.category,
+    tags: e.tags,
+    commentCount: e.commentCount,
+    mine: e.mine,
+    actionId: e.actionId,
+  );
+
   /// Make an experience show [name] as its author (what the API does for signed posts).
-  void signAs(String id, String name) {
-    final e = _experiences[id]!;
-    _experiences[id] = ExperienceItem(
-      id: e.id,
-      topicId: e.topicId,
-      identityType: e.identityType,
-      sourceLocale: e.sourceLocale,
-      originalVoice: e.originalVoice,
-      situation: e.situation,
-      feelingOrAttempt: e.feelingOrAttempt,
-      reminder: e.reminder,
-      translation: e.translation,
-      publishedAt: e.publishedAt,
-      helpfulCount: e.helpfulCount,
-      experiencedTooCount: e.experiencedTooCount,
-      differentCount: e.differentCount,
-      myReactions: e.myReactions,
-      saved: e.saved,
-      authorName: name,
-    );
-  }
+  void signAs(String id, String name) =>
+      _experiences[id] = _copy(_experiences[id]!, authorName: name);
 
   /// Newest first, like the API.
   final List<String> saved = [];
@@ -341,83 +377,167 @@ class FakeCultureRepository implements CultureRepository {
   Future<ExperienceDetail> requestTranslation(String id, String locale) =>
       experience(id);
 
-  MyExperience _mine(
-    String id,
-    String voice,
-    String status,
-    SummaryDraftInfo? summary,
-  ) => MyExperience(
-    id: id,
-    status: status,
-    topicId: 'culture_communication',
-    identityType: 'degree_student',
-    originalVoice: voice,
-    latestSummary: summary,
-    impact: const Impact(0, 0, 0, 0),
-  );
+  /// Keyword rules standing in for the AI that suggests tags.
+  static const _tagRules = {
+    '居留': '#居留證',
+    '預約': '#線上預約',
+    '夜市': '#夜市',
+    '公車': '#公車',
+    '租': '#租屋',
+  };
 
   @override
-  Future<MyExperience> createDraft({
-    required String topic,
-    required String identityType,
-    required String voice,
-    required String sourceLocale,
-    String? differentFromId,
+  Future<List<String>> suggestTags({
+    required String title,
+    required String text,
+    String? category,
   }) async {
     _requireLogin();
-    final id = 'draft-${_ids++}';
-    return mine[id] = _mine(id, voice, 'draft', null);
-  }
-
-  @override
-  Future<MyExperience> updateDraft(
-    String id, {
-    required String topic,
-    required String identityType,
-    required String voice,
-    required String sourceLocale,
-  }) async => mine[id] = _mine(id, voice, 'draft', null);
-
-  @override
-  Future<SummaryDraftInfo> summarize(String experienceId) async {
     if (aiDown) throw const ApiException(503, 'ai_unavailable');
-    return SummaryDraftInfo(
-      id: 'summary-${_ids++}',
-      situation: 'AI 整理的情境',
-      feelingOrAttempt: '',
-      reminder: 'AI 整理的提醒',
-      matchesCurrentVoice: true,
-      confirmedAt: null,
-    );
+    return [
+      for (final rule in _tagRules.entries)
+        if ('$title$text'.contains(rule.key)) rule.value,
+    ];
   }
 
-  Map<String, String?>? lastPublish;
+  Map<String, Object?>? lastPublish;
 
   @override
-  Future<MyExperience> publish(
-    String experienceId,
-    String summaryId, {
-    String? situation,
-    String? feelingOrAttempt,
-    String? reminder,
+  Future<ExperienceItem> publishPost({
+    required String title,
+    required String voice,
+    required String category,
+    required List<String> tags,
+    required String sourceLocale,
+    String authorDisplay = 'anonymous',
+    String? differentFromId,
+    String? actionId,
+  }) async {
+    _requireLogin();
+    lastPublish = {
+      'title': title,
+      'voice': voice,
+      'category': category,
+      'tags': tags,
+      'author_display': authorDisplay,
+      'different_from_id': differentFromId,
+      'action_id': actionId,
+    };
+    final id = 'post-${_ids++}';
+    final item = ExperienceItem(
+      id: id,
+      topicId: category == 'culture'
+          ? 'culture_communication'
+          : 'life_adaptation',
+      identityType: 'other',
+      sourceLocale: sourceLocale,
+      originalVoice: voice,
+      situation: '',
+      feelingOrAttempt: '',
+      reminder: '',
+      translation: null,
+      publishedAt: DateTime.now(),
+      helpfulCount: 0,
+      experiencedTooCount: 0,
+      differentCount: 0,
+      myReactions: const [],
+      authorName: switch (authorDisplay) {
+        'nickname' => nickname,
+        'real_name' => realName,
+        _ => null,
+      },
+      title: title,
+      category: category,
+      tags: tags,
+      mine: true,
+      actionId: actionId,
+    );
+    _experiences[id] = item;
+    mine[id] = MyExperience(
+      id: id,
+      status: 'published',
+      topicId: item.topicId,
+      identityType: 'other',
+      originalVoice: voice,
+      latestSummary: null,
+      impact: const Impact(0, 0, 0, 0),
+      title: title,
+      category: category,
+      tags: tags,
+      publishedAt: item.publishedAt,
+    );
+    return item;
+  }
+
+  final Map<String, List<CommentItem>> postComments = {};
+
+  @override
+  Future<List<CommentItem>> comments(String experienceId) async => [
+    ...?postComments[experienceId],
+  ];
+
+  @override
+  Future<CommentItem> addComment(
+    String experienceId, {
+    required String body,
+    String? replyToId,
     String authorDisplay = 'anonymous',
   }) async {
-    lastPublish = {
-      'situation': situation,
-      'reminder': reminder,
-      'author_display': authorDisplay,
-    };
-    final draft = mine[experienceId]!;
-    return mine[experienceId] = _mine(
-      experienceId,
-      draft.originalVoice,
-      'published',
-      null,
+    _requireLogin();
+    final comment = CommentItem(
+      id: 'c-${_ids++}',
+      body: body,
+      createdAt: DateTime.now(),
+      likeCount: 0,
+      replyToId: replyToId,
+      authorName: authorDisplay == 'nickname' ? nickname : null,
+      mine: true,
     );
+    postComments.putIfAbsent(experienceId, () => []).add(comment);
+    return comment;
   }
 
   @override
-  Future<void> deleteExperience(String id) async => mine.remove(id);
+  Future<CommentItem> likeComment(String commentId, bool on) async {
+    _requireLogin();
+    for (final list in postComments.values) {
+      final i = list.indexWhere((c) => c.id == commentId);
+      if (i < 0) continue;
+      final c = list[i];
+      return list[i] = CommentItem(
+        id: c.id,
+        body: c.body,
+        createdAt: c.createdAt,
+        likeCount: c.likeCount + (on ? 1 : -1),
+        replyToId: c.replyToId,
+        authorName: c.authorName,
+        liked: on,
+        byPostAuthor: c.byPostAuthor,
+        mine: c.mine,
+      );
+    }
+    throw const ApiException(404, 'comment_not_found');
+  }
+
+  @override
+  Future<void> deleteComment(String commentId) async {
+    for (final list in postComments.values) {
+      list.removeWhere((c) => c.id == commentId || c.replyToId == commentId);
+    }
+  }
+
+  @override
+  Future<void> reportComment(
+    String commentId,
+    String reason,
+    String? note,
+  ) async => reports.add('comment:$commentId:$reason');
+
+  @override
+  Future<void> deleteExperience(String id) async {
+    mine.remove(id);
+    _experiences.remove(id);
+  }
 
   @override
   Future<List<MyExperience>> myExperiences() async {

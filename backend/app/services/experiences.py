@@ -1,12 +1,17 @@
 """Student experiences (B-8..B-16).
 
-Flow: draft -> AI summary of the current words -> author confirms (optionally edits) -> published
--> translated in the background. Experiences never carry a verification status. Public payloads
-never expose the author's account; they show a name only when the author chose to sign with
-their nickname or real name, read live from the account.
+Posts (the redesign): the author writes a title and text, picks a category and tags, and the
+post is published exactly as written; the AI only suggests tags. Each post still gets a confirmed
+"verbatim" summary (empty parts) so the database's publication gate stays the same.
+
+Older flow (kept for existing drafts): draft -> AI summary -> author confirms -> published.
+Either way posts are translated in the background and never carry a verification status. Public
+payloads never expose the author's account; they show a name only when the author chose to sign
+with their nickname or real name, read live from the account.
 """
 
 import logging
+import re
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Literal
 
@@ -18,8 +23,11 @@ from app.ai.experience_ai import AIUnavailable, ExperienceAI, TranslatedExperien
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, conflict, not_found
 from app.models import (
+    Action,
     ActionExperienceLink,
+    CommentLike,
     Experience,
+    ExperienceComment,
     ExperienceLink,
     ExperienceReaction,
     ExperienceSummary,
@@ -35,11 +43,35 @@ logger = logging.getLogger(__name__)
 
 Locale = Literal["zh-Hant", "en"]
 TopicId = Literal["life_adaptation", "culture_communication"]
+Category = Literal["life", "food", "housing", "transit", "study", "culture"]
+Sort = Literal["new", "hot"]
 IdentityType = Literal["degree_student", "exchange_student", "language_student", "other"]
 ReactionKind = Literal["helpful", "experienced_too"]
 AuthorDisplay = Literal["anonymous", "nickname", "real_name"]
 _TAIPEI = timezone(timedelta(hours=8))
 MAX_VOICE = 2000
+MAX_TITLE = 80
+MAX_TAGS = 8
+MAX_TAG_LENGTH = 12
+VERBATIM = "author-verbatim"  # model_name of the summary a post publishes with
+
+
+def topic_for(category: str) -> str:
+    """The older two-topic field still exists (the assistant filters by it)."""
+    return "culture_communication" if category == "culture" else "life_adaptation"
+
+
+def clean_tags(tags: list[str]) -> list[str]:
+    """'#tag' strings: no spaces, at most 12 characters, no repeats, at most 8."""
+    out: list[str] = []
+    for raw in tags:
+        word = re.sub(r"\s+", "", raw.strip().lstrip("#"))
+        if not word or len(word) > MAX_TAG_LENGTH:
+            continue
+        tag = f"#{word}"
+        if tag not in out:
+            out.append(tag)
+    return out[:MAX_TAGS]
 
 
 def _clean_voice(value: str) -> str:
@@ -71,6 +103,35 @@ class DraftUpdate(BaseModel):
         return None if value is None else _clean_voice(value)
 
 
+class PostIn(BaseModel):
+    """A post published as written."""
+
+    title: str = Field(max_length=MAX_TITLE)
+    original_voice: str = Field(max_length=MAX_VOICE)
+    category: Category
+    tags: list[str] = Field(default_factory=list, max_length=20)
+    source_locale: Locale = "zh-Hant"
+    author_display: Literal["anonymous", "nickname", "real_name"] = "anonymous"
+    different_from_id: str | None = None
+    # Shown under this official guide as well.
+    action_id: str | None = None
+
+    _voice = field_validator("original_voice")(_clean_voice)
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("title must not be blank")
+        return value
+
+    @field_validator("tags")
+    @classmethod
+    def _tags(cls, value: list[str]) -> list[str]:
+        return clean_tags(value)
+
+
 class SummaryOut(BaseModel):
     id: str
     version_number: int
@@ -94,6 +155,7 @@ class PublishIn(BaseModel):
 
 class TranslationOut(BaseModel):
     locale: Locale
+    title: str | None = None
     original_voice: str
     situation: str
     feeling_or_attempt: str
@@ -119,6 +181,14 @@ class PublicExperience(BaseModel):
     saved: bool = False
     # The name the author chose to sign with; None means anonymous.
     author_name: str | None = None
+    title: str | None = None
+    category: Category = "life"
+    tags: list[str] = Field(default_factory=list)
+    comment_count: int = 0
+    # Written by the signed-in reader (they may delete it).
+    mine: bool = False
+    # The official guide this post was shared under.
+    action_id: str | None = None
 
 
 class ExperienceDetail(PublicExperience):
@@ -146,6 +216,10 @@ class MyExperience(BaseModel):
     latest_summary: SummaryOut | None
     impact: Impact
     author_display: AuthorDisplay = "anonymous"
+    title: str | None = None
+    category: Category = "life"
+    tags: list[str] = Field(default_factory=list)
+    comment_count: int = 0
 
 
 class ExperiencePage(BaseModel):
@@ -219,6 +293,27 @@ def _public_query(viewer: CurrentUser | None) -> Select:
     return query
 
 
+def _category(experience: Experience) -> str:
+    return experience.category or (
+        "culture" if experience.topic_id == "culture_communication" else "life"
+    )
+
+
+def _visible_comments(db: Session, ids: list[str]) -> dict[str, int]:
+    if not ids:
+        return {}
+    return dict(
+        db.execute(  # type: ignore[arg-type]
+            select(ExperienceComment.experience_id, func.count())
+            .where(
+                ExperienceComment.experience_id.in_(ids),
+                ExperienceComment.status == "visible",
+            )
+            .group_by(ExperienceComment.experience_id)
+        ).all()
+    )
+
+
 def _counts(db: Session, ids: list[str]) -> dict[str, dict[str, int]]:
     counts: dict[str, dict[str, int]] = {i: {} for i in ids}
     if not ids:
@@ -276,6 +371,15 @@ def _public_items(
                 names[experience.id] = author.nickname
             elif author is not None and experience.author_display == "real_name":
                 names[experience.id] = author.real_name
+    comments = _visible_comments(db, ids)
+    guides: dict[str, str] = {}
+    if ids:
+        for action_id, experience_id in db.execute(
+            select(ActionExperienceLink.action_id, ActionExperienceLink.experience_id).where(
+                ActionExperienceLink.experience_id.in_(ids)
+            )
+        ):
+            guides.setdefault(experience_id, action_id)
     translations: dict[str, ExperienceTranslation] = {}
     if ids:
         for t in db.scalars(
@@ -301,6 +405,7 @@ def _public_items(
                 reminder=summary.reminder,
                 translation=TranslationOut(
                     locale=t.locale,  # type: ignore[arg-type]
+                    title=t.title,
                     original_voice=t.original_voice,
                     situation=t.situation,
                     feeling_or_attempt=t.feeling_or_attempt,
@@ -316,18 +421,25 @@ def _public_items(
                 my_reactions=sorted(mine.get(experience.id, [])),  # type: ignore[arg-type]
                 saved=experience.id in saved,
                 author_name=names.get(experience.id),
+                title=experience.title,
+                category=_category(experience),  # type: ignore[arg-type]
+                tags=list(experience.tags or []),
+                comment_count=comments.get(experience.id, 0),
+                mine=viewer is not None and experience.author_id == viewer.id,
+                action_id=guides.get(experience.id),
             )
         )
     return items
 
 
 def _keyword_filter(query: Select, q: str) -> Select:
-    """Match every word of q in the original, summary or translation (B-16 keyword search)."""
+    """Match every word of q in the title, tags, original, summary or translation (B-16)."""
     for word in q.split()[:8]:
         pattern = f"%{word.replace('%', '').replace('_', '')}%"
         translated = exists().where(
             ExperienceTranslation.experience_id == Experience.id,
             or_(
+                ExperienceTranslation.title.ilike(pattern),
                 ExperienceTranslation.original_voice.ilike(pattern),
                 ExperienceTranslation.situation.ilike(pattern),
                 ExperienceTranslation.reminder.ilike(pattern),
@@ -335,6 +447,8 @@ def _keyword_filter(query: Select, q: str) -> Select:
         )
         query = query.where(
             or_(
+                Experience.title.ilike(pattern),
+                func.array_to_string(Experience.tags, " ").ilike(pattern),
                 Experience.original_voice.ilike(pattern),
                 ExperienceSummary.situation.ilike(pattern),
                 ExperienceSummary.feeling_or_attempt.ilike(pattern),
@@ -348,6 +462,29 @@ def _keyword_filter(query: Select, q: str) -> Select:
 # ---------- public reads ----------
 
 
+def _heat():
+    """ "Me too" taps plus twice the visible comments (a comment takes more effort)."""
+    same = (
+        select(func.count())
+        .where(
+            ExperienceReaction.experience_id == Experience.id,
+            ExperienceReaction.kind == "experienced_too",
+        )
+        .correlate(Experience)
+        .scalar_subquery()
+    )
+    comments = (
+        select(func.count())
+        .where(
+            ExperienceComment.experience_id == Experience.id,
+            ExperienceComment.status == "visible",
+        )
+        .correlate(Experience)
+        .scalar_subquery()
+    )
+    return same + 2 * comments
+
+
 def explore(
     db: Session,
     viewer: CurrentUser | None,
@@ -357,19 +494,40 @@ def explore(
     locale: Locale | None,
     limit: int,
     offset: int,
+    category: str | None = None,
+    action_id: str | None = None,
+    sort: Sort = "new",
 ) -> ExperiencePage:
     query = _public_query(viewer)
     if topic_id:
         query = query.where(Experience.topic_id == topic_id)
+    if category in ("life", "culture"):
+        # Posts from before categories only have a topic: life or culture.
+        query = query.where(
+            or_(
+                Experience.category == category,
+                Experience.category.is_(None) & (Experience.topic_id == topic_for(category)),
+            )
+        )
+    elif category:
+        query = query.where(Experience.category == category)
     if identity_type:
         query = query.where(Experience.identity_type == identity_type)
+    if action_id:
+        query = query.where(
+            exists().where(
+                ActionExperienceLink.experience_id == Experience.id,
+                ActionExperienceLink.action_id == action_id,
+            )
+        )
     if q and q.strip():
         query = _keyword_filter(query, q.strip())
-    rows = db.execute(
-        query.order_by(Experience.published_at.desc(), Experience.id)
-        .limit(limit + 1)
-        .offset(offset)
-    ).all()
+    order = (
+        (_heat().desc(), Experience.published_at.desc(), Experience.id)
+        if sort == "hot"
+        else (Experience.published_at.desc(), Experience.id)
+    )
+    rows = db.execute(query.order_by(*order).limit(limit + 1).offset(offset)).all()
     has_more = len(rows) > limit
     return ExperiencePage(
         items=_public_items(db, rows[:limit], viewer, locale),
@@ -465,6 +623,8 @@ def _summaries_today(db: Session, user: CurrentUser) -> int:
                 ExperienceSummary.created_at >= local_midnight.astimezone(UTC),
                 # Author edits are not AI calls.
                 ExperienceSummary.model_name.not_like("%+author-edit"),
+                # Posts published as written are not AI calls either.
+                ExperienceSummary.model_name != VERBATIM,
             )
         )
         or 0
@@ -539,6 +699,98 @@ def publish(db: Session, user: CurrentUser, experience_id: str, body: PublishIn)
     return my_experience(db, experience)
 
 
+MAX_POSTS_PER_DAY = 20
+
+
+def _posts_today(db: Session, user: CurrentUser) -> int:
+    local_midnight = datetime.combine(
+        now().astimezone(_TAIPEI).date(), datetime.min.time(), _TAIPEI
+    )
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(Experience)
+            .where(
+                Experience.author_id == user.id,
+                Experience.created_at >= local_midnight.astimezone(UTC),
+            )
+        )
+        or 0
+    )
+
+
+def create_post(db: Session, user: CurrentUser, body: PostIn) -> PublicExperience:
+    """Publish a post exactly as written; the author confirms their own words."""
+    # Each post is translated and indexed by the AI in the background, so cap them.
+    if _posts_today(db, user) >= MAX_POSTS_PER_DAY:
+        raise ApiError(429, "daily_limit_reached")
+    if body.different_from_id:
+        _require_public(db, body.different_from_id)
+    if body.action_id:
+        action = db.get(Action, body.action_id)
+        if action is None or action.archived_at is not None:
+            raise not_found("action_not_found")
+    if body.author_display != "anonymous":
+        account = db.get(User, user.id)
+        if account is None or not getattr(account, body.author_display):
+            raise ApiError(422, f"{body.author_display}_missing")
+    experience = Experience(
+        author_id=user.id,
+        topic_id=topic_for(body.category),
+        identity_type="other",
+        original_voice=body.original_voice,
+        source_locale=body.source_locale,
+        title=body.title,
+        category=body.category,
+        tags=body.tags,
+        author_display=body.author_display,
+    )
+    db.add(experience)
+    db.flush()
+    summary = ExperienceSummary(
+        experience_id=experience.id,
+        version_number=1,
+        source_voice=experience.original_voice,
+        situation="",
+        feeling_or_attempt="",
+        reminder="",
+        model_name=VERBATIM,
+        confirmed_by=user.id,
+        confirmed_at=now(),
+    )
+    db.add(summary)
+    db.flush()
+    experience.status = "published"
+    experience.confirmed_summary_id = summary.id
+    experience.published_at = now()
+    if body.different_from_id:
+        db.add(
+            ExperienceLink(
+                from_experience_id=body.different_from_id,
+                to_experience_id=experience.id,
+                kind="different",
+            )
+        )
+    if body.action_id:
+        db.add(ActionExperienceLink(action_id=body.action_id, experience_id=experience.id))
+    db.commit()
+    return get_public(db, user, experience.id, None)
+
+
+def popular_tags(db: Session, limit: int) -> list[str]:
+    """The most used tags on public posts."""
+    tag = func.unnest(Experience.tags).label("tag")
+    used = select(tag).where(Experience.status == "published").subquery()
+    return list(
+        db.scalars(
+            select(used.c.tag)
+            .group_by(used.c.tag)
+            .order_by(func.count().desc(), used.c.tag)
+            .limit(limit)
+        )
+    )
+
+
 def delete_experience(db: Session, user: CurrentUser, experience_id: str) -> None:
     experience = _own(db, user, experience_id)
     delete_experiences(db, [experience.id])
@@ -549,6 +801,15 @@ def delete_experiences(db: Session, ids: list[str]) -> None:
     """Remove experiences and everything hanging off them (also used by account deletion)."""
     if not ids:
         return
+    comment_ids = select(ExperienceComment.id).where(ExperienceComment.experience_id.in_(ids))
+    db.execute(delete(CommentLike).where(CommentLike.comment_id.in_(comment_ids)))
+    # Replies first: they point at the top-level comments.
+    db.execute(
+        delete(ExperienceComment).where(
+            ExperienceComment.experience_id.in_(ids), ExperienceComment.reply_to_id.is_not(None)
+        )
+    )
+    db.execute(delete(ExperienceComment).where(ExperienceComment.experience_id.in_(ids)))
     db.execute(delete(ExperienceReaction).where(ExperienceReaction.experience_id.in_(ids)))
     db.execute(delete(SavedExperience).where(SavedExperience.experience_id.in_(ids)))
     db.execute(
@@ -586,6 +847,10 @@ def my_experience(db: Session, experience: Experience) -> MyExperience:
         published_at=experience.published_at,
         latest_summary=_summary_out(summary, experience.original_voice) if summary else None,
         author_display=experience.author_display,  # type: ignore[arg-type]
+        title=experience.title,
+        category=_category(experience),  # type: ignore[arg-type]
+        tags=list(experience.tags or []),
+        comment_count=_visible_comments(db, [experience.id]).get(experience.id, 0),
         impact=Impact(
             helpful_count=c.get("helpful", 0),
             experienced_too_count=c.get("experienced_too", 0),
@@ -689,6 +954,7 @@ def translate(db: Session, ai: ExperienceAI, experience_id: str, target: Locale)
             situation=summary.situation,
             feeling_or_attempt=summary.feeling_or_attempt,
             reminder=summary.reminder,
+            title=experience.title or "",
         ),
         experience.source_locale,  # type: ignore[arg-type]
         target,
@@ -699,7 +965,11 @@ def translate(db: Session, ai: ExperienceAI, experience_id: str, target: Locale)
             summary_id=summary.id,
             locale=target,
             method="ai",
-            **translated.__dict__,
+            original_voice=translated.original_voice,
+            situation=translated.situation,
+            feeling_or_attempt=translated.feeling_or_attempt,
+            reminder=translated.reminder,
+            title=translated.title or None,
         )
     )
     db.commit()

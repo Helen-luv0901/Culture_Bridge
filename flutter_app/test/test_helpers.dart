@@ -23,6 +23,20 @@ class MemoryPreferences implements PreferencesRepository {
   Future<void> saveDraft(ShareDraft value) async {
     draft = value;
   }
+
+  @override
+  Set<String> readIds = {};
+  @override
+  Future<void> saveReadIds(Set<String> ids) async {
+    readIds = {...ids};
+  }
+
+  @override
+  Set<String> savedGuides = {};
+  @override
+  Future<void> saveSavedGuides(Set<String> ids) async {
+    savedGuides = {...ids};
+  }
 }
 
 MessageCatalog loadMessages() => MessageCatalog(

@@ -10,7 +10,7 @@ router = APIRouter(tags=["moderation"])
 
 @router.post("/reports", status_code=status.HTTP_201_CREATED)
 def report(body: svc.ReportIn, user: RequiredUser, db: DbSession) -> svc.ReportAck:
-    return svc.report_experience(db, user, body)
+    return svc.report_content(db, user, body)
 
 
 class BlockIn(BaseModel):

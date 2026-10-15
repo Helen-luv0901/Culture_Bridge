@@ -111,7 +111,7 @@ def _upsert(
 
 def experience_text(db: Session, experience: Experience) -> str:
     summary = db.get(ExperienceSummary, experience.confirmed_summary_id)
-    parts = [experience.original_voice]
+    parts = [experience.title or "", " ".join(experience.tags or []), experience.original_voice]
     if summary:
         parts += [summary.situation, summary.feeling_or_attempt, summary.reminder]
     for t in db.scalars(
@@ -120,7 +120,7 @@ def experience_text(db: Session, experience: Experience) -> str:
             ExperienceTranslation.summary_id == experience.confirmed_summary_id,
         )
     ):
-        parts += [t.original_voice, t.situation, t.reminder]
+        parts += [t.title or "", t.original_voice, t.situation, t.reminder]
     return "\n".join(p for p in parts if p)
 
 

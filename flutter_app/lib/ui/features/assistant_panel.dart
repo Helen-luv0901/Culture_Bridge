@@ -1,87 +1,166 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/link.dart';
 
 import '../../domain/api_models.dart';
 import '../../domain/keys.dart';
 import '../core/design_system.dart';
+import '../core/layout.dart';
 import '../view_models/bridge_view_model.dart';
-import 'browse_pages.dart';
+import 'post_cards.dart';
 
-/// The floating assistant (C-11): a bottom sheet on phones, a side panel on wide screens.
-/// It scrolls and closes independently of the page underneath.
-class AssistantButton extends StatelessWidget {
-  const AssistantButton({super.key, required this.uri, required this.mobile});
-  final Uri uri;
-  final bool mobile;
-
+/// The round chat bubble at the bottom right; it opens and closes the assistant.
+class AssistantBubble extends StatelessWidget {
+  const AssistantBubble({super.key});
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    return FloatingActionButton.extended(
-      key: const Key('assistant-button'),
-      backgroundColor: Palette.moss,
-      foregroundColor: Palette.high,
-      icon: const Icon(Icons.chat_bubble_outline),
-      label: Text(vm.pair('問助理', 'Ask')),
-      tooltip: vm.pair('AI 助理', 'AI assistant'),
-      onPressed: () {
-        if (mobile) {
-          final router = GoRouter.of(context);
-          showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            backgroundColor: Palette.high,
-            builder: (sheet) => BridgeScope(
-              viewModel: vm,
-              child: FractionallySizedBox(
-                heightFactor: 0.85,
-                child: AssistantPanel(
-                  uri: uri,
-                  onNavigate: (path) {
-                    Navigator.pop(sheet);
-                    router.push(path);
-                  },
-                  onClose: () => Navigator.pop(sheet),
-                ),
+    return Semantics(
+      button: true,
+      expanded: vm.assistantOpen,
+      label: vm.pair('AI 助理', 'AI assistant'),
+      excludeSemantics: true,
+      child: Tooltip(
+        message: vm.pair('AI 助理', 'AI assistant'),
+        child: Material(
+          key: const Key('assistant-button'),
+          color: Palette.moss,
+          shape: const CircleBorder(),
+          elevation: 6,
+          shadowColor: Palette.ink.withValues(alpha: .5),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: vm.assistantOpen ? vm.closeAssistant : vm.openAssistant,
+            child: const SizedBox(
+              width: 56,
+              height: 56,
+              child: Center(
+                child: AppIcon('chat', size: 26, color: Palette.onMoss),
               ),
             ),
-          );
-        } else {
-          Scaffold.of(context).openEndDrawer();
-        }
-      },
+          ),
+        ),
+      ),
     );
   }
 }
 
-class AssistantDrawer extends StatelessWidget {
-  const AssistantDrawer({super.key, required this.uri});
+/// The open assistant: a near-full-height panel on phones, a floating window elsewhere.
+class AssistantOverlay extends StatelessWidget {
+  const AssistantOverlay({
+    super.key,
+    required this.uri,
+    required this.onNavigate,
+  });
   final Uri uri;
+  final void Function(String path) onNavigate;
+
+  static const windowSize = Size(380, 540);
+
   @override
-  Widget build(BuildContext context) => Drawer(
-    width: 440,
-    backgroundColor: Palette.high,
-    child: SafeArea(
-      child: AssistantPanel(
-        uri: uri,
-        onNavigate: (path) => context.push(path),
-        onClose: () => Navigator.of(context).maybePop(),
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final phone = AppLayout.of(context) == AppLayout.phone;
+    final panel = CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): vm.closeAssistant,
+      },
+      child: FocusScope(
+        autofocus: true,
+        child: AssistantPanel(
+          uri: uri,
+          onNavigate: (path) {
+            if (phone) vm.closeAssistant();
+            onNavigate(path);
+          },
+        ),
       ),
-    ),
-  );
+    );
+    if (!phone) {
+      final size = MediaQuery.sizeOf(context);
+      return Positioned(
+        right: 28,
+        bottom: 96,
+        width: windowSize.width,
+        height: (size.height - 96 - 80).clamp(320, windowSize.height),
+        child: Semantics(
+          scopesRoute: true,
+          explicitChildNodes: true,
+          label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Palette.high,
+              border: Border.all(color: Palette.edge),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: Palette.ink.withValues(alpha: .12),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+                BoxShadow(
+                  color: Palette.ink.withValues(alpha: .3),
+                  blurRadius: 36,
+                  spreadRadius: -16,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+            child: Material(type: MaterialType.transparency, child: panel),
+          ),
+        ),
+      );
+    }
+    final top = MediaQuery.paddingOf(context).top + 72;
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: vm.closeAssistant,
+              child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: top,
+            bottom: 0,
+            child: Semantics(
+              scopesRoute: true,
+              namesRoute: true,
+              explicitChildNodes: true,
+              label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
+              child: Material(
+                color: Palette.high,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+                  side: BorderSide(color: Palette.oat),
+                ),
+                child: SafeArea(top: false, child: panel),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+const _suggested = [
+  ('居留證要準備什麼？', 'What do I need for an ARC?'),
+  ('怎麼加入健保？', 'How do I join NHI?'),
+  ('租屋要注意什麼？', 'What should I check when renting?'),
+];
 
 class AssistantPanel extends StatefulWidget {
   const AssistantPanel({
     super.key,
     required this.uri,
     required this.onNavigate,
-    required this.onClose,
   });
   final Uri uri;
   final void Function(String path) onNavigate;
-  final VoidCallback onClose;
 
   @override
   State<AssistantPanel> createState() => _AssistantPanelState();
@@ -90,6 +169,7 @@ class AssistantPanel extends StatefulWidget {
 class _AssistantPanelState extends State<AssistantPanel> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  int _seen = 0;
 
   @override
   void dispose() {
@@ -109,125 +189,238 @@ class _AssistantPanelState extends State<AssistantPanel> {
     };
   }
 
-  Future<void> _send() async {
+  Future<void> _ask(String text) async {
     final vm = BridgeScope.of(context);
-    final text = _input.text;
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty || vm.asking) return;
     _input.clear();
     await vm.ask(text, screen: _screen());
-    if (_scroll.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) {
-          _scroll.animateTo(
-            _scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
   }
+
+  void _scrollToEnd() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scroll.hasClients) {
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+  });
 
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 8, 4),
-          child: Row(
+    final count = vm.chat.length + (vm.asking ? 1 : 0);
+    if (count != _seen) {
+      _seen = count;
+      _scrollToEnd();
+    }
+    // With large text the emergency line scrolls with the chat, so the input stays visible.
+    final urgentInLog = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
             children: [
+              const Avatar(),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  vm.pair('AI 助理', 'AI assistant'),
-                  style: displayStyle(22),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
+                    style: displayStyle(16),
+                  ),
                 ),
               ),
-              // Icons, not text buttons: with large text a labelled button squeezed the title
-              // into a tall column and pushed the input off a phone screen.
               if (vm.chat.isNotEmpty)
                 IconButton(
                   key: const Key('assistant-clear'),
                   tooltip: vm.pair('清除對話', 'Clear conversation'),
                   onPressed: vm.clearChat,
-                  icon: const Icon(Icons.delete_sweep_outlined),
+                  icon: const Icon(
+                    Icons.delete_sweep_outlined,
+                    color: Palette.muted,
+                  ),
                 ),
               IconButton(
+                key: const Key('assistant-close'),
                 tooltip: vm.pair('關閉', 'Close'),
-                onPressed: widget.onClose,
-                icon: const Icon(Icons.close),
+                onPressed: vm.closeAssistant,
+                icon: const AppIcon('close', size: 20),
               ),
             ],
           ),
-        ),
-        const Divider(color: Palette.edge, height: 1),
-        Expanded(
-          child: ListView(
-            controller: _scroll,
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (vm.chat.isEmpty)
-                Text(
-                  vm.pair(
-                    '可以問我辦理流程、學生經驗或 App 的使用方式。我會附上依據與驗證狀態；不確定的事會直接說。',
-                    'Ask about procedures, student experiences or how to use the app. I cite my sources and verification status, and say so when I don\'t know.',
-                  ),
-                  style: const TextStyle(color: Palette.muted),
+          const SizedBox(height: 6),
+          Expanded(
+            child: Semantics(
+              liveRegion: true,
+              // Built in full (chats are short) so scrolling to the end is exact.
+              child: SingleChildScrollView(
+                controller: _scroll,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Bubble(
+                      text: vm.pair(
+                        '嗨！我是 Culture Bridge 助理，在台灣生活遇到問題都可以問我。',
+                        "Hi! I'm the Culture Bridge assistant. Ask me anything about life in Taiwan.",
+                      ),
+                    ),
+                    if (vm.chat.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Wrap(
+                          direction: Axis.vertical,
+                          spacing: 8,
+                          children: [
+                            for (final q in _suggested)
+                              NoteChip(
+                                label: vm.pair(q.$1, q.$2),
+                                selected: false,
+                                onTap: () => _ask(vm.pair(q.$1, q.$2)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    for (final entry in vm.chat)
+                      _Entry(entry: entry, onNavigate: widget.onNavigate),
+                    if (vm.asking)
+                      _Bubble(text: vm.pair('想一下…', 'Thinking…'), muted: true),
+                    if (urgentInLog)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: _UrgentLine(),
+                      ),
+                  ],
                 ),
-              for (final entry in vm.chat)
-                _Entry(entry: entry, onNavigate: widget.onNavigate),
-              if (vm.asking)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: LinearProgressIndicator(
-                    color: Palette.moss,
-                    backgroundColor: Palette.edge,
-                  ),
-                ),
-            ],
+              ),
+            ),
           ),
-        ),
-        const Divider(color: Palette.edge, height: 1),
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            8,
-            8,
-            8 + MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Row(
+          const DashedRule(color: Palette.edge),
+          const SizedBox(height: 6),
+          if (!urgentInLog) ...[const _UrgentLine(), const SizedBox(height: 4)],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: TextField(
                   key: const Key('assistant-input'),
                   controller: _input,
                   minLines: 1,
-                  maxLines: 4,
+                  maxLines: 3,
                   maxLength: 1000,
                   textInputAction: TextInputAction.send,
                   decoration: InputDecoration(
-                    hintText: vm.pair(
-                      '例如：工作證要準備什麼？',
-                      'e.g. What do I need for a work permit?',
-                    ),
-                    hintMaxLines: 2,
+                    hintText: vm.pair('輸入你的問題…', 'Type your question…'),
                     counterText: '',
                   ),
-                  onSubmitted: (_) => _send(),
+                  onSubmitted: _ask,
                 ),
               ),
-              IconButton(
+              const SizedBox(width: 8),
+              FilledButton(
                 key: const Key('assistant-send'),
-                tooltip: vm.t('send'),
-                onPressed: vm.asking ? null : _send,
-                icon: const Icon(Icons.send),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                onPressed: vm.asking ? null : () => _ask(_input.text),
+                child: Text(vm.pair('送出', 'Send')),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Emergency or a real person: the 1990 hotline and the university's international office.
+class _UrgentLine extends StatelessWidget {
+  const _UrgentLine();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          vm.pair('緊急或需要真人：', 'Urgent, or need a person: '),
+          style: mutedStyle.copyWith(fontSize: 12),
+        ),
+        Link(
+          uri: Uri.parse('tel:1990'),
+          builder: (context, follow) => InkWell(
+            onTap: follow,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                vm.pair('1990 外國人生活諮詢熱線', '1990 foreigner hotline'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Palette.brickDeep,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Palette.brick,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Text(
+          vm.pair(
+            '（免付費，24 小時）· 逢甲大學國際事務處（行政二館 303 室）',
+            ' (free, 24 h) · FCU Office of International Affairs (Admin Bldg II, Rm 303)',
+          ),
+          style: mutedStyle.copyWith(fontSize: 12),
         ),
       ],
     );
   }
+}
+
+class _Bubble extends StatelessWidget {
+  const _Bubble({required this.text, this.mine = false, this.muted = false});
+  final String text;
+  final bool mine;
+  final bool muted;
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+    child: FractionallySizedBox(
+      widthFactor: .86,
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Align(
+        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: mine ? Palette.moss : Palette.bubble,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(12),
+              topRight: const Radius.circular(12),
+              bottomLeft: Radius.circular(mine ? 12 : 4),
+              bottomRight: Radius.circular(mine ? 4 : 12),
+            ),
+          ),
+          child: SelectableText(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.6,
+              color: mine
+                  ? Palette.onMoss
+                  : muted
+                  ? Palette.muted
+                  : Palette.ink,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _Entry extends StatelessWidget {
@@ -239,51 +432,55 @@ class _Entry extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final reply = entry.reply;
-    return Align(
-      alignment: entry.fromUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.all(12),
-        color: entry.fromUser
-            ? Palette.paleMoss
-            : entry.failed
-            ? Palette.ochre
-            : Palette.oat,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SelectableText(entry.text),
-            if (reply != null) ...[
-              for (final card in reply.cards)
-                _AnswerCard(card: card, onNavigate: onNavigate),
-              for (final action in reply.screenActions)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.arrow_forward, size: 16),
-                    label: Text(_actionLabel(vm, action)),
-                    onPressed: () {
-                      final path = screenActionPath(action);
-                      if (path != null) onNavigate(path);
-                    },
-                  ),
+    final links = <(String, String)>[
+      if (reply != null) ...[
+        for (final card in reply.cards)
+          card.type == 'action'
+              ? (
+                  card.title ?? vm.pair('官方指南', 'Official guide'),
+                  '/actions/${card.id}',
+                )
+              : (
+                  vm.pair('看這篇學生分享', 'Read this student post'),
+                  '/experiences/${card.id}',
                 ),
-              for (final operation in reply.pendingOperations)
-                _OperationCard(operation: operation, onNavigate: onNavigate),
-            ],
-          ],
-        ),
-      ),
+        for (final action in reply.screenActions)
+          if (screenActionPath(action) case final path?)
+            (_actionLabel(vm, action), path),
+      ],
+    ];
+    return Column(
+      crossAxisAlignment: entry.fromUser
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        _Bubble(text: entry.text, mine: entry.fromUser, muted: entry.failed),
+        for (final (label, path) in links)
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                decoration: TextDecoration.underline,
+                decorationColor: Palette.brick,
+              ),
+            ),
+            onPressed: () => onNavigate(path),
+            child: Text('$label →'),
+          ),
+        if (reply != null)
+          for (final operation in reply.pendingOperations)
+            _OperationCard(operation: operation, onNavigate: onNavigate),
+      ],
     );
   }
 
   String _actionLabel(BridgeViewModel vm, ScreenAction action) =>
       switch (action.type) {
-        'open_action' => vm.pair('打開流程', 'Open procedure'),
+        'open_action' => vm.pair('打開官方指南', 'Open the guide'),
         'open_progress' => vm.pair('打開辦理進度', 'Open progress'),
-        'open_experience' => vm.pair('打開這則經驗', 'Open experience'),
-        'open_explore' => vm.pair('去探索', 'Go to Explore'),
+        'open_experience' => vm.pair('看這篇學生分享', 'Read this student post'),
+        'open_explore' => vm.pair('去探索看看', 'Go to Explore'),
         'open_share' => vm.pair('去分享', 'Go to Share'),
         _ => action.type,
       };
@@ -298,90 +495,16 @@ String? screenActionPath(ScreenAction action) {
     'open_action' when id != null => '/actions/$id',
     'open_progress' when id != null => '/actions/$id/progress',
     'open_experience' when id != null => '/experiences/$id',
-    'open_explore' =>
-      action.topic != null && topicKeys.containsKey(action.topic)
-          ? '/explore?topic=${topicKeys[action.topic]}'
-          : '/explore',
+    'open_explore' => switch (action.topic) {
+      'life_adaptation' => '/explore?cat=life',
+      'culture_communication' => '/explore?cat=culture',
+      final String key when categoryLabels.containsKey(key) =>
+        '/explore?cat=$key',
+      _ => '/explore',
+    },
     'open_share' => '/share',
     _ => null,
   };
-}
-
-/// Procedure or experience the answer relied on (C-12).
-class _AnswerCard extends StatelessWidget {
-  const _AnswerCard({required this.card, required this.onNavigate});
-  final AssistantCard card;
-  final void Function(String path) onNavigate;
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    if (card.type == 'experience') {
-      return Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: PaperCard(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PaperTag(
-                vm.pair('學生經驗（非官方）', 'Student experience (not official)'),
-              ),
-              const SizedBox(height: 8),
-              Text(card.reminder ?? ''),
-              TextButton(
-                onPressed: () => onNavigate('/experiences/${card.id}'),
-                child: Text(vm.t('similarSituations')),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: PaperCard(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${vm.pair('依據', 'Based on')}: ${card.title}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            StatusTag(card.verificationStatus ?? 'unverified'),
-            const SizedBox(height: 6),
-            Text(
-              card.lastVerifiedAt != null
-                  ? '${vm.t('lastOfficialUpdate')}: ${card.lastVerifiedAt}'
-                  : vm.t('notYetVerified'),
-              style: const TextStyle(fontSize: 13),
-            ),
-            Text(
-              card.recentSuccessCount > 0
-                  ? '${card.recentSuccessCount} ${vm.t('recentlyCompleted')}'
-                  : vm.t('noRecentCompletions'),
-              style: const TextStyle(fontSize: 13),
-            ),
-            Wrap(
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: () => onNavigate('/actions/${card.id}'),
-                  child: Text(vm.t('startAction')),
-                ),
-                TextButton(
-                  onPressed: () => onNavigate('/actions/${card.id}'),
-                  child: Text(vm.pair('看來源', 'View sources')),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// A write the assistant prepared; nothing happens until the user confirms (A-17, C-13).
@@ -397,8 +520,8 @@ class _OperationCard extends StatelessWidget {
     final expired =
         status == 'pending' && DateTime.now().isAfter(operation.expiresAt);
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: PaperCard(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: NoteCard(
         color: Palette.paleMoss,
         padding: const EdgeInsets.all(12),
         child: Column(

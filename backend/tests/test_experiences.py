@@ -33,6 +33,11 @@ class FakeAI:
             model_name="fake-model",
         )
 
+    def suggest_tags(self, title, text, locale):
+        if self.fail:
+            raise AIUnavailable("down")
+        return ["#測試"]
+
     def translate(self, fields, source, target):
         if self.fail:
             raise AIUnavailable("down")

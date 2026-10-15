@@ -26,3 +26,15 @@ String apiTopic(String key) =>
     topicKeys.entries.firstWhere((e) => e.value == key).key;
 String apiIdentity(String key) =>
     identityKeys.entries.firstWhere((e) => e.value == key).key;
+
+/// Explore and share categories in both languages (zh, en).
+const categoryLabels = {
+  'all': ('全部', 'All'),
+  'official': ('官方', 'Official'),
+  'life': ('生活', 'Life'),
+  'food': ('美食', 'Food'),
+  'housing': ('住宿', 'Housing'),
+  'transit': ('交通', 'Transport'),
+  'study': ('學業', 'Study'),
+  'culture': ('文化', 'Culture'),
+};

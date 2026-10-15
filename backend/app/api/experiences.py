@@ -13,6 +13,7 @@ from app.rag.index import sync_in_background
 from app.services import actions as action_svc
 from app.services import experiences as svc
 from app.services import metrics
+from app.services import tags as tag_svc
 
 router = APIRouter(tags=["experiences"])
 AI = Annotated[ExperienceAI, Depends(get_experience_ai)]
@@ -23,13 +24,56 @@ def explore(
     db: DbSession,
     viewer: OptionalUser,
     topic: svc.TopicId | None = None,
+    category: svc.Category | None = None,
     identity_type: svc.IdentityType | None = None,
+    action_id: str | None = Query(default=None, max_length=64),
     q: str | None = Query(default=None, max_length=200),
     locale: svc.Locale | None = None,
+    sort: svc.Sort = "new",
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0),
 ) -> svc.ExperiencePage:
-    return svc.explore(db, viewer, topic, identity_type, q, locale, limit, offset)
+    return svc.explore(
+        db,
+        viewer,
+        topic,
+        identity_type,
+        q,
+        locale,
+        limit,
+        offset,
+        category=category,
+        action_id=action_id,
+        sort=sort,
+    )
+
+
+@router.post("/posts", status_code=status.HTTP_201_CREATED)
+def create_post(
+    body: svc.PostIn,
+    user: RequiredUser,
+    db: DbSession,
+    ai: AI,
+    background: BackgroundTasks,
+) -> svc.PublicExperience:
+    """Publish a post exactly as written (title, text, category and chosen tags)."""
+    post = svc.create_post(db, user, body)
+    background.add_task(svc.translate_in_background, get_sessionmaker(), ai, post.id)
+    background.add_task(
+        sync_in_background, get_sessionmaker(), get_embedder(), "experience", post.id
+    )
+    return post
+
+
+@router.post("/experiences/tag-suggestions")
+def suggest_tags(body: tag_svc.TagRequest, user: RequiredUser, ai: AI) -> tag_svc.TagSuggestions:
+    """Tags for a post being written; the AI never changes the post itself."""
+    return tag_svc.suggest(user, body, ai, get_settings().ai_tag_suggestions_per_day)
+
+
+@router.get("/tags/popular")
+def popular_tags(db: DbSession, limit: int = Query(default=8, ge=1, le=20)) -> list[str]:
+    return svc.popular_tags(db, limit)
 
 
 @router.get("/experiences/{experience_id}")

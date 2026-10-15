@@ -58,9 +58,12 @@ class ActionSummary {
     required this.verificationStatus,
     required this.lastVerifiedAt,
     required this.recentSuccessCount,
+    this.slug = '',
+    this.publishedAt,
   });
   factory ActionSummary.fromJson(Json json) => ActionSummary(
     id: json['id'] as String,
+    slug: json['slug'] as String? ?? '',
     versionNumber: json['version_number'] as int,
     title: Text2.fromJson(json['title'] as Json),
     description: Text2.fromJson(json['description'] as Json),
@@ -70,9 +73,11 @@ class ActionSummary {
         : Text2.fromJson(json['location'] as Json),
     verificationStatus: json['verification_status'] as String,
     lastVerifiedAt: _date(json['last_verified_at']),
+    publishedAt: _date(json['published_at']),
     recentSuccessCount: json['recent_success_count'] as int,
   );
   final String id;
+  final String slug;
   final int versionNumber;
   final Text2 title;
   final Text2 description;
@@ -80,6 +85,9 @@ class ActionSummary {
   final Text2? location;
   final String verificationStatus;
   final DateTime? lastVerifiedAt;
+
+  /// When this version went public; the feed sorts official guides by it.
+  final DateTime? publishedAt;
   final int recentSuccessCount;
 }
 
@@ -132,15 +140,20 @@ class ActionDetail {
     required this.summary,
     required this.steps,
     required this.sources,
+    this.documents = const [],
   });
   factory ActionDetail.fromJson(Json json) => ActionDetail(
     summary: ActionSummary.fromJson(json),
     steps: _list(json['steps'], ActionStepInfo.fromJson),
     sources: _list(json['sources'], SourceInfo.fromJson),
+    documents: _list(json['documents'], Text2.fromJson),
   );
   final ActionSummary summary;
   final List<ActionStepInfo> steps;
   final List<SourceInfo> sources;
+
+  /// What to bring, shown as a checklist the student ticks before going.
+  final List<Text2> documents;
 }
 
 class ExecutionStepState {
@@ -200,6 +213,20 @@ class Execution {
 
 // ---------- experiences ----------
 
+/// The six categories students post into. Explore adds "all" and "official" in front.
+const postCategories = [
+  'life',
+  'food',
+  'housing',
+  'transit',
+  'study',
+  'culture',
+];
+
+/// Older posts only have one of the two original topics.
+String categoryFor(String? category, String topicId) =>
+    category ?? (topicId == 'culture_communication' ? 'culture' : 'life');
+
 class ExperienceTranslation {
   const ExperienceTranslation({
     required this.locale,
@@ -208,9 +235,11 @@ class ExperienceTranslation {
     required this.feelingOrAttempt,
     required this.reminder,
     required this.method,
+    this.title,
   });
   factory ExperienceTranslation.fromJson(Json json) => ExperienceTranslation(
     locale: json['locale'] as String,
+    title: json['title'] as String?,
     originalVoice: json['original_voice'] as String,
     situation: json['situation'] as String,
     feelingOrAttempt: json['feeling_or_attempt'] as String,
@@ -218,6 +247,7 @@ class ExperienceTranslation {
     method: json['method'] as String,
   );
   final String locale;
+  final String? title;
   final String originalVoice;
   final String situation;
   final String feelingOrAttempt;
@@ -243,6 +273,12 @@ class ExperienceItem {
     required this.myReactions,
     this.saved = false,
     this.authorName,
+    this.title = '',
+    this.category,
+    this.tags = const [],
+    this.commentCount = 0,
+    this.mine = false,
+    this.actionId,
   });
   factory ExperienceItem.fromJson(Json json) => ExperienceItem(
     id: json['id'] as String,
@@ -250,9 +286,9 @@ class ExperienceItem {
     identityType: json['identity_type'] as String,
     sourceLocale: json['source_locale'] as String,
     originalVoice: json['original_voice'] as String,
-    situation: json['situation'] as String,
-    feelingOrAttempt: json['feeling_or_attempt'] as String,
-    reminder: json['reminder'] as String,
+    situation: json['situation'] as String? ?? '',
+    feelingOrAttempt: json['feeling_or_attempt'] as String? ?? '',
+    reminder: json['reminder'] as String? ?? '',
     translation: json['translation'] == null
         ? null
         : ExperienceTranslation.fromJson(json['translation'] as Json),
@@ -263,6 +299,12 @@ class ExperienceItem {
     myReactions: List<String>.from(json['my_reactions'] as List),
     saved: json['saved'] as bool? ?? false,
     authorName: json['author_name'] as String?,
+    title: json['title'] as String? ?? '',
+    category: json['category'] as String?,
+    tags: List<String>.from(json['tags'] as List? ?? const []),
+    commentCount: json['comment_count'] as int? ?? 0,
+    mine: json['mine'] as bool? ?? false,
+    actionId: json['action_id'] as String?,
   );
   final String id;
   final String topicId;
@@ -285,7 +327,23 @@ class ExperienceItem {
   /// The nickname or real name the author chose to sign with; null means anonymous.
   final String? authorName;
 
-  ExperienceItem withSaved(bool value) => ExperienceItem(
+  /// Written by the author; older posts have none and show the start of the text instead.
+  final String title;
+  final String? category;
+  final List<String> tags;
+  final int commentCount;
+
+  /// Written by the signed-in reader (they can delete it).
+  final bool mine;
+
+  /// The official guide this post was shared under, if any.
+  final String? actionId;
+
+  String get categoryKey => categoryFor(category, topicId);
+
+  ExperienceItem withSaved(bool value) => copyWith(saved: value);
+
+  ExperienceItem copyWith({bool? saved, int? commentCount}) => ExperienceItem(
     id: id,
     topicId: topicId,
     identityType: identityType,
@@ -300,8 +358,14 @@ class ExperienceItem {
     experiencedTooCount: experiencedTooCount,
     differentCount: differentCount,
     myReactions: myReactions,
-    saved: value,
+    saved: saved ?? this.saved,
     authorName: authorName,
+    title: title,
+    category: category,
+    tags: tags,
+    commentCount: commentCount ?? this.commentCount,
+    mine: mine,
+    actionId: actionId,
   );
 
   /// Summary text (situation plus feeling), in the translation when [translated].
@@ -317,6 +381,14 @@ class ExperienceItem {
       (translated ? translation?.originalVoice : null) ?? originalVoice;
   String reminderText(bool translated) =>
       (translated ? translation?.reminder : null) ?? reminder;
+
+  /// The title, or for older posts without one the start of the text.
+  String heading(bool translated) {
+    final own = (translated ? translation?.title : null) ?? title;
+    if (own.trim().isNotEmpty) return own.trim();
+    final text = voice(translated).trim().replaceAll(RegExp(r'\s+'), ' ');
+    return text.length > 24 ? '${text.substring(0, 24)}…' : text;
+  }
 }
 
 class ExperiencePage {
@@ -339,6 +411,54 @@ class ExperienceDetail {
   final ExperienceItem item;
   final List<ExperienceItem> different;
   final String? respondsToId;
+}
+
+/// Keyword search over official guides and student posts.
+class SearchResults {
+  const SearchResults(this.actions, this.experiences);
+  factory SearchResults.fromJson(Json json) => SearchResults(
+    _list(json['actions'], ActionSummary.fromJson),
+    _list(json['experiences'], ExperienceItem.fromJson),
+  );
+  final List<ActionSummary> actions;
+  final List<ExperienceItem> experiences;
+}
+
+/// A comment under a student post; [replyToId] points at the comment it answers.
+class CommentItem {
+  const CommentItem({
+    required this.id,
+    required this.body,
+    required this.createdAt,
+    required this.likeCount,
+    this.replyToId,
+    this.authorName,
+    this.liked = false,
+    this.byPostAuthor = false,
+    this.mine = false,
+  });
+  factory CommentItem.fromJson(Json json) => CommentItem(
+    id: json['id'] as String,
+    body: json['body'] as String,
+    createdAt: _date(json['created_at'])!,
+    likeCount: json['like_count'] as int? ?? 0,
+    replyToId: json['reply_to_id'] as String?,
+    authorName: json['author_name'] as String?,
+    liked: json['liked'] as bool? ?? false,
+    byPostAuthor: json['by_post_author'] as bool? ?? false,
+    mine: json['mine'] as bool? ?? false,
+  );
+  final String id;
+  final String body;
+  final DateTime createdAt;
+  final int likeCount;
+  final String? replyToId;
+
+  /// The commenter's nickname when they chose to sign; null means anonymous.
+  final String? authorName;
+  final bool liked;
+  final bool byPostAuthor;
+  final bool mine;
 }
 
 class SummaryDraftInfo {
@@ -394,6 +514,11 @@ class MyExperience {
     required this.originalVoice,
     required this.latestSummary,
     required this.impact,
+    this.title = '',
+    this.category,
+    this.tags = const [],
+    this.publishedAt,
+    this.commentCount = 0,
   });
   factory MyExperience.fromJson(Json json) => MyExperience(
     id: json['id'] as String,
@@ -405,6 +530,11 @@ class MyExperience {
         ? null
         : SummaryDraftInfo.fromJson(json['latest_summary'] as Json),
     impact: Impact.fromJson(json['impact'] as Json),
+    title: json['title'] as String? ?? '',
+    category: json['category'] as String?,
+    tags: List<String>.from(json['tags'] as List? ?? const []),
+    publishedAt: _date(json['published_at']),
+    commentCount: json['comment_count'] as int? ?? 0,
   );
   final String id;
   final String status;
@@ -413,6 +543,12 @@ class MyExperience {
   final String originalVoice;
   final SummaryDraftInfo? latestSummary;
   final Impact impact;
+  final String title;
+  final String? category;
+  final List<String> tags;
+  final DateTime? publishedAt;
+  final int commentCount;
+  String get categoryKey => categoryFor(category, topicId);
 }
 
 class BlockInfo {

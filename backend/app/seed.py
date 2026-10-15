@@ -125,6 +125,7 @@ def seed_experience(db: Session, item: dict) -> bool:
         id=item["id"],
         author_id=author,
         topic_id=_TOPIC[item["topicKey"]],
+        category="culture" if item["topicKey"] == "cultureCommunication" else "life",
         identity_type=_IDENTITY.get(item["identityTypeKey"], "other"),
         original_voice=voice,
         source_locale="en" if item.get("sourceLanguage") == "en" else "zh-Hant",

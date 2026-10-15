@@ -1,372 +1,545 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/design_system.dart';
 import '../features/assistant_panel.dart';
+import '../features/explore_page.dart';
+import 'design_system.dart';
+import 'layout.dart';
 
-class AppShell extends StatelessWidget {
+/// The frame around every screen. Phone: header and bottom tabs. Tablet portrait: a 76px
+/// icon sidebar. Tablet landscape and web: a 232px sidebar and search in the header.
+/// The centre column is at most 880px wide; there is no right rail.
+class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.child, required this.uri});
   final Widget child;
   final Uri uri;
-  static const paths = ['/', '/explore', '/share', '/profile'];
-  static const keys = ['home', 'explore', 'share', 'myExperiences'];
-  static const icons = ['home', 'compass', 'feather', 'user'];
-  int get index {
-    if (uri.path.startsWith('/explore') ||
-        uri.path.startsWith('/experiences')) {
-      return uri.queryParameters['from']?.startsWith('/profile') == true
-          ? 3
-          : 1;
-    }
-    if (uri.path == '/share' || uri.path == '/review') return 2;
-    if (uri.path == '/profile') return 3;
-    return 0;
+
+  static const tabs = ['/', '/explore', '/share', '/profile'];
+  static const icons = ['home', 'explore', 'share', 'me'];
+  static const maxContentWidth = 880.0;
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  /// Posts and guides keep the tab they were opened from highlighted.
+  int _lastTab = 0;
+
+  int? get _tabOfPath {
+    final path = widget.uri.path;
+    if (path == '/') return 0;
+    if (path.startsWith('/explore')) return 1;
+    if (path == '/share') return 2;
+    if (path.startsWith('/profile')) return 3;
+    return null;
   }
 
-  String title(BuildContext context) {
+  int get _index => _tabOfPath ?? _lastTab;
+
+  bool get _isTabRoot => AppShell.tabs.contains(widget.uri.path);
+
+  @override
+  void initState() {
+    super.initState();
+    _lastTab = _tabOfPath ?? 0;
+  }
+
+  @override
+  void didUpdateWidget(AppShell old) {
+    super.didUpdateWidget(old);
+    _lastTab = _tabOfPath ?? _lastTab;
+  }
+
+  String _title(BuildContext context, AppLayout layout) {
     final vm = BridgeScope.of(context);
-    if (uri.path.startsWith('/experiences')) return vm.t('similarSituations');
-    if (uri.path.startsWith('/actions')) {
-      if (uri.path.endsWith('/progress')) return vm.t('myActionProgress');
-      if (uri.path.endsWith('/complete')) return vm.t('actionCompletion');
-      return vm
-              .action(uri.pathSegments[1])
-              .data
-              ?.summary
-              .title
-              .of(vm.english) ??
-          vm.t('officialActionGuide');
+    final path = widget.uri.path;
+    if (path == '/') return layout == AppLayout.phone ? 'Culture Bridge' : '';
+    if (path.startsWith('/explore')) return vm.pair('探索', 'Explore');
+    if (path == '/share') return vm.pair('分享', 'Share');
+    if (path == '/profile/settings') return vm.pair('設定', 'Settings');
+    if (path.startsWith('/profile')) return vm.pair('我的', 'My');
+    if (path.startsWith('/experiences')) {
+      return vm.pair('學生分享', 'Student post');
     }
-    if (uri.path == '/review') return vm.t('reviewBeforePublish');
-    if (uri.path == '/signin') return vm.t('signIn');
-    if (uri.path == '/welcome') return vm.t('profileNames');
-    if (uri.path.startsWith('/admin')) {
-      return vm.pair('審查與管理', 'Review & admin');
+    if (path.startsWith('/actions')) {
+      if (path.endsWith('/progress')) return vm.t('myActionProgress');
+      if (path.endsWith('/complete')) return vm.t('actionCompletion');
+      return vm.pair('官方指南', 'Official guide');
     }
-    return vm.t(keys[index]);
+    if (path.startsWith('/guide')) return vm.pair('官方指南', 'Official guide');
+    if (path == '/signin') return vm.t('signIn');
+    if (path == '/welcome') return vm.t('profileNames');
+    if (path.startsWith('/admin')) return vm.pair('審查與管理', 'Review & admin');
+    return '';
   }
 
-  void back(BuildContext context) {
+  void _back(BuildContext context) {
     if (context.canPop()) {
       context.pop();
       return;
     }
-    final from = uri.queryParameters['from'];
-    if (from != null && from.startsWith('/') && !from.startsWith('//')) {
-      context.go(from);
+    final path = widget.uri.path;
+    if (path.endsWith('/progress') || path.endsWith('/complete')) {
+      context.go('/actions/${widget.uri.pathSegments[1]}');
       return;
     }
-    if (uri.path.endsWith('/progress') || uri.path.endsWith('/complete')) {
-      context.go('/actions/${uri.pathSegments[1]}');
+    if (path.startsWith('/profile/')) {
+      context.go('/profile');
       return;
     }
-    context.go(uri.path == '/review' ? '/share' : '/');
+    context.go(AppShell.tabs[_index]);
+  }
+
+  void _goTab(BuildContext context, int i) => context.go(AppShell.tabs[i]);
+
+  void _showNotice(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final notice = vm.notice;
+    if (notice == null) return;
+    // Show one-off messages (published, saved, errors) once, then clear them.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (vm.notice != notice) return;
+      vm.notice = null;
+      ScaffoldMessenger.maybeOf(context)
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(notice)));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final notice = vm.notice;
-    if (notice != null) {
-      // Show one-off messages (published, reported, errors) once, then clear them.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (vm.notice != notice) return;
-        vm.notice = null;
-        ScaffoldMessenger.maybeOf(context)
-          ?..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(notice)));
-      });
-    }
-    return LayoutBuilder(
-      builder: (context, c) {
-        final mobile = c.maxWidth < 768;
-        final wide = c.maxWidth > 1100;
-        return Scaffold(
-          endDrawer: mobile ? null : AssistantDrawer(uri: uri),
-          floatingActionButton: AssistantButton(uri: uri, mobile: mobile),
-          body: PaperBackground(
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Palette.edge)),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: mobile ? 16 : 28,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => context.go('/'),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Culture Bridge',
-                                style: displayStyle(mobile ? 19 : 24),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (wide)
-                          Expanded(
-                            child: Text(
-                              vm.pair(
-                                '一起寫下在台灣的生活',
-                                'A shared notebook for life in Taiwan',
-                              ),
-                              style: const TextStyle(
-                                fontStyle: FontStyle.italic,
-                                color: Palette.muted,
-                              ),
-                            ),
-                          ),
-                        TextButton(
-                          key: const Key('locale-zh'),
-                          onPressed: () => vm.setEnglish(false),
-                          child: Text(
-                            '中',
-                            style: TextStyle(
-                              decoration: !vm.english
-                                  ? TextDecoration.underline
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          key: const Key('locale-en'),
-                          onPressed: () => vm.setEnglish(true),
-                          child: Text(
-                            'EN',
-                            style: TextStyle(
-                              decoration: vm.english
-                                  ? TextDecoration.underline
-                                  : TextDecoration.none,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1380),
-                        child: Row(
+    _showNotice(context);
+    final layout = AppLayout.of(context);
+    final phone = layout == AppLayout.phone;
+    // The route navigator; each page brings its own scrolling frame (PageFrame).
+    final content = widget.child;
+    final header = _Header(
+      layout: layout,
+      title: _title(context, layout),
+      showBack: !_isTabRoot,
+      onBack: () => _back(context),
+      uri: widget.uri,
+    );
+    final scaffold = Scaffold(
+      backgroundColor: Palette.paper,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Column(
+              children: [
+                header,
+                Expanded(
+                  child: phone
+                      ? content
+                      : Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (!mobile)
-                              Container(
-                                key: const Key('desktop-navigation'),
-                                width: wide ? 228 : 190,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    right: BorderSide(color: Palette.edge),
-                                  ),
-                                ),
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 28,
-                                    horizontal: 14,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      for (int i = 0; i < 4; i++)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 12,
-                                          ),
-                                          child: TextButton(
-                                            key: Key('nav-$i'),
-                                            style: TextButton.styleFrom(
-                                              backgroundColor: index == i
-                                                  ? Palette.paleMoss
-                                                  : Colors.transparent,
-                                              foregroundColor: Palette.ink,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 14,
-                                                    vertical: 16,
-                                                  ),
-                                            ),
-                                            onPressed: () =>
-                                                context.go(paths[i]),
-                                            child: Row(
-                                              children: [
-                                                InkIcon(icons[i]),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(vm.t(keys[i])),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      const SizedBox(height: 60),
-                                      Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Text(
-                                          vm.pair(
-                                            '每一段經驗，都讓我們多懂一點。',
-                                            'Every experience adds a different perspective.',
-                                          ),
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontStyle: FontStyle.italic,
-                                            color: Palette.muted,
-                                          ),
-                                        ),
-                                      ),
-                                      Image.asset(
-                                        'assets/images/botanical-0.png',
-                                        height: 100,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: Builder(
-                                builder: (context) => SingleChildScrollView(
-                                  key: ValueKey(uri.toString()),
-                                  padding: EdgeInsets.fromLTRB(
-                                    mobile
-                                        ? 20
-                                        : wide
-                                        ? 48
-                                        : 28,
-                                    32,
-                                    mobile
-                                        ? 20
-                                        : wide
-                                        ? 48
-                                        : 28,
-                                    36,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Text(
-                                        vm.pair(
-                                          '你的台灣生活筆記',
-                                          'Your Taiwan notebook',
-                                        ),
-                                        style: const TextStyle(
-                                          fontFamily: 'CourierPrime',
-                                          fontFamilyFallback: ['NotoSerifTC'],
-                                          fontSize: 12,
-                                          color: Palette.muted,
-                                          letterSpacing: 1,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 16,
-                                        runSpacing: 12,
-                                        crossAxisAlignment:
-                                            WrapCrossAlignment.center,
-                                        children: [
-                                          Semantics(
-                                            header: true,
-                                            child: Text(
-                                              title(context),
-                                              style: displayStyle(
-                                                mobile ? 30 : 44,
-                                              ),
-                                            ),
-                                          ),
-                                          if (!paths.contains(uri.path))
-                                            TextButton.icon(
-                                              onPressed: () => back(context),
-                                              icon: const InkIcon('back'),
-                                              label: Text(
-                                                vm.pair('返回', 'Back'),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 28),
-                                      child,
-                                      const SizedBox(height: 40),
-                                      const Divider(color: Palette.edge),
-                                      Text(
-                                        vm.pair(
-                                          '不同的經驗，多一種理解。',
-                                          'Different experiences. More ways to understand.',
-                                        ),
-                                        style: const TextStyle(
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 14,
-                                          color: Palette.muted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                            _Sidebar(
+                              compact: layout == AppLayout.tablet,
+                              index: _index,
+                              onTap: (i) => _goTab(context, i),
                             ),
+                            Expanded(child: content),
                           ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+          // Phone: the panel covers the page, so the bubble hides. Elsewhere it toggles.
+          if (!(phone && vm.assistantOpen))
+            Positioned(
+              right: phone ? 16 : 28,
+              bottom: phone ? 16 : 28,
+              child: const AssistantBubble(),
+            ),
+        ],
+      ),
+      bottomNavigationBar: phone
+          ? _BottomTabs(index: _index, onTap: (i) => _goTab(context, i))
+          : null,
+    );
+    // The assistant sits above everything, the phone's tab bar included; back closes it.
+    return PopScope(
+      canPop: !vm.assistantOpen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && vm.assistantOpen) vm.closeAssistant();
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(child: scaffold),
+          if (vm.assistantOpen)
+            AssistantOverlay(
+              uri: widget.uri,
+              onNavigate: (path) => context.push(path),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.layout,
+    required this.title,
+    required this.showBack,
+    required this.onBack,
+    required this.uri,
+  });
+  final AppLayout layout;
+  final String title;
+  final bool showBack;
+  final VoidCallback onBack;
+  final Uri uri;
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final phone = layout == AppLayout.phone;
+    final onExplore = uri.path == '/explore';
+    return Material(
+      color: Palette.header,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: phone ? 56 : 64,
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Palette.edge)),
+          ),
+          padding: EdgeInsets.only(
+            left: phone ? (showBack ? 4 : 16) : 24,
+            right: phone ? 16 : 32,
+          ),
+          child: Row(
+            children: [
+              if (!phone) ...[
+                // The brand lines up with the 232px sidebar on web.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: layout == AppLayout.web ? 184 : 0,
+                    maxWidth: layout == AppLayout.web ? 184 : 200,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child: InkWell(
+                      key: const Key('brand'),
+                      onTap: () => context.go('/'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          'Culture Bridge',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: displayStyle(20),
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
+                const SizedBox(width: 16),
+              ],
+              if (showBack)
+                IconButton(
+                  key: const Key('back'),
+                  tooltip: vm.pair('返回', 'Back'),
+                  onPressed: onBack,
+                  icon: const AppIcon('back'),
+                ),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: displayStyle(18),
+                  ),
+                ),
+              ),
+              if (!phone)
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: layout == AppLayout.web ? 300 : 240,
+                    ),
+                    child: SearchField(
+                      key: const Key('header-search'),
+                      compact: true,
+                      initial: onExplore ? uri.queryParameters['q'] ?? '' : '',
+                      category: onExplore
+                          ? uri.queryParameters['cat'] ?? 'all'
+                          : 'all',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One page on notebook paper: it scrolls on its own, centred and at most 880px wide.
+class PageFrame extends StatelessWidget {
+  const PageFrame({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final padding = switch (AppLayout.of(context)) {
+      // Room at the bottom so the chat bubble never covers the last item.
+      AppLayout.phone => const EdgeInsets.fromLTRB(16, 14, 16, 88),
+      AppLayout.tablet => const EdgeInsets.fromLTRB(28, 24, 28, 96),
+      AppLayout.web => const EdgeInsets.fromLTRB(32, 28, 32, 96),
+    };
+    return NotebookBackground(
+      child: SingleChildScrollView(
+        padding: padding,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppShell.maxContentWidth,
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+List<String> _navLabels(BuildContext context) {
+  final vm = BridgeScope.of(context);
+  return [
+    vm.pair('首頁', 'Home'),
+    vm.pair('探索', 'Explore'),
+    vm.pair('分享', 'Share'),
+    vm.pair('我的', 'My'),
+  ];
+}
+
+class _Sidebar extends StatelessWidget {
+  const _Sidebar({
+    required this.compact,
+    required this.index,
+    required this.onTap,
+  });
+
+  /// Tablet portrait: icons with small labels in a 76px rail.
+  final bool compact;
+  final int index;
+  final ValueChanged<int> onTap;
+  @override
+  Widget build(BuildContext context) {
+    final labels = _navLabels(context);
+    return Container(
+      key: const Key('desktop-navigation'),
+      width: compact ? 76 : 232,
+      decoration: const BoxDecoration(
+        color: Palette.nav,
+        border: Border(right: BorderSide(color: Palette.edge)),
+      ),
+      padding: EdgeInsets.symmetric(
+        vertical: compact ? 20 : 24,
+        horizontal: compact ? 10 : 16,
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < AppShell.tabs.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _SidebarItem(
+                key: Key('nav-$i'),
+                icon: AppShell.icons[i],
+                label: labels[i],
+                selected: index == i,
+                compact: compact,
+                onTap: () => onTap(i),
               ),
             ),
-          ),
-          bottomNavigationBar: mobile
-              ? SafeArea(
-                  child: Container(
-                    key: const Key('mobile-navigation'),
-                    decoration: const BoxDecoration(
-                      color: Palette.high,
-                      border: Border(top: BorderSide(color: Palette.edge)),
-                    ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatelessWidget {
+  const _SidebarItem({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.compact,
+    required this.onTap,
+  });
+  final String icon;
+  final String label;
+  final bool selected;
+  final bool compact;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? Palette.moss : Palette.muted;
+    final weight = selected ? FontWeight.w700 : FontWeight.w400;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? Palette.paleMoss : Colors.transparent,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: onTap,
+          child: compact
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 56,
+                    maxWidth: 56,
+                    minHeight: 56,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AppIcon(icon, color: color),
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.3,
+                          color: color,
+                          fontWeight: weight,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
+                      horizontal: 14,
+                      vertical: 6,
                     ),
                     child: Row(
                       children: [
-                        for (int i = 0; i < 4; i++)
-                          Expanded(
-                            child: TextButton(
-                              key: Key('nav-$i'),
-                              onPressed: () => context.go(paths[i]),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 2,
-                                ),
-                                foregroundColor: Palette.ink,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  RingIcon(icons[i], selected: index == i),
-                                  Text(
-                                    vm.t(i == 3 ? 'my' : keys[i]),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ],
-                              ),
+                        AppIcon(icon, color: color),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: selected ? Palette.moss : Palette.ink,
+                              fontWeight: weight,
                             ),
                           ),
+                        ),
                       ],
                     ),
                   ),
-                )
-              : null,
-        );
-      },
+                ),
+        ),
+      ),
     );
   }
+}
+
+class _BottomTabs extends StatelessWidget {
+  const _BottomTabs({required this.index, required this.onTap});
+  final int index;
+  final ValueChanged<int> onTap;
+  @override
+  Widget build(BuildContext context) {
+    final labels = _navLabels(context);
+    return Material(
+      key: const Key('mobile-navigation'),
+      color: Palette.nav,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 66),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Palette.edge)),
+          ),
+          child: Row(
+            children: [
+              for (int i = 0; i < AppShell.tabs.length; i++)
+                Expanded(
+                  child: Semantics(
+                    selected: index == i,
+                    button: true,
+                    child: InkWell(
+                      key: Key('nav-$i'),
+                      onTap: () => onTap(i),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 66),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _RingedIcon(
+                                name: AppShell.icons[i],
+                                selected: index == i,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                labels[i],
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.3,
+                                  color: index == i
+                                      ? Palette.moss
+                                      : Palette.muted,
+                                  fontWeight: index == i
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The current tab's icon gets a thin brick circle around it, like a pen mark.
+class _RingedIcon extends StatelessWidget {
+  const _RingedIcon({required this.name, required this.selected});
+  final String name;
+  final bool selected;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 30,
+    height: 30,
+    alignment: Alignment.center,
+    decoration: selected
+        ? BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Palette.brick, width: 1.5),
+          )
+        : null,
+    child: AppIcon(
+      name,
+      size: 20,
+      color: selected ? Palette.moss : Palette.muted,
+    ),
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:culture_bridge/app.dart';
 import 'package:culture_bridge/domain/api_models.dart';
+import 'package:culture_bridge/ui/core/design_system.dart';
 import 'package:culture_bridge/ui/features/assistant_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,13 +37,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final width in [320.0, 375.0, 768.0, 1024.0, 1440.0]) {
+  Finder inDialog(String text) =>
+      find.descendant(of: find.byType(AlertDialog), matching: find.text(text));
+
+  for (final width in [320.0, 375.0, 820.0, 1180.0, 1440.0]) {
     for (final route in [
       '/',
       '/explore',
+      '/explore?cat=official',
+      '/explore?cat=food',
+      '/explore?q=居留',
       '/share',
       '/profile',
+      '/profile?tab=saved',
+      '/profile/settings',
       '/signin',
+      '/guide/welcome',
       '/experiences/first-rental',
       '/actions/arc',
       '/actions/arc/progress',
@@ -66,24 +76,80 @@ void main() {
     }
   }
 
-  testWidgets('Home lists procedures from the API and my progress', (
+  testWidgets('Sidebar is icon-only on tablet portrait and full on web', (
     tester,
   ) async {
-    await mount(
-      tester,
-      '/',
-      const Size(1024, 1400),
-      before: (app) => app.vm.startAction('arc'),
+    await mount(tester, '/', const Size(820, 1180));
+    expect(
+      tester.getSize(find.byKey(const Key('desktop-navigation'))).width,
+      76,
     );
-    expect(find.text('申請工作證'), findsOneWidget);
-    expect(find.byKey(const Key('progress-arc')), findsOneWidget);
+    expect(find.byKey(const Key('header-search')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await mount(tester, '/', const Size(1280, 800));
+    expect(
+      tester.getSize(find.byKey(const Key('desktop-navigation'))).width,
+      232,
+    );
+  });
+
+  testWidgets('Home: pinned welcome guide, then guides and posts', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(1280, 2400));
+    final pinned = tester.getTopLeft(find.byKey(const Key('guide-welcome')));
+    final guide = tester.getTopLeft(find.byKey(const Key('guide-arc')));
+    final post = tester.getTopLeft(find.byKey(const Key('post-first-rental')));
+    expect(pinned.dy, lessThan(guide.dy));
+    expect(pinned.dy, lessThan(post.dy));
+    expect(find.text('初次來台灣？先看這篇'), findsOneWidget);
+    // Official posts carry the seal, not a text badge or a check mark.
+    expect(find.byType(OfficialSeal), findsWidgets);
+    expect(find.text('官方'), findsNothing);
+    expect(find.byIcon(Icons.verified), findsNothing);
+  });
+
+  testWidgets('Opened posts are dimmed and marked read', (tester) async {
+    final app = await mount(tester, '/', const Size(1280, 2400));
+    await tap(tester, find.text('申請或更新 ARC').first);
+    expect(app.vm.isRead('guide:arc'), isTrue);
+    await tap(tester, find.byKey(const Key('back')));
+    expect(find.textContaining('已看過'), findsOneWidget);
+  });
+
+  testWidgets('Explore: categories, search sections and popular tags', (
+    tester,
+  ) async {
+    await mount(tester, '/explore', const Size(375, 1600));
+    for (final label in ['全部', '官方', '生活', '美食', '住宿', '交通', '學業', '文化']) {
+      expect(find.text(label), findsWidgets);
+    }
+    expect(find.text('熱門貼文'.toUpperCase()), findsOneWidget);
+    expect(find.text('#夜市'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('explore-search')), 'ARC');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('官方指南'.toUpperCase()), findsOneWidget);
+    expect(find.byKey(const Key('guide-row-arc')), findsOneWidget);
+    expect(find.byKey(const Key('ask-assistant')), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('cat-food')));
+    expect(find.textContaining('找不到'), findsOneWidget);
+  });
+
+  testWidgets('Tapping a tag searches for it', (tester) async {
+    await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
+    await tap(tester, find.text('#居留證'));
+    expect(find.text('學生分享'.toUpperCase()), findsOneWidget);
+    expect(find.byKey(const Key('post-first-rental')), findsOneWidget);
   });
 
   testWidgets('Guests are sent to sign in, then back', (tester) async {
     final app = await mount(
       tester,
       '/actions/arc',
-      const Size(1024, 1200),
+      const Size(1280, 1600),
       signedIn: false,
     );
     await tap(tester, find.byKey(const Key('start-action')));
@@ -97,85 +163,118 @@ void main() {
     expect(find.byKey(const Key('start-action')), findsOneWidget);
   });
 
-  testWidgets('Names set after sign-in sign a published experience', (
+  testWidgets('Share: required fields, AI tags, publish as written', (
     tester,
   ) async {
+    final app = await mount(tester, '/share', const Size(1280, 2000));
+    await tap(tester, find.byKey(const Key('publish')));
+    expect(find.text('先寫一個標題'), findsOneWidget);
+    expect(find.text('先寫內文再發布'), findsOneWidget);
+    expect(find.text('選一個分類，大家才找得到'), findsOneWidget);
+    expect(app.repository.lastPublish, isNull);
+
+    await tester.enterText(find.byKey(const Key('share-title')), '居留證要先預約');
+    await tester.enterText(
+      find.byKey(const Key('share-voice')),
+      '我以為可以直接去服務站，結果要先線上預約。',
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('＋ #居留證'), findsOneWidget);
+    await tap(tester, find.text('＋ #居留證'));
+    expect(find.text('✓ #居留證'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('share-cat-life')));
+    expect(find.text('發布後會長這樣'.toUpperCase()), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('publish')));
+    expect(app.repository.lastPublish, containsPair('title', '居留證要先預約'));
+    expect(
+      app.repository.lastPublish,
+      containsPair('voice', '我以為可以直接去服務站，結果要先線上預約。'),
+    );
+    expect(app.repository.lastPublish!['tags'], ['#居留證']);
+    // Opens the new post: the author's words, not an AI rewrite.
+    expect(find.text('居留證要先預約'), findsOneWidget);
+    expect(find.textContaining('作者原文，未經 AI 改寫'), findsOneWidget);
+    expect(app.vm.draft.isEmpty, isTrue);
+  });
+
+  testWidgets('Names set after sign-in sign a published post', (tester) async {
     final app = await mount(
       tester,
       '/share',
-      const Size(1024, 1600),
+      const Size(1280, 2000),
       signedIn: false,
     );
+    await tester.enterText(find.byKey(const Key('share-title')), '夜市');
     await tester.enterText(find.byKey(const Key('share-voice')), '第一次去夜市。');
-    await tester.pump(const Duration(milliseconds: 350));
-    await tap(tester, find.byKey(const Key('review-draft')));
+    await tap(tester, find.byKey(const Key('share-cat-food')));
+    await tap(tester, find.byKey(const Key('publish')));
     await tester.enterText(find.byKey(const Key('dev-name')), 'mei');
     await tap(tester, find.byKey(const Key('dev-sign-in')));
     await tester.enterText(find.byKey(const Key('nickname')), '  小  美 ');
     await tap(tester, find.byKey(const Key('save-names')));
     expect(app.repository.nickname, '小 美');
-    expect(app.repository.realName, isNull);
     // Back on Share with the words kept.
-    expect(find.text('第一次去夜市。'), findsOneWidget);
-    await tap(tester, find.byKey(const Key('review-draft')));
-    // Real name is not set, so it can't be chosen.
-    final realName = tester.widget<ChoiceChip>(
-      find.byKey(const Key('post-as-real_name')),
-    );
-    expect(realName.onSelected, isNull);
+    expect(find.widgetWithText(TextField, '第一次去夜市。'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('post-as-real_name')));
+    expect(find.textContaining('先到「我的 › 設定」填寫'), findsOneWidget);
     await tap(tester, find.byKey(const Key('post-as-nickname')));
     await tap(tester, find.byKey(const Key('publish')));
     expect(app.repository.lastPublish!['author_display'], 'nickname');
+    await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('Signed experiences show the name, others stay anonymous', (
+  testWidgets('Signed posts show the name, others stay anonymous', (
     tester,
   ) async {
     await mount(
       tester,
       '/experiences/professor-see',
-      const Size(1024, 1400),
+      const Size(1280, 1400),
       before: (app) async => app.repository.signAs('professor-see', '小美'),
     );
-    expect(find.text('小美'), findsOneWidget);
-    expect(find.text('匿名分享'), findsNothing);
+    expect(find.textContaining('小美 · '), findsOneWidget);
+    expect(find.textContaining('匿名 · '), findsNothing);
   });
 
-  testWidgets('Share: blank check, AI summary, edit and publish', (
+  testWidgets('Post: me too, comments with replies and likes', (tester) async {
+    final app = await mount(
+      tester,
+      '/experiences/professor-see',
+      const Size(1280, 1800),
+    );
+    await tap(tester, find.byKey(const Key('me-too')));
+    expect(find.text('我也遇過 1'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('send-comment')));
+    expect(find.text('先寫點什麼再送出'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('comment-box')), '我也是這樣');
+    await tap(tester, find.byKey(const Key('send-comment')));
+    expect(find.text('我也是這樣'), findsOneWidget);
+    await tap(tester, find.text('有同感'));
+    expect(find.text('有同感 1'), findsOneWidget);
+    await tap(tester, find.text('回覆'));
+    expect(find.textContaining('回覆 匿名學生'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('comment-box')), '謝謝');
+    await tap(tester, find.byKey(const Key('send-comment')));
+    final comments = app.repository.postComments['professor-see']!;
+    expect(comments.last.replyToId, comments.first.id);
+  });
+
+  testWidgets('Official guide: steps, documents checklist, share under it', (
     tester,
   ) async {
-    final app = await mount(tester, '/share', const Size(1024, 1400));
-    await tap(tester, find.byKey(const Key('review-draft')));
-    expect(find.text('請先寫下發生了什麼事，再整理你的經驗。'), findsOneWidget);
-
-    await tester.enterText(find.byKey(const Key('share-voice')), '同學幫我適應生活。');
-    await tester.pump(const Duration(milliseconds: 350));
-    await tap(tester, find.byKey(const Key('review-draft')));
-    expect(find.widgetWithText(TextField, 'AI 整理的情境'), findsOneWidget);
-
-    await tester.enterText(find.byKey(const Key('summary-reminder')), '我改過的提醒');
-    await tap(tester, find.byKey(const Key('publish')));
-    expect(app.repository.lastPublish!['reminder'], '我改過的提醒');
-    expect(find.text('已發布'), findsOneWidget);
-    expect(app.vm.draft.voice, '');
-  });
-
-  testWidgets('AI failure keeps the draft and explains', (tester) async {
-    final app = await mount(tester, '/share', const Size(1024, 1400));
-    app.repository.aiDown = true;
-    await tester.enterText(find.byKey(const Key('share-voice')), '原話');
-    await tester.pump(const Duration(milliseconds: 350));
-    await tap(tester, find.byKey(const Key('review-draft')));
-    expect(find.textContaining('AI 整理暫時無法使用'), findsOneWidget);
-    expect(app.vm.draft.serverId, isNotNull);
-  });
-
-  testWidgets('Mobile navigation and language toggle work', (tester) async {
-    await mount(tester, '/', const Size(375, 812));
-    await tap(tester, find.byKey(const Key('nav-3')));
-    expect(find.text('你的影響'), findsOneWidget);
-    await tap(tester, find.byKey(const Key('locale-en')));
-    expect(find.text('Your impact'), findsOneWidget);
+    final app = await mount(tester, '/actions/arc', const Size(375, 2400));
+    expect(find.text('步驟'.toUpperCase()), findsOneWidget);
+    expect(find.text('已備妥 0 / 2'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('document-1')));
+    expect(find.text('已備妥 1 / 2'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('share-under-guide')));
+    expect(app.vm.draft.actionId, 'arc');
+    expect(find.textContaining('也會出現在官方指南'), findsOneWidget);
+    // Let the debounced draft save run before the test ends.
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('Step interaction and stuck report reach the API', (
@@ -201,7 +300,7 @@ void main() {
     final app = await mount(
       tester,
       '/actions/arc/complete',
-      const Size(1024, 1400),
+      const Size(1280, 1400),
       before: (app) => app.vm.startAction('arc'),
     );
     await tap(tester, find.text('流程和原本不同'));
@@ -211,63 +310,66 @@ void main() {
     expect(app.repository.executions, isEmpty);
   });
 
-  testWidgets('Save an experience and find it under My', (tester) async {
+  testWidgets('Mobile tabs, My page and the language setting', (tester) async {
+    await mount(tester, '/', const Size(375, 812));
+    await tap(tester, find.byKey(const Key('nav-3')));
+    expect(find.text('我的分享'), findsOneWidget);
+    expect(find.text('收藏'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('open-settings')));
+    await tap(tester, find.byKey(const Key('locale-en')));
+    expect(find.text('Settings'), findsOneWidget);
+  });
+
+  testWidgets('Save a post and find it under My › Saved', (tester) async {
     final app = await mount(
       tester,
       '/experiences/professor-see',
-      const Size(1024, 1400),
+      const Size(1280, 1400),
     );
-    await tap(tester, find.byKey(const Key('save-professor-see')));
+    await tap(tester, find.byKey(const Key('save-post')));
     expect(app.repository.saved, ['professor-see']);
-    expect(find.text('已收藏，可以在「我的」找到。'), findsOneWidget);
-    final saved = tester.widget<IconButton>(
-      find.byKey(const Key('save-professor-see')),
-    );
-    expect(saved.isSelected, isTrue);
-    expect(saved.tooltip, '取消收藏');
+    expect(find.text('已收藏，在「我的 › 收藏」找得到'), findsOneWidget);
+    expect(find.text('已收藏'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await mount(
       tester,
-      '/profile',
-      const Size(1024, 1600),
-      before: (other) async {
-        await other.repository.setSaved('professor-see', true);
-      },
+      '/profile?tab=saved',
+      const Size(1280, 1600),
+      before: (other) => other.repository.setSaved('professor-see', true),
     );
-    expect(find.text('收藏的經驗'), findsOneWidget);
-    expect(find.byKey(const Key('saved-professor-see')), findsOneWidget);
-    await tap(tester, find.text('取消收藏'));
-    expect(find.byKey(const Key('saved-professor-see')), findsNothing);
-    expect(find.textContaining('還沒有收藏'), findsOneWidget);
+    expect(find.byKey(const Key('post-professor-see')), findsOneWidget);
+    await tap(tester, find.byTooltip(RegExp('取消收藏')));
+    expect(find.byKey(const Key('post-professor-see')), findsNothing);
+    expect(find.text('還沒有收藏'), findsOneWidget);
   });
 
   testWidgets('Guests are asked to sign in before saving', (tester) async {
     await mount(
       tester,
       '/experiences/professor-see',
-      const Size(1024, 1400),
+      const Size(1280, 1400),
       signedIn: false,
     );
-    await tap(tester, find.byKey(const Key('save-professor-see')));
+    await tap(tester, find.byKey(const Key('save-post')));
     expect(find.byKey(const Key('dev-name')), findsOneWidget);
   });
 
-  testWidgets('Report and block from an experience', (tester) async {
+  testWidgets('Report and block from a post', (tester) async {
     final app = await mount(
       tester,
       '/experiences/professor-see',
-      const Size(1024, 1400),
+      const Size(1280, 1400),
     );
     await tap(tester, find.byKey(const Key('moderation-menu')));
-    await tap(tester, find.text('檢舉'));
+    await tap(tester, find.text('檢舉').last);
     await tap(tester, find.text('騷擾或霸凌'));
-    await tap(tester, find.text('送出'));
+    await tap(tester, inDialog('送出'));
     expect(app.repository.reports, ['professor-see:harassment']);
 
     await tap(tester, find.byKey(const Key('moderation-menu')));
     await tap(tester, find.text('封鎖這位作者'));
-    await tap(tester, find.text('確認'));
+    await tap(tester, inDialog('確認'));
     expect(app.repository.blocked, {'professor-see'});
   });
 
@@ -280,8 +382,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Assistant answers with cards and confirm cards', (tester) async {
-    final app = await mount(tester, '/actions/arc', const Size(1024, 1200));
+  testWidgets('Assistant: greeting, suggestions, links and confirm cards', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/actions/arc', const Size(1280, 900));
     app.repository.assistantReply = (message) => AssistantReply(
       conversationId: 'c1',
       text: '依據「申請或更新 ARC」流程卡。',
@@ -311,15 +415,30 @@ void main() {
       fallback: false,
     );
     await tap(tester, find.byKey(const Key('assistant-button')));
-    await tester.enterText(find.byKey(const Key('assistant-input')), '幫我開始辦這個');
-    await tap(tester, find.byKey(const Key('assistant-send')));
-    expect(app.repository.assistantMessages, ['幫我開始辦這個']);
-    expect(find.text('依據: 申請或更新 ARC'), findsOneWidget);
-    expect(find.text('打開辦理進度'), findsOneWidget);
+    expect(find.textContaining('我是 Culture Bridge 助理'), findsOneWidget);
+    expect(find.text('居留證要準備什麼？'), findsOneWidget);
+    expect(find.textContaining('1990'), findsOneWidget);
+    // Web: a floating window; the bubble stays to close it.
+    expect(find.byKey(const Key('assistant-button')), findsOneWidget);
 
+    await tap(tester, find.text('居留證要準備什麼？'));
+    expect(app.repository.assistantMessages, ['居留證要準備什麼？']);
+    expect(find.text('申請或更新 ARC →'), findsOneWidget);
+    expect(find.text('打開辦理進度 →'), findsOneWidget);
     await tap(tester, find.byKey(const Key('confirm-op1')));
     expect(app.repository.confirmed, ['op1']);
     expect(find.text('已開始，打開進度'), findsOneWidget);
+  });
+
+  testWidgets('Assistant on a phone covers the page and hides the bubble', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812));
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    expect(app.vm.assistantOpen, isTrue);
+    expect(find.byKey(const Key('assistant-button')), findsNothing);
+    await tap(tester, find.byKey(const Key('assistant-close')));
+    expect(find.byKey(const Key('assistant-button')), findsOneWidget);
   });
 
   test('Only whitelisted screen actions become routes', () {
@@ -331,7 +450,11 @@ void main() {
       screenActionPath(
         const ScreenAction('open_explore', null, 'life_adaptation'),
       ),
-      '/explore?topic=lifeAdaptation',
+      '/explore?cat=life',
+    );
+    expect(
+      screenActionPath(const ScreenAction('open_explore', null, 'food')),
+      '/explore?cat=food',
     );
     expect(
       screenActionPath(const ScreenAction('open_admin', 'x', null)),
@@ -348,7 +471,7 @@ void main() {
   });
 
   testWidgets('Admin console is staff-only', (tester) async {
-    await mount(tester, '/admin', const Size(1024, 900));
+    await mount(tester, '/admin', const Size(1280, 900));
     expect(find.text('只有審查者與管理者可以使用。'), findsOneWidget);
   });
 }
