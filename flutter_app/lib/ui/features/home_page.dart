@@ -5,7 +5,8 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import 'post_cards.dart';
 
-/// Home: every post, newest first, with the welcome guide pinned on top.
+/// Home: the official account pinned on top, then students' posts, newest first.
+/// Official guides live on the official account's page, not in this feed.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
   @override
@@ -19,14 +20,10 @@ class HomePage extends StatelessWidget {
           title: vm.pair(welcomeTitle.$1, welcomeTitle.$2),
           pinned: true,
         ),
-        ResourceView<List<ActionSummary>>(
-          resource: (vm) => vm.actions,
-          load: (vm) => vm.loadActions(),
-          builder: (context, actions) => ResourceView<ExperiencePage>(
-            resource: (vm) => vm.posts(),
-            load: (vm) => vm.loadPosts(),
-            builder: (context, page) => _Feed(actions: actions, page: page),
-          ),
+        ResourceView<ExperiencePage>(
+          resource: (vm) => vm.posts(),
+          load: (vm) => vm.loadPosts(),
+          builder: (context, page) => _Feed(page: page),
         ),
       ],
     );
@@ -34,38 +31,18 @@ class HomePage extends StatelessWidget {
 }
 
 class _Feed extends StatelessWidget {
-  const _Feed({required this.actions, required this.page});
-  final List<ActionSummary> actions;
+  const _Feed({required this.page});
   final ExperiencePage page;
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final oldestPost = page.items.isEmpty ? null : page.items.last.publishedAt;
-    // Guides older than the last loaded post wait until more posts are loaded,
-    // so the order stays newest first as the list grows.
-    final guides = [
-      for (final a in actions)
-        if (page.nextOffset == null ||
-            oldestPost == null ||
-            !(a.publishedAt ?? DateTime(2000)).isBefore(oldestPost))
-          a,
-    ];
-    final entries = <(DateTime, Widget)>[
-      for (final a in guides)
-        (
-          a.publishedAt ?? DateTime(2000),
-          OfficialPostCard(
-            id: a.id,
-            title: a.title.of(vm.english),
-            publishedAt: a.publishedAt,
-          ),
-        ),
-      for (final e in page.items) (e.publishedAt, StudentPostCard(item: e)),
-    ]..sort((a, b) => b.$1.compareTo(a.$1));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        CardList(gap: 16, children: [for (final e in entries) e.$2]),
+        CardList(
+          gap: 16,
+          children: [for (final e in page.items) StudentPostCard(item: e)],
+        ),
         if (page.nextOffset != null)
           Padding(
             padding: const EdgeInsets.only(top: 16),
@@ -81,35 +58,115 @@ class _Feed extends StatelessWidget {
   }
 }
 
-const welcomeTitle = ('初次來台灣？先看這篇', 'New to Taiwan? Start here');
+const welcomeTitle = ('初次來台灣？可以來這邊看看', 'New to Taiwan? Have a look here');
 const _welcomeBody = (
   '先從機場到校園安頓好，接著申請在學證明，再申請居留證。開銀行帳戶、打工都要先有居留證，'
-      '順序對了可以少跑很多趟。下面幾篇官方指南，照需要的時候看就好。',
+      '順序對了可以少跑很多趟。下面是官方發的貼文，照需要的時候看就好。',
   'Settle in on campus first, then get a certificate of enrollment and apply '
       'for your ARC. Opening a bank account and part-time work both need the ARC, '
-      'so doing things in this order saves trips. Read the official guides below '
-      'when you need them.',
+      'so doing things in this order saves trips. Below are the official posts; '
+      'read them when you need them.',
 );
 
-/// The pinned welcome guide: a short note and every official guide.
-class WelcomeGuidePage extends StatelessWidget {
-  const WelcomeGuidePage({super.key});
+/// The official account: who it is, a short note for new arrivals, and its posts.
+class OfficialAccountPage extends StatelessWidget {
+  const OfficialAccountPage({super.key});
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     return FlowBody(
+      gap: 16,
       children: [
-        OfficialByline(when: vm.pair('置頂', 'Pinned')),
-        PageTitle(vm.pair(welcomeTitle.$1, welcomeTitle.$2)),
-        Text(
-          vm.pair(_welcomeBody.$1, _welcomeBody.$2),
-          style: const TextStyle(fontSize: 16, height: 1.75),
+        NoteCard(
+          key: const Key('official-account'),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Avatar(size: 56),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                'Culture Bridge',
+                                style: displayStyle(20),
+                              ),
+                            ),
+                            const OfficialSeal(size: 18),
+                          ],
+                        ),
+                        Text(
+                          vm.pair('官方帳號', 'Official account'),
+                          style: mutedStyle,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                vm.pair(welcomeTitle.$1, welcomeTitle.$2),
+                style: displayStyle(17),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                vm.pair(_welcomeBody.$1, _welcomeBody.$2),
+                style: const TextStyle(fontSize: 15, height: 1.75),
+              ),
+            ],
+          ),
         ),
-        SectionLabel(vm.pair('官方指南', 'Official guides')),
         ResourceView<List<ActionSummary>>(
           resource: (vm) => vm.actions,
           load: (vm) => vm.loadActions(),
-          builder: (context, actions) => GuideList(actions: actions),
+          builder: (context, actions) => _OfficialPosts(actions: actions),
+        ),
+      ],
+    );
+  }
+}
+
+class _OfficialPosts extends StatelessWidget {
+  const _OfficialPosts({required this.actions});
+  final List<ActionSummary> actions;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final newest = [...actions]
+      ..sort(
+        (a, b) => (b.publishedAt ?? DateTime(2000)).compareTo(
+          a.publishedAt ?? DateTime(2000),
+        ),
+      );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionLabel(
+          vm.pair('官方貼文', 'Official posts'),
+          note: vm.pair('${newest.length} 篇', '${newest.length}'),
+        ),
+        const SizedBox(height: 12),
+        CardList(
+          gap: 16,
+          children: [
+            for (final a in newest)
+              OfficialPostCard(
+                id: a.id,
+                title: a.title.of(vm.english),
+                publishedAt: a.publishedAt,
+              ),
+          ],
         ),
       ],
     );

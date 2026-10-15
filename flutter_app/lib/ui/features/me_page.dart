@@ -6,6 +6,7 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import 'account_pages.dart';
 import 'browse_pages.dart';
+import 'home_page.dart' show welcomeTitle;
 import 'post_cards.dart';
 
 /// 我的: who I am, my posts and what I saved. Settings are one tap away.
@@ -289,7 +290,7 @@ class _SavedGuide extends StatelessWidget {
       pinned: id == welcomeGuideId,
       title:
           action?.title.of(vm.english) ??
-          vm.pair('初次來台灣？先看這篇', 'New to Taiwan? Start here'),
+          vm.pair(welcomeTitle.$1, welcomeTitle.$2),
       publishedAt: action?.publishedAt,
     );
   }
