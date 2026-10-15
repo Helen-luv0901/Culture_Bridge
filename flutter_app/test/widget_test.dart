@@ -320,6 +320,19 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
+  for (final size in [const Size(375, 812), const Size(1280, 900)]) {
+    testWidgets('Header switches language at ${size.width}', (tester) async {
+      final app = await mount(tester, '/', size);
+      expect(find.byKey(const Key('header-language')), findsOneWidget);
+      await tap(tester, find.byKey(const Key('header-language')));
+      expect(app.vm.english, isTrue);
+      expect(find.text('中文'), findsOneWidget);
+      await tap(tester, find.byKey(const Key('header-language')));
+      expect(app.vm.english, isFalse);
+      expect(find.text('EN'), findsOneWidget);
+    });
+  }
+
   testWidgets('Save a post and find it under My › Saved', (tester) async {
     final app = await mount(
       tester,

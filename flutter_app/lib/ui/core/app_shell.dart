@@ -277,9 +277,34 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                 ),
+              SizedBox(width: phone ? 4 : 12),
+              const _LanguageToggle(),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Switches between Chinese and English from any page; it shows the other language.
+class _LanguageToggle extends StatelessWidget {
+  const _LanguageToggle();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return TextButton(
+      key: const Key('header-language'),
+      onPressed: () => vm.setEnglish(!vm.english),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(44, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        foregroundColor: Palette.ink,
+      ),
+      child: Text(
+        vm.english ? '中文' : 'EN',
+        semanticsLabel: vm.english ? '切換成中文' : 'Switch to English',
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       ),
     );
   }
