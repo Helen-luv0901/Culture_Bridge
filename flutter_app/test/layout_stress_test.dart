@@ -21,6 +21,10 @@ void main() {
     '/actions/arc/progress',
     '/actions/arc/complete',
     '/welcome',
+    '/profile/settings',
+    '/profile?tab=saved',
+    '/guide/welcome',
+    '/explore?q=居留',
   ];
 
   for (final english in [false, true]) {

@@ -24,40 +24,51 @@ abstract class CultureRepository {
   });
 
   Future<ExperiencePage> explore({
-    String? topic,
+    String? category,
     String? query,
     String? locale,
+    String? actionId,
+    String sort = 'new',
     int offset = 0,
   });
+  Future<SearchResults> search(String query, {String? locale});
+  Future<List<String>> popularTags();
   Future<ExperienceDetail> experience(String id, {String? locale});
   Future<ExperienceItem> react(String id, String kind, bool on);
   Future<void> setSaved(String id, bool on);
   Future<List<ExperienceItem>> savedExperiences({String? locale});
   Future<ExperienceDetail> requestTranslation(String id, String locale);
-  Future<MyExperience> createDraft({
-    required String topic,
-    required String identityType,
-    required String voice,
-    required String sourceLocale,
-    String? differentFromId,
+
+  /// Tags the AI suggests for a post being written; it never rewrites the post.
+  Future<List<String>> suggestTags({
+    required String title,
+    required String text,
+    String? category,
   });
-  Future<MyExperience> updateDraft(
-    String id, {
-    required String topic,
-    required String identityType,
+
+  /// Publishes the post exactly as written.
+  Future<ExperienceItem> publishPost({
+    required String title,
     required String voice,
+    required String category,
+    required List<String> tags,
     required String sourceLocale,
-  });
-  Future<SummaryDraftInfo> summarize(String experienceId);
-  Future<MyExperience> publish(
-    String experienceId,
-    String summaryId, {
-    String? situation,
-    String? feelingOrAttempt,
-    String? reminder,
     String authorDisplay = 'anonymous',
+    String? differentFromId,
+    String? actionId,
   });
   Future<void> deleteExperience(String id);
+
+  Future<List<CommentItem>> comments(String experienceId);
+  Future<CommentItem> addComment(
+    String experienceId, {
+    required String body,
+    String? replyToId,
+    String authorDisplay = 'anonymous',
+  });
+  Future<CommentItem> likeComment(String commentId, bool on);
+  Future<void> deleteComment(String commentId);
+  Future<void> reportComment(String commentId, String reason, String? note);
   Future<List<MyExperience>> myExperiences();
 
   Future<void> report(String experienceId, String reason, String? note);
@@ -147,18 +158,31 @@ class ApiCultureRepository implements CultureRepository {
 
   @override
   Future<ExperiencePage> explore({
-    String? topic,
+    String? category,
     String? query,
     String? locale,
+    String? actionId,
+    String sort = 'new',
     int offset = 0,
   }) async => ExperiencePage.fromJson(
     await api.get('/experiences', {
-      'topic': ?topic,
+      'category': ?category,
       if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       'locale': ?locale,
+      'action_id': ?actionId,
+      if (sort != 'new') 'sort': sort,
       'offset': '$offset',
     }),
   );
+  @override
+  Future<SearchResults> search(String query, {String? locale}) async =>
+      SearchResults.fromJson(
+        await api.get('/search', {'q': query.trim(), 'locale': ?locale}),
+      );
+  @override
+  Future<List<String>> popularTags() async => [
+    for (final tag in await api.get('/tags/popular') as List) tag as String,
+  ];
   @override
   Future<ExperienceDetail> experience(String id, {String? locale}) async =>
       ExperienceDetail.fromJson(
@@ -186,60 +210,80 @@ class ApiCultureRepository implements CultureRepository {
         await api.post('/experiences/$id/translations', {'locale': locale}),
       );
   @override
-  Future<MyExperience> createDraft({
-    required String topic,
-    required String identityType,
+  Future<List<String>> suggestTags({
+    required String title,
+    required String text,
+    String? category,
+  }) async {
+    final json = await api.post('/experiences/tag-suggestions', {
+      'title': title,
+      'text': text,
+      'category': ?category,
+    });
+    return [for (final tag in (json as Json)['tags'] as List) tag as String];
+  }
+
+  @override
+  Future<ExperienceItem> publishPost({
+    required String title,
     required String voice,
+    required String category,
+    required List<String> tags,
     required String sourceLocale,
-    String? differentFromId,
-  }) async => MyExperience.fromJson(
-    await api.post('/experiences', {
-      'topic_id': topic,
-      'identity_type': identityType,
-      'original_voice': voice,
-      'source_locale': sourceLocale,
-      'different_from_id': ?differentFromId,
-    }),
-  );
-  @override
-  Future<MyExperience> updateDraft(
-    String id, {
-    required String topic,
-    required String identityType,
-    required String voice,
-    required String sourceLocale,
-  }) async => MyExperience.fromJson(
-    await api.patch('/experiences/$id', {
-      'topic_id': topic,
-      'identity_type': identityType,
-      'original_voice': voice,
-      'source_locale': sourceLocale,
-    }),
-  );
-  @override
-  Future<SummaryDraftInfo> summarize(String experienceId) async =>
-      SummaryDraftInfo.fromJson(
-        await api.post('/experiences/$experienceId/summaries'),
-      );
-  @override
-  Future<MyExperience> publish(
-    String experienceId,
-    String summaryId, {
-    String? situation,
-    String? feelingOrAttempt,
-    String? reminder,
     String authorDisplay = 'anonymous',
-  }) async => MyExperience.fromJson(
-    await api.post('/experiences/$experienceId/publish', {
-      'summary_id': summaryId,
-      'situation': ?situation,
-      'feeling_or_attempt': ?feelingOrAttempt,
-      'reminder': ?reminder,
+    String? differentFromId,
+    String? actionId,
+  }) async => ExperienceItem.fromJson(
+    await api.post('/posts', {
+      'title': title,
+      'original_voice': voice,
+      'category': category,
+      'tags': tags,
+      'source_locale': sourceLocale,
       'author_display': authorDisplay,
+      'different_from_id': ?differentFromId,
+      'action_id': ?actionId,
     }),
   );
   @override
   Future<void> deleteExperience(String id) => api.delete('/experiences/$id');
+  @override
+  Future<List<CommentItem>> comments(String experienceId) async => [
+    for (final item
+        in await api.get('/experiences/$experienceId/comments') as List)
+      CommentItem.fromJson(item as Json),
+  ];
+  @override
+  Future<CommentItem> addComment(
+    String experienceId, {
+    required String body,
+    String? replyToId,
+    String authorDisplay = 'anonymous',
+  }) async => CommentItem.fromJson(
+    await api.post('/experiences/$experienceId/comments', {
+      'body': body,
+      'reply_to_id': ?replyToId,
+      'author_display': authorDisplay,
+    }),
+  );
+  @override
+  Future<CommentItem> likeComment(String commentId, bool on) async =>
+      CommentItem.fromJson(
+        on
+            ? await api.put('/comments/$commentId/like')
+            : await api.delete('/comments/$commentId/like'),
+      );
+  @override
+  Future<void> deleteComment(String commentId) =>
+      api.delete('/comments/$commentId');
+  @override
+  Future<void> reportComment(String commentId, String reason, String? note) =>
+      api.post('/reports', {
+        'comment_id': commentId,
+        'reason': reason,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      });
+
   @override
   Future<List<MyExperience>> myExperiences() async => [
     for (final item in await api.get('/me/experiences') as List)

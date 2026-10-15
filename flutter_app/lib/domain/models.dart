@@ -1,18 +1,89 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'models.freezed.dart';
+import 'package:flutter/foundation.dart';
 
 /// What the student is writing on the Share page. Kept on the device until published.
-@freezed
-abstract class ShareDraft with _$ShareDraft {
-  const factory ShareDraft({
-    @Default('') String voice,
-    @Default('cultureCommunication') String topic,
-    @Default('degreeStudent') String identity,
+@immutable
+class ShareDraft {
+  const ShareDraft({
+    this.title = '',
+    this.voice = '',
+    this.category,
+    this.chosenTags = const [],
+    this.customTags = const [],
+    this.authorDisplay = 'anonymous',
+    this.differentFromId,
+    this.actionId,
+  });
 
-    /// The server-side draft once the AI has been asked to organize it.
-    String? serverId,
+  final String title;
+  final String voice;
 
-    /// Set when this answers another experience ("my experience was different").
-    String? differentFromId,
-  }) = _ShareDraft;
+  /// One of [postCategories]; null until the student picks one.
+  final String? category;
+
+  /// AI-suggested tags the student ticked.
+  final List<String> chosenTags;
+
+  /// Tags the student typed in themselves.
+  final List<String> customTags;
+  final String authorDisplay;
+
+  /// Set when this answers another post ("my experience was different").
+  final String? differentFromId;
+
+  /// Set when shared from an official guide, so the post also shows under it.
+  final String? actionId;
+
+  bool get isEmpty => title.trim().isEmpty && voice.trim().isEmpty;
+
+  ShareDraft copyWith({
+    String? title,
+    String? voice,
+    String? category,
+    List<String>? chosenTags,
+    List<String>? customTags,
+    String? authorDisplay,
+  }) => ShareDraft(
+    title: title ?? this.title,
+    voice: voice ?? this.voice,
+    category: category ?? this.category,
+    chosenTags: chosenTags ?? this.chosenTags,
+    customTags: customTags ?? this.customTags,
+    authorDisplay: authorDisplay ?? this.authorDisplay,
+    differentFromId: differentFromId,
+    actionId: actionId,
+  );
+
+  /// The same draft without the link to another post or guide.
+  ShareDraft unlinked({bool post = false, bool guide = false}) => ShareDraft(
+    title: title,
+    voice: voice,
+    category: category,
+    chosenTags: chosenTags,
+    customTags: customTags,
+    authorDisplay: authorDisplay,
+    differentFromId: post ? null : differentFromId,
+    actionId: guide ? null : actionId,
+  );
+
+  Map<String, Object?> toJson() => {
+    'title': title,
+    'voice': voice,
+    'category': category,
+    'chosenTags': chosenTags,
+    'customTags': customTags,
+    'authorDisplay': authorDisplay,
+    'differentFromId': differentFromId,
+    'actionId': actionId,
+  };
+
+  factory ShareDraft.fromJson(Map<String, dynamic> json) => ShareDraft(
+    title: json['title'] as String? ?? '',
+    voice: json['voice'] as String? ?? '',
+    category: json['category'] as String?,
+    chosenTags: List<String>.from(json['chosenTags'] as List? ?? const []),
+    customTags: List<String>.from(json['customTags'] as List? ?? const []),
+    authorDisplay: json['authorDisplay'] as String? ?? 'anonymous',
+    differentFromId: json['differentFromId'] as String?,
+    actionId: json['actionId'] as String?,
+  );
 }

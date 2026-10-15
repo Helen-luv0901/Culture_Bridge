@@ -24,6 +24,10 @@ AdminVersion _draft() => AdminVersion.fromJson({
   'applicable_to_en': 'Foreign students',
   'location': '線上',
   'location_en': 'Online',
+  'documents': [
+    {'zh': '護照正本', 'en': 'Passport'},
+    {'zh': '在學證明', 'en': ''},
+  ],
   'verification_status': 'unverified',
   'published_at': null,
   'created_at': '2026-10-14T00:00:00Z',
@@ -122,6 +126,11 @@ void main() {
     final step = (body['steps'] as List).single as Map<String, dynamic>;
     expect(step['notes'], '一個月內開立（內政部移民署）');
     expect(step['title_en'], 'Get an enrollment certificate');
+    // The documents list keeps both languages, one item per line.
+    expect(body['documents'], [
+      {'zh': '護照正本', 'en': 'Passport'},
+      {'zh': '在學證明', 'en': ''},
+    ]);
   });
 
   testWidgets('English interface starts on English content', (tester) async {

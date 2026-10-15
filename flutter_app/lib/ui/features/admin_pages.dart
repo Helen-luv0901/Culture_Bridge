@@ -295,12 +295,14 @@ class _VersionEditorState extends State<VersionEditor> {
       ('description_zh', '說明', 'Description', 3),
       ('applicable_to', '適用對象', 'Applies to', 2),
       ('location', '地點', 'Location', 1),
+      ('documents_zh', '要帶的文件（每行一項）', 'What to bring (one per line)', 3),
     ],
     'en': [
       ('title_en', '標題', 'Title', 1),
       ('description_en', '說明', 'Description', 3),
       ('applicable_to_en', '適用對象', 'Applies to', 2),
       ('location_en', '地點', 'Location', 1),
+      ('documents_en', '要帶的文件（每行一項）', 'What to bring (one per line)', 3),
     ],
   };
   late final Map<String, TextEditingController> _fields = {
@@ -328,11 +330,31 @@ class _VersionEditorState extends State<VersionEditor> {
     super.dispose();
   }
 
+  /// One document per line; a line missing in one language falls back to the other.
+  List<Json> _documents() {
+    List<String> lines(String key) => [
+      for (final l in _fields[key]!.text.split('\n')) l.trim(),
+    ];
+    final zh = lines('documents_zh');
+    final en = lines('documents_en');
+    return [
+      for (var i = 0; i < (zh.length > en.length ? zh.length : en.length); i++)
+        if ((i < zh.length && zh[i].isNotEmpty) ||
+            (i < en.length && en[i].isNotEmpty))
+          {
+            'zh': i < zh.length && zh[i].isNotEmpty ? zh[i] : en[i],
+            'en': i < en.length ? en[i] : '',
+          },
+    ];
+  }
+
   Json _content() => {
     for (final e in _fields.entries)
-      e.key: e.key.startsWith('location') && e.value.text.trim().isEmpty
-          ? null
-          : e.value.text.trim(),
+      if (!e.key.startsWith('documents'))
+        e.key: e.key.startsWith('location') && e.value.text.trim().isEmpty
+            ? null
+            : e.value.text.trim(),
+    'documents': _documents(),
     'steps': [
       for (final s in _steps)
         if (s.zh.text.trim().isNotEmpty || s.en.text.trim().isNotEmpty)
@@ -865,6 +887,7 @@ class _ReportQueue extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      '${r.targetType == 'comment' ? vm.pair('留言', 'Comment') : vm.pair('貼文', 'Post')} · '
                       '${r.count} ${vm.pair('則檢舉', 'reports')} · ${r.reasons.entries.map((e) => '${e.key} ${e.value}').join(', ')}'
                       ' · ${r.targetStatus ?? '—'}',
                     ),

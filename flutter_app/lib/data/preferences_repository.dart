@@ -9,27 +9,35 @@ abstract class PreferencesRepository {
   ShareDraft get draft;
   Future<void> saveLanguage(bool english);
   Future<void> saveDraft(ShareDraft draft);
+
+  /// Posts and guides the reader has opened; lists show them dimmed.
+  Set<String> get readIds;
+  Future<void> saveReadIds(Set<String> ids);
+
+  /// Official guides bookmarked on this device (student posts are saved on the server).
+  Set<String> get savedGuides;
+  Future<void> saveSavedGuides(Set<String> ids);
 }
 
 class LocalPreferencesRepository implements PreferencesRepository {
   LocalPreferencesRepository(this.preferences);
   final SharedPreferences preferences;
+
+  /// Keeps the read list small; the oldest entries drop off first.
+  static const maxReadIds = 500;
+
   @override
   bool? get english => preferences.getBool('english');
   @override
   ShareDraft get draft {
     try {
-      final data = jsonDecode(
-        preferences.getString('draft') ?? '{}',
-      ) as Map<String, dynamic>;
-      return ShareDraft(
-        voice: data['voice'] as String? ?? '',
-        topic: data['topic'] as String? ?? 'cultureCommunication',
-        identity: data['identity'] as String? ?? 'degreeStudent',
-        serverId: data['serverId'] as String?,
-        differentFromId: data['differentFromId'] as String?,
+      return ShareDraft.fromJson(
+        jsonDecode(preferences.getString('draft') ?? '{}')
+            as Map<String, dynamic>,
       );
-    } catch (_) {
+    } on FormatException {
+      return const ShareDraft();
+    } on TypeError {
       return const ShareDraft();
     }
   }
@@ -41,15 +49,24 @@ class LocalPreferencesRepository implements PreferencesRepository {
 
   @override
   Future<void> saveDraft(ShareDraft draft) async {
-    await preferences.setString(
-      'draft',
-      jsonEncode({
-        'voice': draft.voice,
-        'topic': draft.topic,
-        'identity': draft.identity,
-        'serverId': ?draft.serverId,
-        'differentFromId': ?draft.differentFromId,
-      }),
+    await preferences.setString('draft', jsonEncode(draft.toJson()));
+  }
+
+  @override
+  Set<String> get readIds => {...?preferences.getStringList('readIds')};
+  @override
+  Future<void> saveReadIds(Set<String> ids) async {
+    final list = ids.toList();
+    await preferences.setStringList(
+      'readIds',
+      list.length > maxReadIds ? list.sublist(list.length - maxReadIds) : list,
     );
+  }
+
+  @override
+  Set<String> get savedGuides => {...?preferences.getStringList('savedGuides')};
+  @override
+  Future<void> saveSavedGuides(Set<String> ids) async {
+    await preferences.setStringList('savedGuides', ids.toList());
   }
 }

@@ -106,6 +106,9 @@ class AdminVersion {
         'location_en',
       ])
         key: json[key] as String? ?? '',
+      // The "what to bring" list, edited as one item per line in each language.
+      'documents_zh': _documentLines(json, 'zh'),
+      'documents_en': _documentLines(json, 'en'),
     },
     status: json['verification_status'] as String,
     publishedAt: json['published_at'] == null
@@ -132,6 +135,11 @@ class AdminVersion {
   final List<AdminVerification> verifications;
   bool get isDraft => publishedAt == null;
 }
+
+String _documentLines(Json json, String lang) => [
+  for (final d in json['documents'] as List? ?? const [])
+    (d as Json)[lang] as String? ?? '',
+].join('\n');
 
 class FeedbackItem {
   const FeedbackItem({
@@ -171,6 +179,7 @@ class FeedbackItem {
 
 class ReportedItem {
   const ReportedItem({
+    this.targetType = 'experience',
     required this.reportId,
     required this.targetId,
     required this.targetStatus,
@@ -180,6 +189,7 @@ class ReportedItem {
     required this.count,
   });
   factory ReportedItem.fromJson(Json json) => ReportedItem(
+    targetType: json['target_type'] as String? ?? 'experience',
     reportId: json['report_id'] as String,
     targetId: json['target_id'] as String,
     targetStatus: json['target_status'] as String?,
@@ -188,6 +198,9 @@ class ReportedItem {
     notes: List<String>.from(json['notes'] as List),
     count: json['report_count'] as int,
   );
+
+  /// 'experience' (a post) or 'comment'.
+  final String targetType;
   final String reportId;
   final String targetId;
   final String? targetStatus;

@@ -34,6 +34,8 @@ class BridgeViewModel extends ChangeNotifier {
   }) {
     _english = preferences.english ?? systemEnglish;
     _draft = preferences.draft;
+    _read = preferences.readIds;
+    _savedGuides = preferences.savedGuides;
     _wasSignedIn = auth.signedIn;
     auth.addListener(_onAuthChanged);
   }
@@ -56,6 +58,8 @@ class BridgeViewModel extends ChangeNotifier {
 
   void setEnglish(bool value) {
     _english = value;
+    // Lists carry the translation for the reader's language; load them again.
+    _dropLists();
     unawaited(preferences.saveLanguage(value));
     if (signedIn) unawaited(_quietly(() => repository.updateLocale(locale)));
     notifyListeners();
@@ -69,6 +73,10 @@ class BridgeViewModel extends ChangeNotifier {
       'login_required' || 'invalid_token' => t('signInNeeded'),
       'ai_unavailable' => t('aiUnavailable'),
       'ai_daily_limit_reached' => t('aiDailyLimit'),
+      'anonymous_post_author' => pair(
+        '這篇是匿名發的，作者留言也只能匿名',
+        'This post is anonymous, so its author comments anonymously too',
+      ),
       'rate_limited' || 'daily_limit_reached' => t('rateLimited'),
       'already_reported' => t('alreadyReported'),
       'summary_outdated' => t('summaryOutdated'),
@@ -119,9 +127,9 @@ class BridgeViewModel extends ChangeNotifier {
     } on ApiException catch (e) {
       return errorText(e);
     }
-    // Signed experiences show the name, so cached lists may be stale.
-    _explore.clear();
-    _experiences.clear();
+    // Signed posts and comments show the name, so cached lists may be stale.
+    _dropLists();
+    _comments.clear();
     saved = const Resource();
     notifyListeners();
     return null;
@@ -144,8 +152,12 @@ class BridgeViewModel extends ChangeNotifier {
     blocks = const Resource();
     saved = const Resource();
     // Lists and details carry "my reactions" and block filtering.
-    _explore.clear();
-    _experiences.clear();
+    _dropLists();
+    _comments.clear();
+    tagSuggestions = const [];
+    _suggestedFor = '';
+    _suggestRequest++;
+    suggestingTags = false;
   }
 
   Future<void> signOut() => auth.signOut();
@@ -323,27 +335,47 @@ class BridgeViewModel extends ChangeNotifier {
     }
   }
 
-  // ---------- experiences ----------
+  // ---------- posts: feed, categories, search ----------
 
+  /// Lists of student posts, keyed by what was asked for (see [_listKey]).
   final Map<String, Resource<ExperiencePage>> _explore = {};
-  String _exploreKey(String topic, String query) => '$topic|$query';
-  Resource<ExperiencePage> explore(String topic, [String query = '']) =>
-      _explore[_exploreKey(topic, query)] ?? const Resource();
+  static String _listKey(String? category, String sort, String? actionId) =>
+      '${category ?? 'all'}|$sort|${actionId ?? ''}';
 
-  Future<void> loadExplore(
-    String topic, {
-    String query = '',
-    bool more = false,
-  }) {
-    final key = _exploreKey(topic, query);
-    final current = explore(topic, query).data;
+  /// Newest student posts in [category] (null: every category).
+  Resource<ExperiencePage> posts([String? category]) =>
+      _explore[_listKey(category, 'new', null)] ?? const Resource();
+  Future<void> loadPosts([String? category, bool more = false]) =>
+      _loadList(category, 'new', null, more);
+
+  /// The most discussed posts: "me too" taps plus comments.
+  Resource<ExperiencePage> get hotPosts =>
+      _explore[_listKey(null, 'hot', null)] ?? const Resource();
+  Future<void> loadHotPosts() => _loadList(null, 'hot', null, false);
+
+  /// Student posts shared under an official guide.
+  Resource<ExperiencePage> postsForAction(String actionId) =>
+      _explore[_listKey(null, 'new', actionId)] ?? const Resource();
+  Future<void> loadPostsForAction(String actionId) =>
+      _loadList(null, 'new', actionId, false);
+
+  Future<void> _loadList(
+    String? category,
+    String sort,
+    String? actionId,
+    bool more,
+  ) {
+    final key = _listKey(category, sort, actionId);
+    final current = _explore[key]?.data;
     return _load(
-      () => explore(topic, query),
+      () => _explore[key] ?? const Resource<ExperiencePage>(),
       (r) => _explore[key] = r,
       () async {
         final page = await repository.explore(
-          topic: topic == 'all' ? null : apiTopic(topic),
-          query: query,
+          category: category,
+          actionId: actionId,
+          sort: sort,
+          locale: locale,
           offset: more ? current?.nextOffset ?? 0 : 0,
         );
         return more && current != null
@@ -352,6 +384,22 @@ class BridgeViewModel extends ChangeNotifier {
       },
     );
   }
+
+  final Map<String, Resource<SearchResults>> _searches = {};
+  Resource<SearchResults> search(String query) =>
+      _searches[query.trim()] ?? const Resource();
+  Future<void> loadSearch(String query) {
+    final q = query.trim();
+    return _load(
+      () => search(q),
+      (r) => _searches[q] = r,
+      () => repository.search(q, locale: locale),
+    );
+  }
+
+  Resource<List<String>> popularTags = const Resource();
+  Future<void> loadPopularTags() =>
+      _load(() => popularTags, (r) => popularTags = r, repository.popularTags);
 
   final Map<String, Resource<ExperienceDetail>> _experiences = {};
   Resource<ExperienceDetail> experience(String id) =>
@@ -362,15 +410,32 @@ class BridgeViewModel extends ChangeNotifier {
     () => repository.experience(id),
   );
 
-  /// Replace one experience everywhere it is cached (after a reaction).
+  /// Drops every cached list (after publishing, deleting, blocking or renaming).
+  void _dropLists() {
+    _explore.clear();
+    _searches.clear();
+    _experiences.clear();
+  }
+
+  /// Replace one post everywhere it is cached (after a reaction or save).
   void _updateItem(ExperienceItem item) {
+    ExperienceItem swap(ExperienceItem e) => e.id == item.id ? item : e;
     for (final entry in _explore.entries.toList()) {
       final page = entry.value.data;
       if (page == null) continue;
       _explore[entry.key] = Resource(
         data: ExperiencePage([
-          for (final e in page.items) e.id == item.id ? item : e,
+          for (final e in page.items) swap(e),
         ], page.nextOffset),
+      );
+    }
+    for (final entry in _searches.entries.toList()) {
+      final found = entry.value.data;
+      if (found == null) continue;
+      _searches[entry.key] = Resource(
+        data: SearchResults(found.actions, [
+          for (final e in found.experiences) swap(e),
+        ]),
       );
     }
     final detail = _experiences[item.id]?.data;
@@ -391,6 +456,43 @@ class BridgeViewModel extends ChangeNotifier {
     } on ApiException catch (e) {
       showNotice(errorText(e));
     }
+  }
+
+  // ---------- read and bookmarked ----------
+
+  late final Set<String> _read;
+
+  /// Opened before; lists show it dimmed with an "already read" note.
+  bool isRead(String id) => _read.contains(id);
+  void markRead(String id) {
+    if (!_read.add(id)) return;
+    unawaited(preferences.saveReadIds(_read));
+    // Lists rebuild when the reader comes back, so no notify is needed here.
+  }
+
+  late final Set<String> _savedGuides;
+  bool guideSaved(String actionId) => _savedGuides.contains(actionId);
+  List<String> get savedGuideIds => _savedGuides.toList().reversed.toList();
+  void toggleSavedGuide(String actionId) {
+    final on = _savedGuides.add(actionId);
+    if (!on) _savedGuides.remove(actionId);
+    unawaited(preferences.saveSavedGuides(_savedGuides));
+    showNotice(
+      on
+          ? pair('已收藏，在「我的 › 收藏」找得到', 'Saved. Find it under My › Saved.')
+          : pair('已取消收藏', 'Removed from saved'),
+    );
+  }
+
+  /// Ticked items of a guide's "what to bring" list (kept while the app is open).
+  final Map<String, Set<int>> _documents = {};
+  bool documentReady(String actionId, int index) =>
+      _documents[actionId]?.contains(index) ?? false;
+  int documentsReady(String actionId) => _documents[actionId]?.length ?? 0;
+  void toggleDocument(String actionId, int index) {
+    final ready = _documents.putIfAbsent(actionId, () => {});
+    if (!ready.remove(index)) ready.add(index);
+    notifyListeners();
   }
 
   // ---------- saved for later ----------
@@ -422,7 +524,11 @@ class BridgeViewModel extends ChangeNotifier {
                 if (e.id != item.id) e,
             ],
           );
-    if (on) showNotice(t('savedNotice'));
+    showNotice(
+      on
+          ? pair('已收藏，在「我的 › 收藏」找得到', 'Saved. Find it under My › Saved.')
+          : pair('已取消收藏', 'Removed from saved'),
+    );
     _updateItem(item.withSaved(on));
   }
 
@@ -458,6 +564,99 @@ class BridgeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------- comments ----------
+
+  final Map<String, Resource<List<CommentItem>>> _comments = {};
+  Resource<List<CommentItem>> comments(String experienceId) =>
+      _comments[experienceId] ?? const Resource();
+  Future<void> loadComments(String experienceId) => _load(
+    () => comments(experienceId),
+    (r) => _comments[experienceId] = r,
+    () => repository.comments(experienceId),
+  );
+
+  /// Null when sent; otherwise the message to show under the box.
+  Future<String?> addComment(
+    String experienceId,
+    String body, {
+    String? replyToId,
+    bool signed = false,
+  }) async {
+    final text = body.trim();
+    if (text.isEmpty) return pair('先寫點什麼再送出', 'Write something first');
+    try {
+      final comment = await repository.addComment(
+        experienceId,
+        body: text,
+        replyToId: replyToId,
+        authorDisplay: signed ? 'nickname' : 'anonymous',
+      );
+      _comments[experienceId] = Resource(
+        data: [...?_comments[experienceId]?.data, comment],
+      );
+      _bumpCommentCount(experienceId, 1);
+      showNotice(pair('已留言', 'Comment posted'));
+      return null;
+    } on ApiException catch (e) {
+      return errorText(e);
+    }
+  }
+
+  void _bumpCommentCount(String experienceId, int by) {
+    final item = _experiences[experienceId]?.data?.item;
+    if (item != null) {
+      _updateItem(item.copyWith(commentCount: item.commentCount + by));
+    }
+  }
+
+  Future<void> toggleCommentLike(String experienceId, CommentItem c) async {
+    try {
+      final updated = await repository.likeComment(c.id, !c.liked);
+      _comments[experienceId] = Resource(
+        data: [
+          for (final e in _comments[experienceId]?.data ?? <CommentItem>[])
+            e.id == c.id ? updated : e,
+        ],
+      );
+      notifyListeners();
+    } on ApiException catch (e) {
+      showNotice(errorText(e));
+    }
+  }
+
+  Future<void> deleteComment(String experienceId, CommentItem c) async {
+    try {
+      await repository.deleteComment(c.id);
+    } on ApiException catch (e) {
+      showNotice(errorText(e));
+      return;
+    }
+    // Replies to a deleted comment go with it on the server too.
+    final before = _comments[experienceId]?.data ?? <CommentItem>[];
+    final kept = [
+      for (final e in before)
+        if (e.id != c.id && e.replyToId != c.id) e,
+    ];
+    _comments[experienceId] = Resource(data: kept);
+    _bumpCommentCount(experienceId, kept.length - before.length);
+    showNotice(pair('已刪除留言', 'Comment deleted'));
+  }
+
+  Future<bool> reportComment(
+    String commentId,
+    String reason,
+    String? note,
+  ) async {
+    try {
+      await repository.reportComment(commentId, reason, note);
+      showNotice(t('reportSent'));
+      return true;
+    } on ApiException catch (e) {
+      showNotice(errorText(e));
+      return false;
+    }
+  }
+
   // ---------- reports and blocks ----------
 
   Future<bool> report(String experienceId, String reason, String? note) async {
@@ -478,8 +677,8 @@ class BridgeViewModel extends ChangeNotifier {
       showNotice(errorText(e));
       return false;
     }
-    _explore.clear();
-    _experiences.clear();
+    _dropLists();
+    _comments.clear();
     blocks = const Resource();
     saved = const Resource();
     showNotice(t('blocked'));
@@ -495,12 +694,12 @@ class BridgeViewModel extends ChangeNotifier {
     } on ApiException catch (e) {
       showNotice(errorText(e));
     }
-    _explore.clear();
-    _experiences.clear();
+    _dropLists();
+    _comments.clear();
     await loadBlocks();
   }
 
-  // ---------- my experiences ----------
+  // ---------- my posts ----------
 
   Resource<List<MyExperience>> mine = const Resource();
   Future<void> loadMine() async {
@@ -508,34 +707,29 @@ class BridgeViewModel extends ChangeNotifier {
     await _load(() => mine, (r) => mine = r, repository.myExperiences);
   }
 
-  Future<void> deleteExperience(String id) async {
+  Future<bool> deleteExperience(String id) async {
     try {
       await repository.deleteExperience(id);
-      _experiences.remove(id);
-      _explore.clear();
-      await loadMine();
     } on ApiException catch (e) {
       showNotice(errorText(e));
+      return false;
     }
+    _dropLists();
+    _comments.remove(id);
+    saved = const Resource();
+    await loadMine();
+    showNotice(pair('已刪除這篇分享', 'Post deleted'));
+    return true;
   }
 
   // ---------- sharing ----------
 
   late ShareDraft _draft;
   ShareDraft get draft => _draft;
-  SummaryDraftInfo? _summary;
-
-  /// The AI summary waiting for the author's confirmation (B-10).
-  SummaryDraftInfo? get reviewSummary => _summary;
   Timer? _saveTimer;
 
-  void updateDraft({String? voice, String? topic, String? identity}) {
-    _draft = _draft.copyWith(
-      voice: voice ?? _draft.voice,
-      topic: topic ?? _draft.topic,
-      identity: identity ?? _draft.identity,
-    );
-    _summary = null;
+  void _storeDraft(ShareDraft value) {
+    _draft = value;
     _saveTimer?.cancel();
     _saveTimer = Timer(
       const Duration(milliseconds: 300),
@@ -544,101 +738,204 @@ class BridgeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startDifferentExperience(String experienceId) {
-    _draft = ShareDraft(
-      topic: _draft.topic,
-      identity: _draft.identity,
-      differentFromId: experienceId,
+  void updateDraft({
+    String? title,
+    String? voice,
+    String? category,
+    String? authorDisplay,
+  }) {
+    _storeDraft(
+      _draft.copyWith(
+        title: title,
+        voice: voice,
+        category: category,
+        authorDisplay: authorDisplay,
+      ),
     );
-    _summary = null;
-    unawaited(preferences.saveDraft(_draft));
-    notifyListeners();
+    if (title != null || voice != null) _scheduleTagSuggestions();
   }
 
-  bool organizing = false;
+  void toggleChosenTag(String tag) {
+    final chosen = [..._draft.chosenTags];
+    if (!chosen.remove(tag)) {
+      if (draftTags.length >= maxTags) {
+        showNotice(pair('最多 8 個標籤', 'At most 8 tags'));
+        return;
+      }
+      chosen.add(tag);
+    }
+    _storeDraft(_draft.copyWith(chosenTags: chosen));
+  }
 
-  /// Save the draft on the server and ask the AI to organize it. Null on success, else a
-  /// message to show.
-  Future<String?> prepareReview() async {
-    final voice = _draft.voice.trim();
-    if (voice.isEmpty) return '';
-    organizing = true;
+  static const maxTagLength = 12;
+  static const maxTags = 8;
+
+  /// Adds a tag the student typed; null when added, else why not.
+  String? addCustomTag(String raw) {
+    final word = raw
+        .trim()
+        .replaceFirst(RegExp(r'^#+'), '')
+        .replaceAll(RegExp(r'\s+'), '');
+    if (word.isEmpty) return pair('先輸入標籤文字', 'Type a tag first');
+    if (word.length > maxTagLength) {
+      return pair('標籤最多 12 個字', 'Tags are at most 12 characters');
+    }
+    final tag = '#$word';
+    if (draftTags.length >= maxTags && !draftTags.contains(tag)) {
+      return pair('最多 8 個標籤', 'At most 8 tags');
+    }
+    if (!_draft.customTags.contains(tag)) {
+      _storeDraft(_draft.copyWith(customTags: [..._draft.customTags, tag]));
+    }
+    return null;
+  }
+
+  void removeCustomTag(String tag) => _storeDraft(
+    _draft.copyWith(
+      customTags: [
+        for (final t in _draft.customTags)
+          if (t != tag) t,
+      ],
+    ),
+  );
+
+  /// Tags that go out with the post: ticked suggestions first, then the student's own.
+  List<String> get draftTags => [
+    for (final t in _draft.chosenTags)
+      if (!_draft.customTags.contains(t)) t,
+    ..._draft.customTags,
+  ].take(maxTags).toList();
+
+  ShareDraft _relinked({String? differentFromId, String? actionId}) =>
+      ShareDraft(
+        title: _draft.title,
+        voice: _draft.voice,
+        category: _draft.category,
+        chosenTags: _draft.chosenTags,
+        customTags: _draft.customTags,
+        authorDisplay: _draft.authorDisplay,
+        differentFromId: differentFromId,
+        actionId: actionId,
+      );
+
+  /// Start a post that answers [experienceId] ("my experience was different").
+  void startDifferentExperience(String experienceId, {String? category}) {
+    final next = _relinked(differentFromId: experienceId);
+    _storeDraft(
+      next.category == null && category != null
+          ? next.copyWith(category: category)
+          : next,
+    );
+  }
+
+  /// Start a post that also shows under the official guide [actionId].
+  void startPostForAction(String actionId) =>
+      _storeDraft(_relinked(actionId: actionId));
+
+  void unlinkDraft({bool post = false, bool guide = false}) =>
+      _storeDraft(_draft.unlinked(post: post, guide: guide));
+
+  // AI tag suggestions follow the text, a moment after typing stops.
+  List<String> tagSuggestions = const [];
+  bool suggestingTags = false;
+  Timer? _suggestTimer;
+  String _suggestedFor = '';
+
+  /// Bumped for every request (and on publish or sign-out) so a late answer is ignored.
+  int _suggestRequest = 0;
+  static const _minSuggestLength = 8;
+
+  void _scheduleTagSuggestions() {
+    _suggestTimer?.cancel();
+    _suggestTimer = Timer(
+      const Duration(milliseconds: 900),
+      () => unawaited(refreshTagSuggestions()),
+    );
+  }
+
+  Future<void> refreshTagSuggestions() async {
+    final title = _draft.title.trim();
+    final text = _draft.voice.trim();
+    final key = '$title\n$text';
+    if (key == _suggestedFor || !signedIn) return;
+    if ((title + text).length < _minSuggestLength) {
+      _suggestedFor = key;
+      tagSuggestions = const [];
+      notifyListeners();
+      return;
+    }
+    final request = ++_suggestRequest;
+    suggestingTags = true;
     notifyListeners();
     try {
-      final source = RegExp(r'[㐀-鿿]').hasMatch(voice) ? 'zh-Hant' : 'en';
-      final topic = apiTopic(_draft.topic);
-      final identity = apiIdentity(_draft.identity);
-      String id;
-      try {
-        id = _draft.serverId == null
-            ? (await repository.createDraft(
-                topic: topic,
-                identityType: identity,
-                voice: voice,
-                sourceLocale: source,
-                differentFromId: _draft.differentFromId,
-              )).id
-            : (await repository.updateDraft(
-                _draft.serverId!,
-                topic: topic,
-                identityType: identity,
-                voice: voice,
-                sourceLocale: source,
-              )).id;
-      } on ApiException catch (e) {
-        // The saved server draft is gone (published elsewhere or deleted): start a new one.
-        if (_draft.serverId == null || (e.status != 404 && e.status != 409)) {
-          rethrow;
-        }
-        id = (await repository.createDraft(
-          topic: topic,
-          identityType: identity,
-          voice: voice,
-          sourceLocale: source,
-          differentFromId: _draft.differentFromId,
-        )).id;
-      }
-      _draft = _draft.copyWith(serverId: id);
-      unawaited(preferences.saveDraft(_draft));
-      _summary = await repository.summarize(id);
-      return null;
-    } on ApiException catch (e) {
-      return errorText(e);
+      final tags = await repository.suggestTags(
+        title: title,
+        text: text,
+        category: _draft.category,
+      );
+      if (request != _suggestRequest) return;
+      tagSuggestions = tags;
+      _suggestedFor = key;
+    } on ApiException {
+      // Suggestions are optional; the student can still add tags by hand.
     } finally {
-      organizing = false;
+      if (request == _suggestRequest) {
+        suggestingTags = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  bool publishing = false;
+
+  /// Publishes the draft exactly as written. Returns an error message, or the new post.
+  Future<(String?, ExperienceItem?)> publishDraft() async {
+    final title = _draft.title.trim();
+    final voice = _draft.voice.trim();
+    final category = _draft.category;
+    if (title.isEmpty || voice.isEmpty || category == null) {
+      return (pair('標題、內文和分類都要填', 'Add a title, text and category'), null);
+    }
+    publishing = true;
+    notifyListeners();
+    try {
+      final item = await repository.publishPost(
+        title: title,
+        voice: voice,
+        category: category,
+        tags: draftTags,
+        sourceLocale: RegExp(r'[㐀-鿿]').hasMatch(title + voice)
+            ? 'zh-Hant'
+            : 'en',
+        authorDisplay: _draft.authorDisplay,
+        differentFromId: _draft.differentFromId,
+        actionId: _draft.actionId,
+      );
+      _draft = ShareDraft(authorDisplay: _draft.authorDisplay);
+      unawaited(preferences.saveDraft(_draft));
+      tagSuggestions = const [];
+      _suggestedFor = '';
+      _suggestRequest++;
+      suggestingTags = false;
+      _dropLists();
+      popularTags = const Resource();
+      mine = const Resource();
+      final label = categoryLabels[category];
+      showNotice(
+        item.actionId != null
+            ? pair('已發布，也貼在官方指南底下', 'Published, also under the guide')
+            : pair(
+                '已發布，首頁和「${label?.$1}」看得到',
+                'Published. It shows on Home and in ${label?.$2}.',
+              ),
+      );
+      return (null, item);
+    } on ApiException catch (e) {
+      return (errorText(e), null);
+    } finally {
+      publishing = false;
       notifyListeners();
     }
-  }
-
-  /// Confirm (with optional edits) and publish anonymously.
-  Future<String?> publish({
-    String? situation,
-    String? feelingOrAttempt,
-    String? reminder,
-    String authorDisplay = 'anonymous',
-  }) async {
-    final summary = _summary;
-    final id = _draft.serverId;
-    if (summary == null || id == null) return t('summaryOutdated');
-    try {
-      await repository.publish(
-        id,
-        summary.id,
-        situation: situation,
-        feelingOrAttempt: feelingOrAttempt,
-        reminder: reminder,
-        authorDisplay: authorDisplay,
-      );
-    } on ApiException catch (e) {
-      return errorText(e);
-    }
-    _draft = ShareDraft(topic: _draft.topic, identity: _draft.identity);
-    _summary = null;
-    unawaited(preferences.saveDraft(_draft));
-    _explore.clear();
-    mine = const Resource();
-    showNotice(t('publishedNotice'));
-    return null;
   }
 
   // ---------- assistant ----------
@@ -646,6 +943,21 @@ class BridgeViewModel extends ChangeNotifier {
   String? conversationId;
   final List<ChatEntry> chat = [];
   bool asking = false;
+
+  /// The chat window over the page; the round bubble opens and closes it.
+  bool assistantOpen = false;
+  void openAssistant({String? question}) {
+    assistantOpen = true;
+    notifyListeners();
+    if (question != null && question.trim().isNotEmpty) {
+      unawaited(ask(question));
+    }
+  }
+
+  void closeAssistant() {
+    assistantOpen = false;
+    notifyListeners();
+  }
 
   /// Send a message with what the user is looking at, so "this procedure" can be resolved.
   Future<void> ask(String text, {Map<String, String>? screen}) async {
@@ -709,6 +1021,7 @@ class BridgeViewModel extends ChangeNotifier {
   void dispose() {
     auth.removeListener(_onAuthChanged);
     _saveTimer?.cancel();
+    _suggestTimer?.cancel();
     super.dispose();
   }
 }
