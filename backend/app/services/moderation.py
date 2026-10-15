@@ -8,7 +8,7 @@ import hashlib
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -22,6 +22,7 @@ from app.models import (
     ExecutionFeedback,
     ExecutionStep,
     Experience,
+    ExperienceComment,
     ExperienceReaction,
     ExperienceSummary,
     Report,
@@ -38,14 +39,23 @@ from app.services.metrics import forget_activity
 ReportReason = Literal[
     "spam", "harassment", "hate", "sexual", "personal_info", "misinformation", "other"
 ]
-AUTO_HIDE_REPORTS = 3  # distinct reporters before an experience is hidden pending review
+AUTO_HIDE_REPORTS = 3  # distinct reporters before a post or comment is hidden pending review
 DELETED_STAFF = "deleted-staff"
 
 
 class ReportIn(BaseModel):
-    experience_id: str
+    """Report a post (experience_id) or a comment (comment_id), not both."""
+
+    experience_id: str | None = None
+    comment_id: str | None = None
     reason: ReportReason
     note: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def _one_target(self) -> "ReportIn":
+        if (self.experience_id is None) == (self.comment_id is None):
+            raise ValueError("report exactly one of experience_id or comment_id")
+        return self
 
 
 class ReportAck(BaseModel):
@@ -60,9 +70,10 @@ class BlockOut(BaseModel):
 
 class ReportedItem(BaseModel):
     report_id: str  # newest pending report; resolving it resolves all reports on the target
-    target_type: Literal["experience"]
+    target_type: Literal["experience", "comment"]
     target_id: str
     target_status: Literal["draft", "published", "hidden"] | None
+    # The post's original words, or the comment's text.
     original_voice: str | None
     reasons: dict[str, int]
     notes: list[str]
@@ -86,6 +97,51 @@ class StaffMember(BaseModel):
 
 
 # ---------- reports ----------
+
+
+def report_content(db: Session, user: CurrentUser, body: ReportIn) -> ReportAck:
+    if body.comment_id is not None:
+        return _report_comment(db, user, body.comment_id, body)
+    return report_experience(db, user, body)
+
+
+def _add_report(db: Session, report: Report) -> int:
+    """Save the report; returns how many reports on the target are pending."""
+    db.add(report)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise conflict("already_reported") from exc
+    return (
+        db.scalar(
+            select(func.count()).where(
+                Report.target_type == report.target_type,
+                Report.target_id == report.target_id,
+                Report.status == "pending",
+            )
+        )
+        or 0
+    )
+
+
+def _report_comment(db: Session, user: CurrentUser, comment_id: str, body: ReportIn) -> ReportAck:
+    comment = db.get(ExperienceComment, comment_id)
+    if comment is None:
+        raise not_found("comment_not_found")
+    if comment.author_id == user.id:
+        raise ApiError(422, "cannot_report_own")
+    report = Report(
+        reporter_id=user.id,
+        target_type="comment",
+        target_id=comment.id,
+        reason=body.reason,
+        note=(body.note or "").strip() or None,
+    )
+    if _add_report(db, report) >= AUTO_HIDE_REPORTS and comment.status == "visible":
+        comment.status = "hidden"
+    db.commit()
+    return ReportAck(id=report.id, status="pending")
 
 
 def report_experience(db: Session, user: CurrentUser, body: ReportIn) -> ReportAck:
@@ -125,26 +181,26 @@ def report_queue(db: Session, status: str) -> list[ReportedItem]:
     reports = list(
         db.scalars(
             select(Report)
-            .where(Report.status == status, Report.target_type == "experience")
+            .where(Report.status == status, Report.target_type.in_(["experience", "comment"]))
             .order_by(Report.created_at)
         )
     )
-    grouped: dict[str, list[Report]] = {}
+    grouped: dict[tuple[str, str], list[Report]] = {}
     for r in reports:
-        grouped.setdefault(r.target_id, []).append(r)
+        grouped.setdefault((r.target_type, r.target_id), []).append(r)
     items = []
-    for target_id, group in grouped.items():
-        experience = db.get(Experience, target_id)
+    for (target_type, target_id), group in grouped.items():
+        target_status, text = _target_state(db, target_type, target_id)
         reasons: dict[str, int] = {}
         for r in group:
             reasons[r.reason] = reasons.get(r.reason, 0) + 1
         items.append(
             ReportedItem(
                 report_id=group[-1].id,
-                target_type="experience",
+                target_type=target_type,  # type: ignore[arg-type]
                 target_id=target_id,
-                target_status=experience.status if experience else None,  # type: ignore[arg-type]
-                original_voice=experience.original_voice if experience else None,
+                target_status=target_status,  # type: ignore[arg-type]
+                original_voice=text,
                 reasons=reasons,
                 notes=[r.note for r in group if r.note],
                 report_count=len(group),
@@ -154,11 +210,31 @@ def report_queue(db: Session, status: str) -> list[ReportedItem]:
     return items
 
 
+def _target_state(db: Session, target_type: str, target_id: str) -> tuple[str | None, str | None]:
+    """Status (as published/hidden) and text of a reported post or comment."""
+    if target_type == "comment":
+        comment = db.get(ExperienceComment, target_id)
+        if comment is None:
+            return None, None
+        return ("hidden" if comment.status == "hidden" else "published"), comment.body
+    experience = db.get(Experience, target_id)
+    if experience is None:
+        return None, None
+    return experience.status, experience.original_voice
+
+
 def resolve_report(db: Session, actor: CurrentUser, report_id: str, body: ResolveIn) -> str:
     report = db.get(Report, report_id)
     if report is None:
         raise not_found("report_not_found")
-    experience = db.get(Experience, report.target_id)
+    comment = (
+        db.get(ExperienceComment, report.target_id) if report.target_type == "comment" else None
+    )
+    if comment is not None:
+        comment.status = "hidden" if body.action == "hide" else "visible"
+    experience = (
+        db.get(Experience, report.target_id) if report.target_type == "experience" else None
+    )
     if experience is not None:
         if body.action == "hide":
             experience.status = "hidden"
@@ -280,6 +356,7 @@ def delete_account(db: Session, user: CurrentUser) -> None:
     )
     db.execute(delete(ExperienceReaction).where(ExperienceReaction.user_id == uid))
     db.execute(delete(SavedExperience).where(SavedExperience.user_id == uid))
+    # Their comments (with replies to them) and likes go with the account (ON DELETE CASCADE).
     # Summaries they confirmed belong to their own experiences, already removed above.
     db.execute(delete(ExperienceSummary).where(ExperienceSummary.confirmed_by == uid))
     executions = list(db.scalars(select(Execution.id).where(Execution.user_id == uid)))

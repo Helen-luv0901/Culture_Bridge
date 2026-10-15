@@ -38,6 +38,11 @@ class StepIn(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
 
 
+class DocumentIn(BaseModel):
+    zh: str = Field(min_length=1, max_length=200)
+    en: str = Field(default="", max_length=200)
+
+
 class VersionContent(BaseModel):
     title_zh: str = Field(min_length=1, max_length=200)
     title_en: str = Field(min_length=1, max_length=200)
@@ -48,6 +53,7 @@ class VersionContent(BaseModel):
     location: str | None = Field(default=None, max_length=200)
     location_en: str | None = Field(default=None, max_length=200)
     steps: list[StepIn] = Field(default_factory=list, max_length=30)
+    documents: list[DocumentIn] = Field(default_factory=list, max_length=30)
 
 
 class NewAction(VersionContent):
@@ -119,6 +125,7 @@ class AdminVersion(BaseModel):
     verification_status: VerificationStatus
     published_at: datetime | None
     created_at: datetime
+    documents: list[Text2] = []
     steps: list[AdminStep]
     sources: list[AdminSource]
     verifications: list[AdminVerification]
@@ -182,6 +189,7 @@ def _apply_content(v: ActionVersion, body: VersionContent) -> None:
         "location_en",
     ):
         setattr(v, field, getattr(body, field))
+    v.documents = [{"zh": d.zh, "en": d.en} for d in body.documents]
 
 
 def _replace_steps(db: Session, v: ActionVersion, steps: list[StepIn]) -> None:
@@ -229,6 +237,7 @@ def version_out(db: Session, v: ActionVersion) -> AdminVersion:
         verification_status=v.verification_status,  # type: ignore[arg-type]
         published_at=v.published_at,
         created_at=v.created_at,
+        documents=[text2(d.get("zh"), d.get("en")) for d in v.documents or []],
         steps=[
             AdminStep(
                 id=s.id,
@@ -352,6 +361,7 @@ def create_version(db: Session, actor: CurrentUser, action_id: str) -> AdminVers
         institution_id=base.institution_id,
         location=base.location,
         location_en=base.location_en,
+        documents=list(base.documents or []),
     )
     db.add(v)
     db.flush()

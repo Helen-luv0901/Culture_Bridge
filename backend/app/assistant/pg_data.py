@@ -62,8 +62,15 @@ def _experience_record(item: experiences.PublicExperience) -> ExperienceRecord:
         other = translated if translated is not None else original
         return Localized(zh=original, en=other) if zh_first else Localized(zh=other, en=original)
 
-    summary = " ".join(p for p in (item.situation, item.feeling_or_attempt) if p)
-    t_summary = " ".join(p for p in (t.situation, t.feeling_or_attempt) if p) if t else None
+    # Posts published as written have no AI summary; their title stands in for it.
+    summary = " ".join(p for p in (item.situation, item.feeling_or_attempt) if p) or (
+        item.title or ""
+    )
+    t_summary = (
+        " ".join(p for p in (t.situation, t.feeling_or_attempt) if p) or (t.title or "")
+        if t
+        else None
+    )
     return ExperienceRecord(
         id=item.id,
         topic_id=item.topic_id,

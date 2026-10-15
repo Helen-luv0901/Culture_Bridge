@@ -73,6 +73,8 @@ class SourceOut(BaseModel):
 class ActionDetail(ActionSummary):
     steps: list[StepOut]
     sources: list[SourceOut]
+    # "What to bring", ticked off by the student before going.
+    documents: list[Text2] = []
 
 
 class ExecutionStepOut(BaseModel):
@@ -294,6 +296,7 @@ def get_action(db: Session, action_id: str) -> ActionDetail:
             )
             for s, note in sources
         ],
+        documents=[text2(d.get("zh"), d.get("en")) for d in v.documents or []],
     )
 
 

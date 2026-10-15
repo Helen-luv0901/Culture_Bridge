@@ -10,7 +10,7 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 Timestamp = TIMESTAMP(timezone=True)
@@ -86,6 +86,10 @@ class ActionVersion(Base):
     applicable_to: Mapped[str] = mapped_column(Text)
     applicable_to_en: Mapped[str] = mapped_column(Text, default="", server_default="")
     location_en: Mapped[str | None] = mapped_column(Text)
+    # "What to bring": [{"zh": ..., "en": ...}, ...] (migration 0008).
+    documents: Mapped[list[dict[str, str]]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
     verification_status: Mapped[str] = mapped_column(
         Text, default="unverified", server_default="unverified"
     )
@@ -194,6 +198,11 @@ class Experience(Base):
     author_display: Mapped[str] = mapped_column(
         Text, default="anonymous", server_default="anonymous"
     )
+    # Written by the author (migration 0008); older posts have no title and are filed
+    # under life or culture.
+    title: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
     created_at: Mapped[datetime] = _created()
 
 
@@ -217,6 +226,7 @@ class ExperienceTranslation(Base):
     experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id"), primary_key=True)
     summary_id: Mapped[str] = mapped_column(Text, primary_key=True)
     locale: Mapped[str] = mapped_column(Text, primary_key=True)
+    title: Mapped[str | None] = mapped_column(Text)
     original_voice: Mapped[str] = mapped_column(Text)
     situation: Mapped[str] = mapped_column(Text)
     feeling_or_attempt: Mapped[str] = mapped_column(Text)
@@ -239,6 +249,33 @@ class SavedExperience(Base):
     __tablename__ = "saved_experiences"
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
     experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id"), primary_key=True)
+    created_at: Mapped[datetime] = _created()
+
+
+class ExperienceComment(Base):
+    """A comment under a post; replies point at a top-level comment (migration 0008)."""
+
+    __tablename__ = "experience_comments"
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
+    experience_id: Mapped[str] = mapped_column(ForeignKey("experiences.id"))
+    author_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    reply_to_id: Mapped[str | None] = mapped_column(ForeignKey("experience_comments.id"))
+    body: Mapped[str] = mapped_column(Text)
+    # anonymous | nickname
+    author_display: Mapped[str] = mapped_column(
+        Text, default="anonymous", server_default="anonymous"
+    )
+    # visible | hidden (by moderation)
+    status: Mapped[str] = mapped_column(Text, default="visible", server_default="visible")
+    created_at: Mapped[datetime] = _created()
+
+
+class CommentLike(Base):
+    """ "Same here" on a comment."""
+
+    __tablename__ = "comment_likes"
+    comment_id: Mapped[str] = mapped_column(ForeignKey("experience_comments.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
     created_at: Mapped[datetime] = _created()
 
 
