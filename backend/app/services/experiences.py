@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 Locale = Literal["zh-Hant", "en"]
 TopicId = Literal["life_adaptation", "culture_communication"]
-Category = Literal["life", "food", "housing", "transit", "study", "culture"]
+Category = Literal["life", "food", "housing", "transit", "study", "culture", "difference"]
 Sort = Literal["new", "hot"]
 IdentityType = Literal["degree_student", "exchange_student", "language_student", "other"]
 ReactionKind = Literal["helpful", "experienced_too"]
@@ -59,7 +59,7 @@ VERBATIM = "author-verbatim"  # model_name of the summary a post publishes with
 
 def topic_for(category: str) -> str:
     """The older two-topic field still exists (the assistant filters by it)."""
-    return "culture_communication" if category == "culture" else "life_adaptation"
+    return "culture_communication" if category in ("culture", "difference") else "life_adaptation"
 
 
 def clean_tags(tags: list[str]) -> list[str]:

@@ -218,7 +218,7 @@ class Execution {
 
 // ---------- experiences ----------
 
-/// The six categories students post into. Explore adds "all" and "official" in front.
+/// The seven categories students post into. Explore adds "all" and "official" in front.
 const postCategories = [
   'life',
   'food',
@@ -226,6 +226,7 @@ const postCategories = [
   'transit',
   'study',
   'culture',
+  'difference',
 ];
 
 /// Older posts only have one of the two original topics.

@@ -138,7 +138,7 @@ void main() {
     tester,
   ) async {
     await mount(tester, '/explore', const Size(375, 1600));
-    for (final label in ['全部', '生活', '美食', '住宿', '交通', '學業', '文化']) {
+    for (final label in ['全部', '生活', '美食', '住宿', '交通', '學業', '文化', '文化差異']) {
       expect(find.text(label), findsWidgets);
     }
     // Official posts live on the official account's page, not in a tab here.

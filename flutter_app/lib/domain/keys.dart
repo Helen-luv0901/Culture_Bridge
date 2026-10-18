@@ -37,4 +37,5 @@ const categoryLabels = {
   'transit': ('交通', 'Transport'),
   'study': ('學業', 'Study'),
   'culture': ('文化', 'Culture'),
+  'difference': ('文化差異', 'Cultural differences'),
 };
