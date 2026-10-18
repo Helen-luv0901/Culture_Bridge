@@ -20,6 +20,8 @@ class Settings:
     ai_tag_suggestions_per_day: int
     embedding_model: str
     semantic_max_distance: float
+    # Stricter cut-off for showing a student post as "related" under an assistant answer.
+    related_post_max_distance: float
     gemini_api_key: str | None
     gemini_model: str
     gemini_timeout_seconds: float
@@ -74,6 +76,7 @@ def get_settings() -> Settings:
         embedding_model=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"),
         # Cosine distance cut-off; tune with `python -m app.rag.evaluate` on real embeddings.
         semantic_max_distance=float(os.getenv("SEMANTIC_MAX_DISTANCE", "0.6")),
+        related_post_max_distance=float(os.getenv("RELATED_POST_MAX_DISTANCE", "0.4")),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),

@@ -21,6 +21,7 @@ from app.assistant.tools import (
     _experience_summary,
     experience_card,
 )
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -95,13 +96,21 @@ def _clearly_matching(posts: list[ExperienceRecord], query: str) -> list[Experie
 def _closest_posts(
     passages: dict | None, keyword_hits: list[ExperienceRecord], ctx: ToolContext
 ) -> tuple[ExperienceRecord, ...]:
-    """Posts nearest in meaning first (already cut off by distance), then keyword matches."""
+    """Posts close in meaning first, then clear keyword matches.
+
+    Semantic search's own cut-off is loose (it feeds the model background), so a post must be
+    much closer to be shown as related: with few posts, the nearest is often still off-topic."""
     by_id = {e.id: e for e in keyword_hits}
-    ordered = [
-        item["content_id"]
-        for item in (passages or {}).get("student_content", [])
-        if item.get("content_type") == "experience"
-    ] + list(by_id)
+    limit = get_settings().related_post_max_distance
+    near = []
+    for item in (passages or {}).get("student_content", []):
+        if item.get("content_type") != "experience":
+            continue
+        distance = item.get("distance")
+        logger.info("Related post %s at distance %s", item["content_id"], distance)
+        if distance is None or distance <= limit:
+            near.append(item["content_id"])
+    ordered = near + list(by_id)
     found: list[ExperienceRecord] = []
     for post_id in dict.fromkeys(ordered):
         record = by_id.get(post_id) or ctx.data.get_experience(post_id)
