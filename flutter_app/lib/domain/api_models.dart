@@ -602,6 +602,8 @@ class AssistantCard {
     required this.recentSuccessCount,
     required this.sources,
     required this.reminder,
+    this.excerpt = '',
+    this.category,
   });
   factory AssistantCard.fromJson(Json json) => json['type'] == 'action'
       ? AssistantCard(
@@ -617,12 +619,14 @@ class AssistantCard {
       : AssistantCard(
           type: 'experience',
           id: json['experience_id'] as String,
-          title: null,
+          title: (json['title'] as String?) ?? '',
           verificationStatus: null,
           lastVerifiedAt: null,
           recentSuccessCount: 0,
           sources: const [],
           reminder: json['reminder'] as String,
+          excerpt: (json['excerpt'] as String?) ?? '',
+          category: json['category'] as String?,
         );
   final String type;
   final String id;
@@ -632,6 +636,10 @@ class AssistantCard {
   final int recentSuccessCount;
   final List<String> sources;
   final String? reminder;
+
+  /// For student posts: the opening words and category, shown on the post card.
+  final String excerpt;
+  final String? category;
 }
 
 class ScreenAction {

@@ -67,6 +67,9 @@ class ExperienceRecord:
     reminder: Localized
     helpful_count: int
     different_count: int
+    # The author's title (empty for older posts) and category, for post cards.
+    title: Localized = Localized("", "")
+    category: str | None = None
 
 
 @dataclass(frozen=True)

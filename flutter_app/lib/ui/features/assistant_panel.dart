@@ -445,18 +445,18 @@ class _Entry extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final reply = entry.reply;
+    final posts = [
+      for (final card in reply?.cards ?? const <AssistantCard>[])
+        if (card.type == 'experience') card,
+    ];
     final links = <(String, String)>[
       if (reply != null) ...[
         for (final card in reply.cards)
-          card.type == 'action'
-              ? (
-                  card.title ?? vm.pair('官方指南', 'Official guide'),
-                  '/actions/${card.id}',
-                )
-              : (
-                  vm.pair('看這篇學生分享', 'Read this student post'),
-                  '/experiences/${card.id}',
-                ),
+          if (card.type == 'action')
+            (
+              card.title ?? vm.pair('官方指南', 'Official guide'),
+              '/actions/${card.id}',
+            ),
         for (final action in reply.screenActions)
           if (screenActionPath(action) case final path?)
             (_actionLabel(vm, action), path),
@@ -481,6 +481,20 @@ class _Entry extends StatelessWidget {
             onPressed: () => onNavigate(path),
             child: Text('$label →'),
           ),
+        if (posts.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 4, left: 2),
+            child: Text(
+              vm.pair('相關的學生分享', 'Related student posts'),
+              style: mutedStyle.copyWith(fontSize: 12),
+            ),
+          ),
+          for (final post in posts)
+            _PostCard(
+              card: post,
+              onTap: () => onNavigate('/experiences/${post.id}'),
+            ),
+        ],
         if (reply != null)
           for (final operation in reply.pendingOperations)
             _OperationCard(operation: operation, onNavigate: onNavigate),
@@ -573,6 +587,70 @@ class _OperationCard extends StatelessWidget {
                 _ => vm.pair('無法完成', 'Could not be done'),
               }, style: const TextStyle(color: Palette.muted)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A student post the assistant found, as a small card that opens the post.
+class _PostCard extends StatelessWidget {
+  const _PostCard({required this.card, required this.onTap});
+  final AssistantCard card;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final category = card.category;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Palette.high,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: const BorderSide(color: Palette.edge),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: Key('assistant-post-${card.id}'),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.title ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (card.excerpt.isNotEmpty && card.excerpt != card.title)
+                        Text(
+                          card.excerpt,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: mutedStyle.copyWith(fontSize: 13),
+                        ),
+                      if (category != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: PaperTag(categoryName(vm, category)),
+                        ),
+                    ],
+                  ),
+                ),
+                const AppIcon('chevron', size: 18, color: Palette.control),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 """System prompt: answer rules from product-map §14-16 and tech-architecture §4.3."""
 
 import json
+import re
 from datetime import date
 
 from app.assistant.data import Locale
@@ -55,14 +56,35 @@ How to answer
   Markdown headings, bold or tables.
 """
 
-_LANGUAGE = {
-    "zh-Hant": "Reply in Traditional Chinese (繁體中文, Taiwan usage).",
-    "en": "Reply in English.",
+_INTERFACE = {
+    "zh-Hant": "Traditional Chinese (繁體中文, Taiwan usage)",
+    "en": "English",
 }
 
 
 def build_system_prompt(locale: Locale, today: date) -> str:
-    return f"{_RULES}\nToday is {today.isoformat()} (Asia/Taipei).\n{_LANGUAGE[locale]}\n"
+    language = (
+        "Reply in the language of the user's latest message, whatever it is (for example "
+        "English, Vietnamese or Indonesian). If they write Chinese, reply in Traditional Chinese "
+        "(繁體中文, Taiwan usage). Only when the message gives no clue (just a number or emoji), "
+        f"reply in {_INTERFACE[locale]}, the language of their app."
+    )
+    return f"{_RULES}\nToday is {today.isoformat()} (Asia/Taipei).\n{language}\n"
+
+
+_CJK = re.compile(r"[㐀-鿿]")
+_LATIN = re.compile(r"[A-Za-z]")
+
+
+def message_locale(message: str, interface: Locale) -> Locale:
+    """The language of the question, for cards and fallback text: Chinese if it has Chinese
+    characters, English if it is written in Latin letters, else the app's language. A lone
+    abbreviation such as "ARC?" says nothing about the language, so it needs a few letters."""
+    if _CJK.search(message):
+        return "zh-Hant"
+    if len(_LATIN.findall(message)) >= 5:
+        return "en"
+    return interface
 
 
 def build_user_message(message: str, screen: ScreenContext | None) -> str:

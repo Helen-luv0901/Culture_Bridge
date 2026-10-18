@@ -81,6 +81,8 @@ def _experience_record(item: experiences.PublicExperience) -> ExperienceRecord:
         reminder=pair(item.reminder, t.reminder if t else None),
         helpful_count=item.helpful_count,
         different_count=item.different_count,
+        title=pair(item.title or "", t.title if t else None),
+        category=item.category,
     )
 
 

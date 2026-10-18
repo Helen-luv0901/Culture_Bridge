@@ -31,10 +31,13 @@ def test_search_then_detail_then_answer(make_assistant):
     assert results.results[0].result["action"]["title"] == "申請工作證"
 
 
-def test_system_prompt_follows_locale(make_assistant):
+def test_system_prompt_answers_in_the_users_language(make_assistant):
     llm = ScriptedLLM(answer("Hi"))
     make_assistant(llm).reply(ask("hi", locale="en"), None)
-    assert "Reply in English." in llm.calls[0]["system"]
+    system = llm.calls[0]["system"]
+    assert "Reply in the language of the user's latest message" in system
+    # The app's language is only the fallback when the message gives no clue.
+    assert "reply in English, the language of their app" in system
     assert "Today is" in llm.calls[0]["system"]
     assert {t.name for t in llm.calls[0]["tools"]} >= {"search_actions", "open_screen"}
 
@@ -188,3 +191,42 @@ def test_thinking_level_maps_to_gemini_config():
     assert thinking_config("") is None
     assert thinking_config("low").thinking_level.value == "LOW"
     assert thinking_config("minimal").thinking_level.value == "MINIMAL"
+
+
+def test_answers_show_the_closest_student_posts(make_assistant):
+    reply = make_assistant(ScriptedLLM(answer("租屋前先看合約。"))).reply(
+        ask("租房子要注意什麼？"), USER
+    )
+    posts = [c.model_dump() for c in reply.cards if c.type == "experience"]
+    assert 1 <= len(posts) <= 2
+    assert posts[0]["experience_id"] == "first-rental"
+    assert posts[0]["title"] and posts[0]["excerpt"]
+
+
+def test_at_most_two_posts_and_none_when_nothing_matches(make_assistant):
+    reply = make_assistant(ScriptedLLM(answer("ok"))).reply(ask("居留證 租屋 夜市 教授"), USER)
+    assert len([c for c in reply.cards if c.type == "experience"]) <= 2
+    nothing = make_assistant(ScriptedLLM(answer("hi"))).reply(ask("zzzz qqqq"), USER)
+    assert [c for c in nothing.cards if c.type == "experience"] == []
+
+
+def test_fallback_answers_show_no_posts(make_assistant):
+    reply = make_assistant(ScriptedLLM(LLMError("quota"))).reply(ask("租房子要注意什麼？"), USER)
+    assert reply.fallback is True and reply.cards == []
+
+
+def test_message_language_decides_cards_and_fallback():
+    from app.assistant.prompts import message_locale
+
+    assert message_locale("居留證要準備什麼？", "en") == "zh-Hant"
+    assert message_locale("What do I need for my ARC?", "zh-Hant") == "en"
+    assert message_locale("Tôi cần gì để làm thẻ cư trú?", "zh-Hant") == "en"
+    assert message_locale("123 👍", "zh-Hant") == "zh-Hant"
+    assert message_locale("ARC?", "zh-Hant") == "zh-Hant"  # an abbreviation alone
+
+
+def test_english_question_in_chinese_app_gets_english_cards(make_assistant):
+    failing = make_assistant(ScriptedLLM(LLMError("quota"))).reply(
+        ask("What do I need for my ARC?", locale="zh-Hant"), USER
+    )
+    assert failing.text.startswith("The assistant can't answer")

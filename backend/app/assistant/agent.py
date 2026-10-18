@@ -24,8 +24,13 @@ from app.assistant.llm import (
 )
 from app.assistant.memory import ConversationStore
 from app.assistant.operations import OperationStore, PendingOperation
-from app.assistant.prefetch import Prefetched, cite_named_procedures, prefetch
-from app.assistant.prompts import build_system_prompt, build_user_message
+from app.assistant.prefetch import (
+    Prefetched,
+    cite_named_procedures,
+    prefetch,
+    show_related_posts,
+)
+from app.assistant.prompts import build_system_prompt, build_user_message, message_locale
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import ToolContext, ToolRegistry
 from app.core.auth import CurrentUser
@@ -94,9 +99,11 @@ class Assistant:
 
         source = data or self._data
         assert source is not None, "Assistant needs a data source"
+        # Cards and fallback text follow the language of the question, not the app's setting.
+        locale = message_locale(request.message, request.locale)
         ctx = ToolContext(
             data=source,
-            locale=request.locale,
+            locale=locale,
             user=user,
             operations=operations or self._operations,
         )
@@ -113,7 +120,7 @@ class Assistant:
                 turn = self._llm.generate(system, history, specs)
             except LLMError as exc:
                 logger.warning("Assistant fallback: %s", exc)
-                return self._fallback(conversation_id, request.locale, tools_used)
+                return self._fallback(conversation_id, locale, tools_used)
             history.append(turn)
             if not turn.tool_calls:
                 return self._finish(owner, conversation_id, history, turn, ctx, tools_used, found)
@@ -126,7 +133,7 @@ class Assistant:
             history.append(ToolResultsTurn(results))
 
         logger.warning("Assistant fallback: tool round limit reached (%s)", tools_used)
-        return self._fallback(conversation_id, request.locale, tools_used)
+        return self._fallback(conversation_id, locale, tools_used)
 
     def _execute(self, call: ToolCall, ctx: ToolContext, index: int) -> ToolResult:
         # Every call still gets a result (the model expects one per call), but only a few run.
@@ -157,6 +164,7 @@ class Assistant:
             logger.warning("Assistant fallback: model returned an empty answer")
             return self._fallback(conversation_id, ctx.locale, tools_used)
         cite_named_procedures(turn.text, found, ctx)
+        show_related_posts(found, ctx)
         self._memory.save(owner, conversation_id, history)
         return AssistantReply(
             conversation_id=conversation_id,

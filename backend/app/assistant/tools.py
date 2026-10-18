@@ -151,6 +151,23 @@ def _experience_summary(experience: ExperienceRecord, locale: Locale) -> dict[st
     }
 
 
+EXCERPT_CHARS = 80
+
+
+def experience_card(experience: ExperienceRecord, locale: Locale) -> ExperienceCard:
+    """A student post as a card in the reader's language: title, opening words, category."""
+    voice = " ".join(experience.original_voice.get(locale).split())
+    title = experience.title.get(locale) or experience.summary.get(locale)
+    excerpt = voice if len(voice) <= EXCERPT_CHARS else voice[:EXCERPT_CHARS].rstrip() + "…"
+    return ExperienceCard(
+        experience_id=experience.id,
+        reminder=experience.reminder.get(locale),
+        title=title or excerpt,
+        excerpt=excerpt,
+        category=experience.category,
+    )
+
+
 def _action_card(action: ActionRecord, locale: Locale) -> ActionCard:
     return ActionCard(
         action_id=action.id,
@@ -212,9 +229,7 @@ def get_experience(args: GetExperienceArgs, ctx: ToolContext) -> dict[str, Any]:
     if experience is None:
         return {"found": False, "experience_id": args.experience_id}
     reminder = experience.reminder.get(ctx.locale)
-    ctx.cards[f"experience:{experience.id}"] = ExperienceCard(
-        experience_id=experience.id, reminder=reminder
-    )
+    ctx.cards[f"experience:{experience.id}"] = experience_card(experience, ctx.locale)
     return {
         "found": True,
         "notice": EXPERIENCE_NOTICE,
