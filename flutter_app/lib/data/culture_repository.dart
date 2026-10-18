@@ -9,6 +9,13 @@ abstract class CultureRepository {
   Future<Profile> updateNames({String? nickname, String? realName});
   Future<void> deleteAccount();
 
+  /// Upload a new profile photo (base64); the server crops and shrinks it.
+  Future<void> uploadAvatar(String base64Image);
+  Future<void> deleteAvatar();
+
+  /// A server path such as /api/avatars/… as a URL the app can load.
+  String imageUrl(String path);
+
   Future<List<ActionSummary>> actions();
   Future<ActionDetail> action(String id);
   Future<Execution> startExecution(String actionId, String identityType);
@@ -103,6 +110,13 @@ class ApiCultureRepository implements CultureRepository {
       );
   @override
   Future<void> deleteAccount() => api.delete('/me');
+  @override
+  Future<void> uploadAvatar(String base64Image) =>
+      api.put('/me/avatar', {'image': base64Image});
+  @override
+  Future<void> deleteAvatar() => api.delete('/me/avatar');
+  @override
+  String imageUrl(String path) => '${api.baseUrl}$path';
 
   @override
   Future<List<ActionSummary>> actions() async => [

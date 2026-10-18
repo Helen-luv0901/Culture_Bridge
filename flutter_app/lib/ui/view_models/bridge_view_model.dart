@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -79,6 +80,18 @@ class BridgeViewModel extends ChangeNotifier {
       ),
       'rate_limited' || 'daily_limit_reached' => t('rateLimited'),
       'already_reported' => t('alreadyReported'),
+      'avatar_invalid' => pair(
+        '這個檔案不是照片，請選 JPG、PNG 或 WebP',
+        "That file isn't a photo. Choose a JPG, PNG or WebP",
+      ),
+      'avatar_too_large' => pair(
+        '照片太大了，請選小一點的',
+        'That photo is too large. Choose a smaller one',
+      ),
+      'avatar_daily_limit' => pair(
+        '今天換太多次了，明天再試',
+        "You've changed it many times today. Try again tomorrow",
+      ),
       'summary_outdated' => t('summaryOutdated'),
       _ => t('genericError'),
     };
@@ -110,6 +123,37 @@ class BridgeViewModel extends ChangeNotifier {
       if (e.needsLogin) await auth.signOut();
     }
     notifyListeners();
+  }
+
+  /// A server image path (a profile photo) as a URL the app can load.
+  String? imageUrl(String? path) =>
+      path == null ? null : repository.imageUrl(path);
+
+  bool updatingAvatar = false;
+
+  /// Replace the profile photo, or remove it with null. Returns an error message, or null.
+  Future<String?> setAvatar(List<int>? bytes) async {
+    updatingAvatar = true;
+    notifyListeners();
+    try {
+      if (bytes == null) {
+        await repository.deleteAvatar();
+      } else {
+        await repository.uploadAvatar(base64Encode(bytes));
+      }
+      profile = await repository.me();
+    } on ApiException catch (e) {
+      return errorText(e);
+    } finally {
+      updatingAvatar = false;
+      notifyListeners();
+    }
+    // Signed posts and comments show the photo, so cached lists may be stale.
+    _dropLists();
+    _comments.clear();
+    saved = const Resource();
+    notifyListeners();
+    return null;
   }
 
   /// Save the optional names; blank clears one. Returns an error message, or null.

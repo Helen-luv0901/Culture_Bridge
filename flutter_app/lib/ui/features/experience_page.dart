@@ -94,7 +94,10 @@ class _PostCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Avatar(initial: authorInitial(vm, item.authorName)),
+              Avatar(
+                initial: authorInitial(vm, item.authorName),
+                imageUrl: vm.imageUrl(item.authorAvatarUrl),
+              ),
               const SizedBox(width: 10),
               Expanded(child: Text(authorLine(vm, item), style: mutedStyle)),
               PaperTag(categoryName(vm, item.categoryKey)),
@@ -526,7 +529,10 @@ class _CommentTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Avatar(initial: authorInitial(vm, c.authorName)),
+          Avatar(
+            initial: authorInitial(vm, c.authorName),
+            imageUrl: vm.imageUrl(c.authorAvatarUrl),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

@@ -8,13 +8,22 @@ import 'post_cards.dart';
 
 /// Share: one page. Title and text are required, one category, AI-suggested tags.
 /// The post is published exactly as written; the AI only suggests tags.
-class SharePage extends StatefulWidget {
+/// Sharing needs an account, so guests are asked to sign in first.
+class SharePage extends StatelessWidget {
   const SharePage({super.key});
   @override
-  State<SharePage> createState() => _SharePageState();
+  Widget build(BuildContext context) => BridgeScope.of(context).signedIn
+      ? const _ShareForm()
+      : const _SignInToShare();
 }
 
-class _SharePageState extends State<SharePage> {
+class _ShareForm extends StatefulWidget {
+  const _ShareForm();
+  @override
+  State<_ShareForm> createState() => _ShareFormState();
+}
+
+class _ShareFormState extends State<_ShareForm> {
   late final _title = TextEditingController(
     text: BridgeScope.of(context).draft.title,
   );
@@ -534,7 +543,12 @@ class _Preview extends StatelessWidget {
         children: [
           Row(
             children: [
-              Avatar(initial: authorInitial(vm, name)),
+              Avatar(
+                initial: authorInitial(vm, name),
+                imageUrl: name == null
+                    ? null
+                    : vm.imageUrl(vm.profile?.avatarUrl),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -576,6 +590,27 @@ class _Preview extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// What a guest sees on the share page (from a link or a "share" button): sign in first.
+class _SignInToShare extends StatelessWidget {
+  const _SignInToShare();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return FlowBody(
+      maxWidth: 760,
+      children: [
+        EmptyNote(
+          key: const Key('share-sign-in'),
+          title: vm.pair('請先登入', 'Please sign in'),
+          body: vm.pair(signInForSharing.$1, signInForSharing.$2),
+          action: vm.t('signIn'),
+          onAction: () => ensureSignedIn(context),
+        ),
+      ],
     );
   }
 }
