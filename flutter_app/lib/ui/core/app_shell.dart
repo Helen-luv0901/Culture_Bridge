@@ -55,11 +55,15 @@ class _AppShellState extends State<AppShell> {
   String _title(BuildContext context, AppLayout layout) {
     final vm = BridgeScope.of(context);
     final path = widget.uri.path;
-    if (path == '/') return layout == AppLayout.phone ? 'Culture Bridge' : '';
-    if (path.startsWith('/explore')) return vm.pair('探索', 'Explore');
-    if (path == '/share') return vm.pair('分享', 'Share');
+    // The four tabs need no page name next to the brand: the navigation already shows it.
+    // Phones have no separate brand, so it takes the title's place.
+    if (path == '/' ||
+        path == '/explore' ||
+        path == '/share' ||
+        path == '/profile') {
+      return layout == AppLayout.phone ? 'Culture Bridge' : '';
+    }
     if (path == '/profile/settings') return vm.pair('設定', 'Settings');
-    if (path.startsWith('/profile')) return vm.pair('我的', 'My');
     if (path.startsWith('/experiences')) {
       return vm.pair('學生分享', 'Student post');
     }

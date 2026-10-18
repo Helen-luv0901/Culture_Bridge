@@ -193,6 +193,17 @@ void main() {
     }
   });
 
+  for (final (route, name) in [
+    ('/explore', '探索'),
+    ('/share', '分享'),
+    ('/profile', '我的'),
+  ]) {
+    testWidgets('$route shows its name only in the navigation', (tester) async {
+      await mount(tester, route, const Size(1280, 900));
+      expect(find.text(name), findsOneWidget);
+    });
+  }
+
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
     await tap(tester, find.text('#居留證'));
