@@ -154,11 +154,15 @@ def _experience_summary(experience: ExperienceRecord, locale: Locale) -> dict[st
 EXCERPT_CHARS = 80
 
 
+def _excerpt(text: str) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= EXCERPT_CHARS else text[:EXCERPT_CHARS].rstrip() + "…"
+
+
 def experience_card(experience: ExperienceRecord, locale: Locale) -> ExperienceCard:
     """A student post as a card in the reader's language: title, opening words, category."""
-    voice = " ".join(experience.original_voice.get(locale).split())
     title = experience.title.get(locale) or experience.summary.get(locale)
-    excerpt = voice if len(voice) <= EXCERPT_CHARS else voice[:EXCERPT_CHARS].rstrip() + "…"
+    excerpt = _excerpt(experience.original_voice.get(locale))
     return ExperienceCard(
         experience_id=experience.id,
         reminder=experience.reminder.get(locale),
@@ -176,6 +180,7 @@ def _action_card(action: ActionRecord, locale: Locale) -> ActionCard:
         last_verified_at=action.last_verified_at,
         recent_success_count=action.recent_success_count,
         sources=[s.title.get(locale) for s in action.sources],
+        excerpt=_excerpt(action.description.get(locale)),
     )
 
 

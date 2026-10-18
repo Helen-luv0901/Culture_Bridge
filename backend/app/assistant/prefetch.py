@@ -12,26 +12,20 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from app.assistant.data import ActionRecord, ExperienceRecord, score, search_units
+from app.assistant.data import ActionRecord
 from app.assistant.tools import (
     EXPERIENCE_NOTICE,
     ToolContext,
     _action_card,
     _action_detail,
     _experience_summary,
-    experience_card,
 )
-from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 PROCEDURES = 2  # full details for the best keyword matches
 EXPERIENCES = 3
 PASSAGES = 3
-RELATED_POSTS = 2  # student posts shown as cards under each answer
-# A post found by keywords must share at least this share of the question's terms; one
-# common word in common ("need") is not enough to call it related.
-KEYWORD_POST_MATCH = 0.5
 MAX_QUERY = 200
 MAX_CHARS = 8000  # keep the attached block (and the remembered history) small
 
@@ -45,8 +39,6 @@ _HEADER = (
 class Prefetched:
     block: str
     actions: tuple[ActionRecord, ...] = ()
-    # The student posts closest to the question, best first.
-    posts: tuple[ExperienceRecord, ...] = ()
 
     def attach(self, message: str) -> str:
         return f"{self.block}\n\n{message}" if self.block else message
@@ -63,7 +55,6 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         logger.exception("Assistant prefetch failed")
         return Prefetched(block="")
     passages = _semantic(query, ctx)
-    posts = _closest_posts(passages, _clearly_matching(experiences, query), ctx)
     if not actions and not experiences and not _has_passages(passages):
         return Prefetched(block="")  # nothing to add; follow-ups like 「第二個」 stay as written
     payload: dict[str, Any] = {
@@ -78,47 +69,7 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     if len(text) > MAX_CHARS:
         payload["related_passages"] = None
         text = _dump(payload)[:MAX_CHARS]
-    return Prefetched(block=f"{_HEADER}\n{text}", actions=tuple(actions), posts=posts)
-
-
-def _clearly_matching(posts: list[ExperienceRecord], query: str) -> list[ExperienceRecord]:
-    units = search_units(query)
-    if not units:
-        return []
-
-    def text(e: ExperienceRecord) -> str:
-        parts = (e.title, e.original_voice, e.summary, e.reminder)
-        return " ".join(f"{p.zh} {p.en}" for p in parts).lower()
-
-    return [e for e in posts if score(units, text(e)) >= KEYWORD_POST_MATCH]
-
-
-def _closest_posts(
-    passages: dict | None, keyword_hits: list[ExperienceRecord], ctx: ToolContext
-) -> tuple[ExperienceRecord, ...]:
-    """Posts close in meaning first, then clear keyword matches.
-
-    Semantic search's own cut-off is loose (it feeds the model background), so a post must be
-    much closer to be shown as related: with few posts, the nearest is often still off-topic."""
-    by_id = {e.id: e for e in keyword_hits}
-    limit = get_settings().related_post_max_distance
-    near = []
-    for item in (passages or {}).get("student_content", []):
-        if item.get("content_type") != "experience":
-            continue
-        distance = item.get("distance")
-        logger.info("Related post %s at distance %s", item["content_id"], distance)
-        if distance is None or distance <= limit:
-            near.append(item["content_id"])
-    ordered = near + list(by_id)
-    found: list[ExperienceRecord] = []
-    for post_id in dict.fromkeys(ordered):
-        record = by_id.get(post_id) or ctx.data.get_experience(post_id)
-        if record is not None:
-            found.append(record)
-        if len(found) == RELATED_POSTS:
-            break
-    return tuple(found)
+    return Prefetched(block=f"{_HEADER}\n{text}", actions=tuple(actions))
 
 
 def _semantic(query: str, ctx: ToolContext) -> dict | None:
@@ -135,12 +86,6 @@ def _has_passages(found: dict | None) -> bool:
 
 def _dump(payload: dict[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False, default=str)
-
-
-def show_related_posts(found: Prefetched, ctx: ToolContext) -> None:
-    """Under the answer, the 1-2 student posts closest to the question, to open and read."""
-    for post in found.posts:
-        ctx.cards.setdefault(f"experience:{post.id}", experience_card(post, ctx.locale))
 
 
 def cite_named_procedures(answer: str, found: Prefetched, ctx: ToolContext) -> None:

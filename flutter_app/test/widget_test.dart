@@ -686,7 +686,15 @@ void main() {
 
     await tap(tester, find.text('居留證要準備什麼？'));
     expect(app.repository.assistantMessages, ['居留證要準備什麼？']);
-    expect(find.text('申請或更新 ARC →'), findsOneWidget);
+    // The guide shows as an official post card, like student posts.
+    expect(find.byKey(const Key('assistant-post-arc')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('assistant-post-arc')),
+        matching: find.text('申請或更新 ARC'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('打開辦理進度 →'), findsOneWidget);
     await tap(tester, find.byKey(const Key('confirm-op1')));
     expect(app.repository.confirmed, ['op1']);
@@ -782,7 +790,7 @@ void main() {
     await tester.enterText(find.byType(TextField).last, '租房子要注意什麼？');
     await tester.testTextInput.receiveAction(TextInputAction.send);
     await tester.pumpAndSettle();
-    expect(find.text('相關的學生分享'), findsOneWidget);
+    expect(find.text('相關貼文'), findsOneWidget);
     expect(find.text('第一次在台中租房子'), findsOneWidget);
 
     await tap(tester, find.byKey(const Key('assistant-post-first-rental')));

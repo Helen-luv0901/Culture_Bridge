@@ -615,6 +615,7 @@ class AssistantCard {
           recentSuccessCount: json['recent_success_count'] as int,
           sources: List<String>.from(json['sources'] as List),
           reminder: null,
+          excerpt: (json['excerpt'] as String?) ?? '',
         )
       : AssistantCard(
           type: 'experience',

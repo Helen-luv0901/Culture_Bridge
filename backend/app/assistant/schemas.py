@@ -43,6 +43,8 @@ class ActionCard(BaseModel):
     last_verified_at: str | None
     recent_success_count: int
     sources: list[str]
+    # The opening of the guide's description, for the card.
+    excerpt: str = ""
 
 
 class ExperienceCard(BaseModel):

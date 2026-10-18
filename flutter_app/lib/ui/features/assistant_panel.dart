@@ -445,18 +445,14 @@ class _Entry extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final reply = entry.reply;
-    final posts = [
-      for (final card in reply?.cards ?? const <AssistantCard>[])
-        if (card.type == 'experience') card,
+    // Official guides first, then student posts: each a card that opens it.
+    final cards = [
+      for (final type in ['action', 'experience'])
+        for (final card in reply?.cards ?? const <AssistantCard>[])
+          if (card.type == type) card,
     ];
     final links = <(String, String)>[
       if (reply != null) ...[
-        for (final card in reply.cards)
-          if (card.type == 'action')
-            (
-              card.title ?? vm.pair('官方指南', 'Official guide'),
-              '/actions/${card.id}',
-            ),
         for (final action in reply.screenActions)
           if (screenActionPath(action) case final path?)
             (_actionLabel(vm, action), path),
@@ -481,18 +477,22 @@ class _Entry extends StatelessWidget {
             onPressed: () => onNavigate(path),
             child: Text('$label →'),
           ),
-        if (posts.isNotEmpty) ...[
+        if (cards.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.only(top: 6, bottom: 4, left: 2),
             child: Text(
-              vm.pair('相關的學生分享', 'Related student posts'),
+              vm.pair('相關貼文', 'Related posts'),
               style: mutedStyle.copyWith(fontSize: 12),
             ),
           ),
-          for (final post in posts)
+          for (final card in cards)
             _PostCard(
-              card: post,
-              onTap: () => onNavigate('/experiences/${post.id}'),
+              card: card,
+              onTap: () => onNavigate(
+                card.type == 'action'
+                    ? '/actions/${card.id}'
+                    : '/experiences/${card.id}',
+              ),
             ),
         ],
         if (reply != null)
@@ -593,7 +593,8 @@ class _OperationCard extends StatelessWidget {
   }
 }
 
-/// A student post the assistant found, as a small card that opens the post.
+/// A guide or student post the assistant found, as a small card that opens it.
+/// Official guides carry the Culture Bridge logo and name.
 class _PostCard extends StatelessWidget {
   const _PostCard({required this.card, required this.onTap});
   final AssistantCard card;
@@ -622,6 +623,27 @@ class _PostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (card.type == 'action')
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              const Avatar(size: 20),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Culture Bridge',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: mutedStyle.copyWith(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Text(
                         card.title ?? '',
                         maxLines: 2,

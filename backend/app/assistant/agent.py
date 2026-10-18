@@ -24,13 +24,9 @@ from app.assistant.llm import (
 )
 from app.assistant.memory import ConversationStore
 from app.assistant.operations import OperationStore, PendingOperation
-from app.assistant.prefetch import (
-    Prefetched,
-    cite_named_procedures,
-    prefetch,
-    show_related_posts,
-)
+from app.assistant.prefetch import Prefetched, cite_named_procedures, prefetch
 from app.assistant.prompts import build_system_prompt, build_user_message, message_locale
+from app.assistant.related import parse_related, related_cards
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import ToolContext, ToolRegistry
 from app.core.auth import CurrentUser
@@ -160,15 +156,16 @@ class Assistant:
         tools_used: list[str],
         found: Prefetched,
     ) -> AssistantReply:
-        if not turn.text:
+        related = parse_related(turn.text or "")
+        if not related.text:
             logger.warning("Assistant fallback: model returned an empty answer")
             return self._fallback(conversation_id, ctx.locale, tools_used)
-        cite_named_procedures(turn.text, found, ctx)
-        show_related_posts(found, ctx)
+        cite_named_procedures(related.text, found, ctx)
+        related_cards(related, ctx)
         self._memory.save(owner, conversation_id, history)
         return AssistantReply(
             conversation_id=conversation_id,
-            text=turn.text,
+            text=related.text,
             cards=list(ctx.cards.values()),
             screen_actions=ctx.screen_actions,
             pending_operations=[operation_out(op) for op in ctx.proposed_operations],
