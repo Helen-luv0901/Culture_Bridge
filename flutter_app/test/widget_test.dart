@@ -455,6 +455,25 @@ void main() {
     expect(find.text('已開始，打開進度'), findsOneWidget);
   });
 
+  testWidgets('Guests are asked to sign in before using the assistant', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812), signedIn: false);
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    expect(find.text('請先登入'), findsOneWidget);
+    expect(find.text('登入後才可以使用 AI 助理。'), findsOneWidget);
+    expect(app.vm.assistantOpen, isFalse);
+
+    await tap(tester, find.text('取消'));
+    expect(find.byKey(const Key('assistant-sign-in')), findsNothing);
+    expect(app.vm.assistantOpen, isFalse);
+
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    await tap(tester, find.byKey(const Key('assistant-sign-in-go')));
+    expect(find.byKey(const Key('dev-name')), findsOneWidget);
+    expect(app.repository.assistantMessages, isEmpty);
+  });
+
   testWidgets('Assistant on a phone covers the page and hides the bubble', (
     tester,
   ) async {
