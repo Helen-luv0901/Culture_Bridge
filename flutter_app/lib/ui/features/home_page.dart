@@ -219,7 +219,7 @@ class GuideList extends StatelessWidget {
   }
 }
 
-/// 「官方帳號」 as a small bright yellow tag with a light sweeping across the text.
+/// 「官方帳號」 in golden yellow letters with a light sweeping across them.
 /// The shine plays twice, then rests; it is skipped when the system asks for less motion.
 class _OfficialBadge extends StatefulWidget {
   const _OfficialBadge(this.label);
@@ -230,7 +230,8 @@ class _OfficialBadge extends StatefulWidget {
 
 class _OfficialBadgeState extends State<_OfficialBadge>
     with SingleTickerProviderStateMixin {
-  static const _yellow = Color(0xFFFFD43B);
+  static const _gold = Color(0xFFE0A100);
+  static const _glint = Color(0xFFFFE680);
   late final _shine = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
@@ -256,39 +257,30 @@ class _OfficialBadgeState extends State<_OfficialBadge>
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-    decoration: BoxDecoration(
-      color: _yellow,
-      borderRadius: BorderRadius.circular(3),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _shine,
+    builder: (context, child) => ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) {
+        final x = -1 + 3 * _shine.value;
+        return LinearGradient(
+          begin: Alignment(x - .5, 0),
+          end: Alignment(x + .5, 0),
+          colors: const [_gold, _glint, _gold],
+          stops: const [.35, .5, .65],
+        ).createShader(bounds);
+      },
+      child: child,
     ),
-    child: AnimatedBuilder(
-      animation: _shine,
-      builder: (context, child) => ShaderMask(
-        blendMode: BlendMode.srcATop,
-        shaderCallback: (bounds) {
-          final x = -1 + 3 * _shine.value;
-          return LinearGradient(
-            begin: Alignment(x - .5, 0),
-            end: Alignment(x + .5, 0),
-            colors: const [
-              Palette.ochreInk,
-              Color(0xFFB98A1E),
-              Palette.ochreInk,
-            ],
-            stops: const [.35, .5, .65],
-          ).createShader(bounds);
-        },
-        child: child,
-      ),
-      child: Text(
-        widget.label,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: Palette.ochreInk,
-          height: 1.4,
-        ),
+    child: Text(
+      widget.label,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        letterSpacing: .5,
+        color: _gold,
+        // A faint edge so the yellow letters hold up on the cream card.
+        shadows: [Shadow(color: Color(0x33000000), blurRadius: .5)],
       ),
     ),
   );
