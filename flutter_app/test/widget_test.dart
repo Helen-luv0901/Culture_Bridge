@@ -126,6 +126,23 @@ void main() {
     expect(find.byKey(const Key('post-first-rental')), findsNothing);
   });
 
+  testWidgets('A whole card opens its post, not just the title', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(1280, 2400));
+    final pinned = find.byKey(const Key('guide-welcome'));
+    // Tap the empty right side of the card, far from the title.
+    await tester.tapAt(tester.getTopRight(pinned) + const Offset(-40, 60));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('official-account')), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('back')));
+    final post = find.byKey(const Key('post-first-rental'));
+    await tester.tapAt(tester.getTopRight(post) + const Offset(-200, 70));
+    await tester.pumpAndSettle();
+    expect(find.text('學生分享'), findsWidgets);
+  });
+
   testWidgets('Opened posts are dimmed and marked read', (tester) async {
     final app = await mount(tester, '/official', const Size(1280, 2400));
     await tap(tester, find.text('申請或更新 ARC').first);

@@ -328,12 +328,16 @@ class NoteCard extends StatelessWidget {
     this.read = false,
     this.color,
     this.borderColor,
+    this.onTap,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool read;
   final Color? color;
   final Color? borderColor;
+
+  /// Makes the whole card one tap target; buttons inside keep their own actions.
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(right: 4, bottom: 5),
@@ -351,7 +355,12 @@ class NoteCard extends StatelessWidget {
           side: BorderSide(color: borderColor ?? Palette.oat),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Padding(padding: padding, child: child),
+        child: onTap == null
+            ? Padding(padding: padding, child: child)
+            : InkWell(
+                onTap: onTap,
+                child: Padding(padding: padding, child: child),
+              ),
       ),
     ),
   );
