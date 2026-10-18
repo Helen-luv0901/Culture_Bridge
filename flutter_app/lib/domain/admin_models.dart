@@ -31,16 +31,23 @@ class AdminActionItem {
 }
 
 class AdminStep {
-  const AdminStep(this.titleZh, this.titleEn, this.notes);
+  const AdminStep(this.titleZh, this.titleEn, this.notes, [this.notesEn]);
   factory AdminStep.fromJson(Json json) => AdminStep(
     json['title_zh'] as String,
     json['title_en'] as String,
     json['notes'] as String?,
+    json['notes_en'] as String?,
   );
   final String titleZh;
   final String titleEn;
   final String? notes;
-  Json toJson() => {'title_zh': titleZh, 'title_en': titleEn, 'notes': notes};
+  final String? notesEn;
+  Json toJson() => {
+    'title_zh': titleZh,
+    'title_en': titleEn,
+    'notes': notes,
+    'notes_en': notesEn,
+  };
 }
 
 class AdminSource {

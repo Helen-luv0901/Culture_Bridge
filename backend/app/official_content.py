@@ -24,6 +24,7 @@ from app.core.auth import CurrentUser
 from app.core.db import get_sessionmaker
 from app.models import Action, ActionVersion, AdminAction, Source, User
 from app.services import admin_actions as svc
+from app.services.publishers import publisher_en
 
 DEFAULT_PATH = Path(__file__).with_name("content") / "official_procedures.json"
 IMPORTER = CurrentUser(id="content-import", role="reviewer")  # type: ignore[arg-type]
@@ -50,6 +51,21 @@ def _cite(text: str | None, publishers: list[str]) -> str | None:
     return _MARKERS.sub(names, text)
 
 
+def _cite_en(text: str | None, publishers: list[str]) -> str | None:
+    """Like _cite, with English source names and English parentheses."""
+    if not text:
+        return text
+
+    def names(match: re.Match[str]) -> str:
+        found = [int(n) - 1 for n in re.findall(r"\d+", match.group(0))]
+        unique = dict.fromkeys(
+            publisher_en(publishers[i]) for i in found if 0 <= i < len(publishers)
+        )
+        return f" ({'; '.join(unique)})" if unique else ""
+
+    return _MARKERS.sub(names, text)
+
+
 def _content(card: dict) -> svc.NewAction:
     publishers = [s["publisher"] for s in card["sources"]]
     return svc.NewAction(
@@ -67,6 +83,7 @@ def _content(card: dict) -> svc.NewAction:
                 title_zh=s["title_zh"],
                 title_en=s["title_en"],
                 notes=_cite(s.get("notes"), publishers),
+                notes_en=_cite_en(s.get("notes_en"), publishers),
             )
             for s in card["steps"]
         ],

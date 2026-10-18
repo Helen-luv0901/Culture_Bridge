@@ -118,6 +118,7 @@ class ActionStep(Base):
     title_zh: Mapped[str] = mapped_column(Text)
     title_en: Mapped[str] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
+    notes_en: Mapped[str | None] = mapped_column(Text)  # migration 0011
 
 
 class Source(Base):

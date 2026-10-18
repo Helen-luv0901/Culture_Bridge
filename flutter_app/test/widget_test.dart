@@ -265,6 +265,34 @@ void main() {
     expect(style.fontSize, 14);
   });
 
+  for (final width in [1100.0, 1920.0]) {
+    testWidgets('Stickers never sit behind cards at $width', (tester) async {
+      await mount(tester, '/official', Size(width, 1200));
+      // The page's two stickers; the empty-state ones live inside cards.
+      final stickers = find.byType(Sticker);
+      expect(stickers, findsWidgets);
+      final cards = find.byType(NoteCard);
+      for (final sticker in tester.widgetList<Sticker>(stickers)) {
+        final s = tester.getRect(find.byWidget(sticker));
+        for (final card in tester.widgetList<NoteCard>(cards)) {
+          final c = tester.getRect(find.byWidget(card));
+          expect(s.overlaps(c), isFalse, reason: '$s overlaps $c');
+        }
+      }
+    });
+  }
+
+  testWidgets('Guide steps show English notes in English', (tester) async {
+    final app = await mount(tester, '/actions/arc', const Size(1280, 1600));
+    expect(find.text('先線上預約。'), findsOneWidget);
+    app.vm.setEnglish(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Book online first.'), findsOneWidget);
+    expect(find.text('先線上預約。'), findsNothing);
+    // Sources show English names, without the Chinese reviewer notes.
+    expect(find.textContaining('Sources: Example Agency'), findsOneWidget);
+  });
+
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
     await tap(tester, find.text('#居留證'));

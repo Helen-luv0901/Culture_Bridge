@@ -336,12 +336,12 @@ class PageFrame extends StatelessWidget {
       AppLayout.tablet => const EdgeInsets.fromLTRB(28, 24, 28, 96),
       AppLayout.web => const EdgeInsets.fromLTRB(32, 28, 32, 96),
     };
-    final scroll = SingleChildScrollView(
+    Widget page(Widget content) => SingleChildScrollView(
       padding: padding,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppShell.maxContentWidth),
-          child: child,
+          child: content,
         ),
       ),
     );
@@ -349,32 +349,49 @@ class PageFrame extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, box) {
           // Decorate the empty paper with two of the team's botanical stickers,
-          // a different pair on each page: beside the column when there is room,
-          // otherwise in the bottom corners behind the cards. Not on phones.
-          if (AppLayout.of(context) == AppLayout.phone) return scroll;
+          // a different pair on each page, always fully visible: in the side
+          // margins when they are wide enough, otherwise below the content.
+          // Never behind the cards, and not on phones.
+          if (AppLayout.of(context) == AppLayout.phone) return page(child);
           final seed = GoRouterState.of(context).uri.path.codeUnits
               .fold<int>(0, (sum, c) => sum + c);
           final margin =
               (box.maxWidth - AppShell.maxContentWidth - padding.horizontal) /
               2;
-          final wide = margin >= 150;
-          final size = wide ? (margin - 40).clamp(110.0, 200.0) : 150.0;
-          return Stack(
-            children: [
-              Positioned(
-                left: wide ? (margin - size) / 2 : 8,
-                bottom: wide ? 48 : 12,
-                child: Sticker(seed, size: size),
-              ),
-              Positioned(
-                right: wide ? (margin - size) / 2 : 16,
-                // Clear of the chat bubble in the corner.
-                top: wide ? 36 : null,
-                bottom: wide ? null : 96,
-                child: Sticker(seed + 2, size: size * .85),
-              ),
-              Positioned.fill(child: scroll),
-            ],
+          if (margin - 24 >= 100) {
+            final size = (margin - 24).clamp(100.0, 200.0);
+            return Stack(
+              children: [
+                Positioned(
+                  left: (margin - size) / 2,
+                  bottom: 48,
+                  child: Sticker(seed, size: size),
+                ),
+                Positioned(
+                  right: (margin - size * .85) / 2,
+                  top: 36,
+                  child: Sticker(seed + 2, size: size * .85),
+                ),
+                Positioned.fill(child: page(child)),
+              ],
+            );
+          }
+          return page(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                child,
+                const SizedBox(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Sticker(seed, size: 130),
+                    Sticker(seed + 2, size: 110),
+                  ],
+                ),
+              ],
+            ),
           );
         },
       ),

@@ -312,7 +312,7 @@ class _VersionEditorState extends State<VersionEditor> {
   final _slug = TextEditingController();
   late final List<_StepFields> _steps = [
     for (final s in widget.version?.steps ?? const <AdminStep>[])
-      _StepFields(s.titleZh, s.titleEn, s.notes ?? ''),
+      _StepFields(s.titleZh, s.titleEn, s.notes ?? '', s.notesEn ?? ''),
   ];
 
   /// Which language's content is shown; starts with the interface language.
@@ -366,6 +366,9 @@ class _VersionEditorState extends State<VersionEditor> {
                 ? s.zh.text.trim()
                 : s.en.text.trim(),
             'notes': s.notes.text.trim().isEmpty ? null : s.notes.text.trim(),
+            'notes_en': s.notesEn.text.trim().isEmpty
+                ? null
+                : s.notesEn.text.trim(),
           },
     ],
   };
@@ -440,16 +443,17 @@ class _VersionEditorState extends State<VersionEditor> {
                           controller: lang == 'zh' ? step.zh : step.en,
                         ),
                         LabeledField(
+                          key: ValueKey('$lang-notes'),
                           label: lang == 'zh'
                               ? vm.pair(
                                   '補充說明（文件、費用、期限）',
                                   'Notes (documents, fees, deadlines)',
                                 )
                               : vm.pair(
-                                  '補充說明（目前只有中文）',
-                                  'Notes (Chinese only for now)',
+                                  '英文補充說明（空白時顯示中文）',
+                                  'English notes (Chinese shows if empty)',
                                 ),
-                          controller: step.notes,
+                          controller: lang == 'zh' ? step.notes : step.notesEn,
                           minLines: 2,
                         ),
                       ],
@@ -527,15 +531,21 @@ class _VersionEditorState extends State<VersionEditor> {
 }
 
 class _StepFields {
-  _StepFields([String zh = '', String en = '', String notes = ''])
-    : zh = TextEditingController(text: zh),
-      en = TextEditingController(text: en),
-      notes = TextEditingController(text: notes);
-  final TextEditingController zh, en, notes;
+  _StepFields([
+    String zh = '',
+    String en = '',
+    String notes = '',
+    String notesEn = '',
+  ]) : zh = TextEditingController(text: zh),
+       en = TextEditingController(text: en),
+       notes = TextEditingController(text: notes),
+       notesEn = TextEditingController(text: notesEn);
+  final TextEditingController zh, en, notes, notesEn;
   void dispose() {
     zh.dispose();
     en.dispose();
     notes.dispose();
+    notesEn.dispose();
   }
 }
 

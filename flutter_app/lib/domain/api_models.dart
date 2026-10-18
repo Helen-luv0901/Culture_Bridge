@@ -103,19 +103,26 @@ class ActionStepInfo {
     required this.title,
     required this.notes,
     required this.recentStuckCount,
+    this.notesEn,
   });
   factory ActionStepInfo.fromJson(Json json) => ActionStepInfo(
     id: json['id'] as String,
     position: json['position'] as int,
     title: Text2.fromJson(json['title'] as Json),
     notes: json['notes'] as String?,
+    notesEn: json['notes_en'] as String?,
     recentStuckCount: json['recent_stuck_count'] as int,
   );
   final String id;
   final int position;
   final Text2 title;
   final String? notes;
+  final String? notesEn;
   final int recentStuckCount;
+
+  /// The notes in the reader's language; English falls back to Chinese.
+  String? notesFor(bool english) =>
+      english && (notesEn ?? '').trim().isNotEmpty ? notesEn : notes;
 }
 
 class SourceInfo {
@@ -125,6 +132,7 @@ class SourceInfo {
     required this.publisher,
     required this.kind,
     required this.evidenceNote,
+    this.publisherEn = '',
   });
   factory SourceInfo.fromJson(Json json) => SourceInfo(
     title: json['title'] as String,
@@ -132,12 +140,18 @@ class SourceInfo {
     publisher: json['publisher'] as String,
     kind: json['kind'] as String,
     evidenceNote: json['evidence_note'] as String,
+    publisherEn: json['publisher_en'] as String? ?? '',
   );
   final String title;
   final String url;
   final String publisher;
+  final String publisherEn;
   final String kind;
   final String evidenceNote;
+
+  /// The publisher's name in the reader's language.
+  String publisherFor(bool english) =>
+      english && publisherEn.isNotEmpty ? publisherEn : publisher;
 }
 
 class ActionDetail {
