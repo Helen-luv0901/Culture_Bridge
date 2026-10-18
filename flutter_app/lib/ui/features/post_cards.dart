@@ -260,7 +260,10 @@ class StudentPostCard extends StatelessWidget {
             padding: const EdgeInsets.only(right: 10),
             child: Row(
               children: [
-                Avatar(initial: authorInitial(vm, item.authorName)),
+                Avatar(
+                  initial: authorInitial(vm, item.authorName),
+                  imageUrl: vm.imageUrl(item.authorAvatarUrl),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

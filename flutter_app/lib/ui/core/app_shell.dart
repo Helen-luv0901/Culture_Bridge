@@ -5,6 +5,7 @@ import '../features/assistant_panel.dart';
 import '../features/explore_page.dart';
 import 'design_system.dart';
 import 'layout.dart';
+import 'loading.dart';
 
 /// The frame around every screen. Phone: header and bottom tabs. Tablet portrait: a 76px
 /// icon sidebar. Tablet landscape and web: a 232px sidebar and search in the header.
@@ -93,7 +94,15 @@ class _AppShellState extends State<AppShell> {
     context.go(AppShell.tabs[_index]);
   }
 
-  void _goTab(BuildContext context, int i) => context.go(AppShell.tabs[i]);
+  void _goTab(BuildContext context, int i) {
+    final tab = AppShell.tabs[i];
+    // Sharing needs an account: guests are asked to sign in instead.
+    if (tab == '/share' && !BridgeScope.of(context).signedIn) {
+      askToSignIn(context, signInForSharing, next: tab);
+      return;
+    }
+    context.go(tab);
+  }
 
   void _showNotice(BuildContext context) {
     final vm = BridgeScope.of(context);

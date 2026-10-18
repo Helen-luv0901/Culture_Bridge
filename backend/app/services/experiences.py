@@ -37,13 +37,14 @@ from app.models import (
     UserBlock,
 )
 from app.rag.index import remove_content
+from app.services import avatars
 from app.services.common import now
 
 logger = logging.getLogger(__name__)
 
 Locale = Literal["zh-Hant", "en"]
 TopicId = Literal["life_adaptation", "culture_communication"]
-Category = Literal["life", "food", "housing", "transit", "study", "culture"]
+Category = Literal["life", "food", "housing", "transit", "study", "culture", "difference"]
 Sort = Literal["new", "hot"]
 IdentityType = Literal["degree_student", "exchange_student", "language_student", "other"]
 ReactionKind = Literal["helpful", "experienced_too"]
@@ -58,7 +59,7 @@ VERBATIM = "author-verbatim"  # model_name of the summary a post publishes with
 
 def topic_for(category: str) -> str:
     """The older two-topic field still exists (the assistant filters by it)."""
-    return "culture_communication" if category == "culture" else "life_adaptation"
+    return "culture_communication" if category in ("culture", "difference") else "life_adaptation"
 
 
 def clean_tags(tags: list[str]) -> list[str]:
@@ -181,6 +182,8 @@ class PublicExperience(BaseModel):
     saved: bool = False
     # The name the author chose to sign with; None means anonymous.
     author_name: str | None = None
+    # The author's photo, only on signed posts.
+    author_avatar_url: str | None = None
     title: str | None = None
     category: Category = "life"
     tags: list[str] = Field(default_factory=list)
@@ -371,6 +374,7 @@ def _public_items(
                 names[experience.id] = author.nickname
             elif author is not None and experience.author_display == "real_name":
                 names[experience.id] = author.real_name
+    photos = avatars.urls_for(db, signed)
     comments = _visible_comments(db, ids)
     guides: dict[str, str] = {}
     if ids:
@@ -421,6 +425,9 @@ def _public_items(
                 my_reactions=sorted(mine.get(experience.id, [])),  # type: ignore[arg-type]
                 saved=experience.id in saved,
                 author_name=names.get(experience.id),
+                author_avatar_url=photos.get(experience.author_id)
+                if names.get(experience.id)
+                else None,
                 title=experience.title,
                 category=_category(experience),  # type: ignore[arg-type]
                 tags=list(experience.tags or []),

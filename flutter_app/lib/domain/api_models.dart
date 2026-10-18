@@ -26,6 +26,7 @@ class Profile {
     required this.preferredLocale,
     this.nickname,
     this.realName,
+    this.avatarUrl,
   });
   factory Profile.fromJson(Json json) => Profile(
     id: json['id'] as String,
@@ -33,6 +34,7 @@ class Profile {
     preferredLocale: json['preferred_locale'] as String,
     nickname: json['nickname'] as String?,
     realName: json['real_name'] as String?,
+    avatarUrl: json['avatar_url'] as String?,
   );
   final String id;
   final String role;
@@ -41,6 +43,9 @@ class Profile {
   /// Optional; shown only on experiences the person chose to sign with them.
   final String? nickname;
   final String? realName;
+
+  /// Server path of the profile photo, if any.
+  final String? avatarUrl;
   bool get isStaff => role == 'reviewer' || role == 'admin';
   bool get isAdmin => role == 'admin';
 }
@@ -213,7 +218,7 @@ class Execution {
 
 // ---------- experiences ----------
 
-/// The six categories students post into. Explore adds "all" and "official" in front.
+/// The seven categories students post into. Explore adds "all" and "official" in front.
 const postCategories = [
   'life',
   'food',
@@ -221,6 +226,7 @@ const postCategories = [
   'transit',
   'study',
   'culture',
+  'difference',
 ];
 
 /// Older posts only have one of the two original topics.
@@ -273,6 +279,7 @@ class ExperienceItem {
     required this.myReactions,
     this.saved = false,
     this.authorName,
+    this.authorAvatarUrl,
     this.title = '',
     this.category,
     this.tags = const [],
@@ -299,6 +306,7 @@ class ExperienceItem {
     myReactions: List<String>.from(json['my_reactions'] as List),
     saved: json['saved'] as bool? ?? false,
     authorName: json['author_name'] as String?,
+    authorAvatarUrl: json['author_avatar_url'] as String?,
     title: json['title'] as String? ?? '',
     category: json['category'] as String?,
     tags: List<String>.from(json['tags'] as List? ?? const []),
@@ -326,6 +334,9 @@ class ExperienceItem {
 
   /// The nickname or real name the author chose to sign with; null means anonymous.
   final String? authorName;
+
+  /// The author's photo; only on signed posts.
+  final String? authorAvatarUrl;
 
   /// Written by the author; older posts have none and show the start of the text instead.
   final String title;
@@ -360,6 +371,7 @@ class ExperienceItem {
     myReactions: myReactions,
     saved: saved ?? this.saved,
     authorName: authorName,
+    authorAvatarUrl: authorAvatarUrl,
     title: title,
     category: category,
     tags: tags,
@@ -433,6 +445,7 @@ class CommentItem {
     required this.likeCount,
     this.replyToId,
     this.authorName,
+    this.authorAvatarUrl,
     this.liked = false,
     this.byPostAuthor = false,
     this.mine = false,
@@ -444,6 +457,7 @@ class CommentItem {
     likeCount: json['like_count'] as int? ?? 0,
     replyToId: json['reply_to_id'] as String?,
     authorName: json['author_name'] as String?,
+    authorAvatarUrl: json['author_avatar_url'] as String?,
     liked: json['liked'] as bool? ?? false,
     byPostAuthor: json['by_post_author'] as bool? ?? false,
     mine: json['mine'] as bool? ?? false,
@@ -456,6 +470,9 @@ class CommentItem {
 
   /// The commenter's nickname when they chose to sign; null means anonymous.
   final String? authorName;
+
+  /// Their photo; only on signed comments.
+  final String? authorAvatarUrl;
   final bool liked;
   final bool byPostAuthor;
   final bool mine;

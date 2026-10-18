@@ -242,34 +242,49 @@ class OfficialSeal extends StatelessWidget {
   );
 }
 
-/// A round avatar: the bridge for the official account, else the author's initial.
+/// A round avatar: the person's photo if they have one, else the author's initial
+/// (or the bridge for the official account).
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, this.initial, this.size = 32});
+  const Avatar({super.key, this.initial, this.size = 32, this.imageUrl});
   final String? initial;
   final double size;
+
+  /// A profile photo; the initial shows instead if it fails to load.
+  final String? imageUrl;
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
     child: Container(
       width: size,
       height: size,
       alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         color: Palette.paleMoss,
         shape: BoxShape.circle,
       ),
-      child: initial == null
-          ? AppIcon('bridge', size: size * .56, color: Palette.moss)
-          : Text(
-              initial!,
-              style: TextStyle(
-                fontSize: size * .4,
-                fontWeight: FontWeight.w700,
-                color: Palette.moss,
-                height: 1,
-              ),
+      child: imageUrl == null
+          ? _fallback()
+          : Image.network(
+              imageUrl!,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _fallback(),
             ),
     ),
   );
+
+  Widget _fallback() => initial == null
+      ? AppIcon('bridge', size: size * .56, color: Palette.moss)
+      : Text(
+          initial!,
+          style: TextStyle(
+            fontSize: size * .4,
+            fontWeight: FontWeight.w700,
+            color: Palette.moss,
+            height: 1,
+          ),
+        );
 }
 
 // ---------- paper ----------

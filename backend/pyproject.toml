@@ -9,6 +9,7 @@ dependencies = [
     "google-auth>=2.30",
     "google-genai>=1.0",
     "pgvector>=0.3",
+    "pillow>=11",
     "psycopg[binary]>=3.2",
     "pydantic>=2.7",
     "requests>=2.32",

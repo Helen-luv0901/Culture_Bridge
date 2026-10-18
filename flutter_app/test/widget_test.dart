@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:culture_bridge/app.dart';
 import 'package:culture_bridge/domain/api_models.dart';
 import 'package:culture_bridge/ui/core/design_system.dart';
 import 'package:culture_bridge/ui/features/assistant_panel.dart';
+import 'package:culture_bridge/ui/features/me_page.dart';
+import 'package:culture_bridge/ui/features/post_cards.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -133,10 +138,14 @@ void main() {
     tester,
   ) async {
     await mount(tester, '/explore', const Size(375, 1600));
-    for (final label in ['全部', '官方', '生活', '美食', '住宿', '交通', '學業', '文化']) {
+    for (final label in ['全部', '生活', '美食', '住宿', '交通', '學業', '文化', '文化差異']) {
       expect(find.text(label), findsWidgets);
     }
-    expect(find.text('熱門貼文'.toUpperCase()), findsOneWidget);
+    // Official posts live on the official account's page, not in a tab here.
+    expect(find.byKey(const Key('cat-official')), findsNothing);
+    expect(find.byKey(const Key('guide-arc')), findsNothing);
+    expect(find.text('學生分享'.toUpperCase()), findsOneWidget);
+    expect(find.byKey(const Key('sort-new')), findsOneWidget);
     expect(find.text('#夜市'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('explore-search')), 'ARC');
@@ -148,6 +157,40 @@ void main() {
 
     await tap(tester, find.byKey(const Key('cat-food')));
     expect(find.textContaining('找不到'), findsOneWidget);
+  });
+
+  testWidgets('Explore sorts student posts by newest or popular', (
+    tester,
+  ) async {
+    await mount(tester, '/explore', const Size(1280, 3000));
+    List<ExperienceItem> shown() => [
+      for (final card in tester.widgetList<StudentPostCard>(
+        find.byType(StudentPostCard),
+      ))
+        card.item,
+    ];
+    final newest = shown();
+    expect(newest.length, greaterThan(1));
+    for (var i = 1; i < newest.length; i++) {
+      expect(
+        newest[i - 1].publishedAt.isBefore(newest[i].publishedAt),
+        isFalse,
+      );
+    }
+
+    await tap(tester, find.byKey(const Key('sort-hot')));
+    int heat(ExperienceItem e) => e.experiencedTooCount + 2 * e.commentCount;
+    final popular = shown();
+    expect(popular.length, newest.length);
+    for (var i = 1; i < popular.length; i++) {
+      expect(heat(popular[i - 1]), greaterThanOrEqualTo(heat(popular[i])));
+    }
+    // The order sticks when switching categories.
+    await tap(tester, find.byKey(const Key('cat-life')));
+    final life = shown();
+    for (var i = 1; i < life.length; i++) {
+      expect(heat(life[i - 1]), greaterThanOrEqualTo(heat(life[i])));
+    }
   });
 
   testWidgets('Tapping a tag searches for it', (tester) async {
@@ -218,17 +261,18 @@ void main() {
       const Size(1280, 2000),
       signedIn: false,
     );
-    await tester.enterText(find.byKey(const Key('share-title')), '夜市');
-    await tester.enterText(find.byKey(const Key('share-voice')), '第一次去夜市。');
-    await tap(tester, find.byKey(const Key('share-cat-food')));
-    await tap(tester, find.byKey(const Key('publish')));
+    // Guests are asked to sign in before they can write anything.
+    expect(find.byKey(const Key('share-title')), findsNothing);
+    await tap(tester, find.text('登入'));
     await tester.enterText(find.byKey(const Key('dev-name')), 'mei');
     await tap(tester, find.byKey(const Key('dev-sign-in')));
     await tester.enterText(find.byKey(const Key('nickname')), '  小  美 ');
     await tap(tester, find.byKey(const Key('save-names')));
     expect(app.repository.nickname, '小 美');
-    // Back on Share with the words kept.
-    expect(find.widgetWithText(TextField, '第一次去夜市。'), findsOneWidget);
+    // Back on Share, now signed in.
+    await tester.enterText(find.byKey(const Key('share-title')), '夜市');
+    await tester.enterText(find.byKey(const Key('share-voice')), '第一次去夜市。');
+    await tap(tester, find.byKey(const Key('share-cat-food')));
     await tap(tester, find.byKey(const Key('post-as-real_name')));
     expect(find.textContaining('先到「我的 › 設定」填寫'), findsOneWidget);
     await tap(tester, find.byKey(const Key('post-as-nickname')));
@@ -461,17 +505,58 @@ void main() {
     final app = await mount(tester, '/', const Size(375, 812), signedIn: false);
     await tap(tester, find.byKey(const Key('assistant-button')));
     expect(find.text('請先登入'), findsOneWidget);
-    expect(find.text('登入後才可以使用 AI 助理。'), findsOneWidget);
+    expect(find.text('AI 助理僅提供給已登入的使用者，請先登入後再使用。'), findsOneWidget);
     expect(app.vm.assistantOpen, isFalse);
 
     await tap(tester, find.text('取消'));
-    expect(find.byKey(const Key('assistant-sign-in')), findsNothing);
+    expect(find.byKey(const Key('sign-in-prompt')), findsNothing);
     expect(app.vm.assistantOpen, isFalse);
 
     await tap(tester, find.byKey(const Key('assistant-button')));
-    await tap(tester, find.byKey(const Key('assistant-sign-in-go')));
+    await tap(tester, find.byKey(const Key('sign-in-prompt-go')));
     expect(find.byKey(const Key('dev-name')), findsOneWidget);
     expect(app.repository.assistantMessages, isEmpty);
+  });
+
+  testWidgets('Guests are asked to sign in before sharing', (tester) async {
+    await mount(tester, '/', const Size(375, 812), signedIn: false);
+    await tap(tester, find.byKey(const Key('nav-2')));
+    expect(find.text('請先登入'), findsOneWidget);
+    expect(find.text('分享經驗需要登入帳號，請先登入後再分享。'), findsOneWidget);
+    await tap(tester, find.text('取消'));
+    expect(find.byKey(const Key('share-title')), findsNothing);
+
+    await tap(tester, find.byKey(const Key('nav-2')));
+    await tap(tester, find.byKey(const Key('sign-in-prompt-go')));
+    expect(find.byKey(const Key('dev-name')), findsOneWidget);
+  });
+
+  testWidgets('A guest opening the share page directly sees sign in first', (
+    tester,
+  ) async {
+    await mount(tester, '/share', const Size(375, 812), signedIn: false);
+    expect(find.byKey(const Key('share-sign-in')), findsOneWidget);
+    expect(find.byKey(const Key('share-title')), findsNothing);
+  });
+
+  testWidgets('Change and remove the profile photo in Settings', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/profile/settings', const Size(375, 1200));
+    pickAvatarPhoto = () async => Uint8List.fromList([1, 2, 3]);
+    addTearDown(() => pickAvatarPhoto = () async => null);
+    expect(find.byKey(const Key('remove-avatar')), findsNothing);
+
+    await tap(tester, find.byKey(const Key('change-avatar')));
+    expect(app.repository.uploadedPhotos, [
+      base64Encode([1, 2, 3]),
+    ]);
+    expect(app.vm.profile?.avatarUrl, '/api/avatars/photo-1');
+    expect(find.text('大頭貼已更新'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('remove-avatar')));
+    expect(app.vm.profile?.avatarUrl, isNull);
+    expect(find.byKey(const Key('remove-avatar')), findsNothing);
   });
 
   testWidgets('Assistant on a phone covers the page and hides the bubble', (

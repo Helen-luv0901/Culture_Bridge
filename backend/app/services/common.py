@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+import threading
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 
 from pydantic import BaseModel
@@ -8,6 +9,27 @@ from app.core.auth import CurrentUser
 from app.models import AdminAction
 
 RECENT_WINDOW = timedelta(days=30)
+_TAIPEI = timezone(timedelta(hours=8))
+
+
+class DailyAllowance:
+    """How many times each person has done something today (Taiwan time), in this process."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._day: date | None = None
+        self._used: dict[str, int] = {}
+
+    def take(self, user_id: str, limit: int) -> bool:
+        today = datetime.now(_TAIPEI).date()
+        with self._lock:
+            if self._day != today:
+                self._day, self._used = today, {}
+            used = self._used.get(user_id, 0)
+            if used >= limit:
+                return False
+            self._used[user_id] = used + 1
+            return True
 
 
 class Text2(BaseModel):

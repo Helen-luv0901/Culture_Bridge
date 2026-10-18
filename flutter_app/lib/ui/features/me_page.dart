@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../domain/api_models.dart';
 import '../core/design_system.dart';
@@ -29,7 +32,11 @@ class ProfilePage extends StatelessWidget {
       children: [
         Row(
           children: [
-            Avatar(initial: name.characters.first, size: 54),
+            Avatar(
+              initial: name.characters.first,
+              size: 54,
+              imageUrl: vm.imageUrl(vm.profile?.avatarUrl),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -308,6 +315,7 @@ class SettingsPage extends StatelessWidget {
       children: [
         if (vm.signedIn) ...[
           SectionLabel(vm.pair('個人資料', 'Profile')),
+          const NoteCard(child: _PhotoSetting()),
           NoteCard(
             child: NamesForm(onSaved: () => vm.showNotice(vm.t('namesSaved'))),
           ),
@@ -449,4 +457,96 @@ class _Row extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Picks a photo from the gallery, already shrunk to at most 1024px; tests replace it.
+Future<Uint8List?> Function() pickAvatarPhoto = () async {
+  final file = await ImagePicker().pickImage(
+    source: ImageSource.gallery,
+    maxWidth: 1024,
+    maxHeight: 1024,
+    imageQuality: 90,
+  );
+  return file?.readAsBytes();
+};
+
+/// The profile photo: change or remove it.
+class _PhotoSetting extends StatelessWidget {
+  const _PhotoSetting();
+
+  Future<void> _change(BuildContext context) async {
+    final vm = BridgeScope.of(context);
+    final bytes = await pickAvatarPhoto();
+    if (bytes == null) return;
+    final error = await vm.setAvatar(bytes);
+    vm.showNotice(error ?? vm.pair('大頭貼已更新', 'Photo updated'));
+  }
+
+  Future<void> _remove(BuildContext context) async {
+    final vm = BridgeScope.of(context);
+    final error = await vm.setAvatar(null);
+    vm.showNotice(error ?? vm.pair('已移除大頭貼', 'Photo removed'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final name = vm.profile?.nickname ?? vm.pair('匿', 'A');
+    final photo = vm.profile?.avatarUrl;
+    return Row(
+      children: [
+        Avatar(
+          key: const Key('my-avatar'),
+          initial: name.characters.first,
+          size: 72,
+          imageUrl: vm.imageUrl(photo),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                vm.pair('大頭貼', 'Profile photo'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              Text(
+                vm.pair(
+                  '只會出現在你署名的貼文和留言旁，匿名發布時不會顯示。',
+                  'Shown only next to posts and comments you sign, never on anonymous ones.',
+                ),
+                style: mutedStyle.copyWith(fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  OutlinedButton(
+                    key: const Key('change-avatar'),
+                    onPressed: vm.updatingAvatar
+                        ? null
+                        : () => _change(context),
+                    child: Text(
+                      vm.updatingAvatar
+                          ? vm.pair('上傳中…', 'Uploading…')
+                          : vm.pair('更換大頭貼', 'Change photo'),
+                    ),
+                  ),
+                  if (photo != null)
+                    TextButton(
+                      key: const Key('remove-avatar'),
+                      onPressed: vm.updatingAvatar
+                          ? null
+                          : () => _remove(context),
+                      child: Text(vm.pair('移除', 'Remove')),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

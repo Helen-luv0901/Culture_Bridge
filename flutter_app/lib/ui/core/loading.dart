@@ -132,6 +132,49 @@ bool ensureSignedIn(BuildContext context) {
   return false;
 }
 
+/// Wording for features only signed-in users can use.
+const signInForAssistant = (
+  'AI 助理僅提供給已登入的使用者，請先登入後再使用。',
+  'The AI assistant is available to signed-in users. Please sign in to continue.',
+);
+const signInForSharing = (
+  '分享經驗需要登入帳號，請先登入後再分享。',
+  'Sharing requires an account. Please sign in to share your experience.',
+);
+
+/// Tells a guest that [message] needs an account and offers the sign-in page. After signing
+/// in they return to [next] (default: where they are).
+Future<void> askToSignIn(
+  BuildContext context,
+  (String, String) message, {
+  String? next,
+}) async {
+  final vm = BridgeScope.of(context);
+  final router = GoRouter.of(context);
+  final back =
+      next ?? router.routerDelegate.currentConfiguration.uri.toString();
+  final signIn = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      key: const Key('sign-in-prompt'),
+      title: Text(vm.pair('請先登入', 'Please sign in')),
+      content: Text(vm.pair(message.$1, message.$2)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialog, false),
+          child: Text(vm.t('cancel')),
+        ),
+        FilledButton(
+          key: const Key('sign-in-prompt-go'),
+          onPressed: () => Navigator.pop(dialog, true),
+          child: Text(vm.t('signIn')),
+        ),
+      ],
+    ),
+  );
+  if (signIn == true) router.push('/signin?next=${Uri.encodeComponent(back)}');
+}
+
 String formatDate(DateTime? date) => date == null
     ? '—'
     : '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

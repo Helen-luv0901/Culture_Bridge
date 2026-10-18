@@ -12,18 +12,28 @@ import 'assistant_panel.dart';
 import 'home_page.dart';
 import 'post_cards.dart';
 
-/// Explore: category tabs, search across guides and posts, hot posts and hot tags.
+/// Explore: category tabs, search across guides and posts, student posts by
+/// newest or most popular, and hot tags. Official posts live on /official.
 class ExplorePage extends StatelessWidget {
-  const ExplorePage({super.key, required this.category, required this.query});
+  const ExplorePage({
+    super.key,
+    required this.category,
+    required this.query,
+    this.sort = 'new',
+  });
 
-  /// 'all', 'official' or one of [postCategories].
+  /// 'all', 'official' (older links) or one of [postCategories].
   final String category;
   final String query;
 
-  static String location(String category, String query) {
+  /// 'new' or 'hot'.
+  final String sort;
+
+  static String location(String category, String query, [String sort = 'new']) {
     final params = {
       if (category != 'all') 'cat': category,
       if (query.trim().isNotEmpty) 'q': query,
+      if (sort == 'hot') 'sort': sort,
     };
     return Uri(
       path: '/explore',
@@ -39,7 +49,12 @@ class ExplorePage extends StatelessWidget {
     return FlowBody(
       gap: 16,
       children: [
-        _CategoryTabs(category: category, query: query, wrap: sidebar),
+        _CategoryTabs(
+          category: category,
+          query: query,
+          sort: sort,
+          wrap: sidebar,
+        ),
         // Wide layouts search from the header instead.
         if (!sidebar)
           SearchField(
@@ -48,16 +63,14 @@ class ExplorePage extends StatelessWidget {
             category: category,
           ),
         if (q.isEmpty && category == 'official') const _OfficialFeed(),
-        if (q.isEmpty && postCategories.contains(category))
-          _CategoryFeed(category: category),
+        if (q.isEmpty && category != 'official')
+          _PostFeed(category: category, sort: sort),
         if (q.isNotEmpty) ...[
           _AskAssistantRow(query: q),
           _SearchResults(query: q, category: category),
         ],
-        if (q.isEmpty && category == 'all') ...[
-          const _HotPosts(),
+        if (q.isEmpty && category == 'all')
           _PopularTags(title: vm.pair('熱門標籤', 'Popular tags')),
-        ],
       ],
     );
   }
@@ -67,22 +80,26 @@ class _CategoryTabs extends StatelessWidget {
   const _CategoryTabs({
     required this.category,
     required this.query,
+    required this.sort,
     required this.wrap,
   });
   final String category;
   final String query;
+  final String sort;
   final bool wrap;
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final chips = [
+      // Official posts have their own page (the official account), so no tab here.
       for (final key in categoryLabels.keys)
-        NoteChip(
-          key: Key('cat-$key'),
-          label: categoryName(vm, key),
-          selected: category == key,
-          onTap: () => context.go(ExplorePage.location(key, query)),
-        ),
+        if (key != 'official')
+          NoteChip(
+            key: Key('cat-$key'),
+            label: categoryName(vm, key),
+            selected: category == key,
+            onTap: () => context.go(ExplorePage.location(key, query, sort)),
+          ),
     ];
     return Semantics(
       label: vm.pair('分類', 'Categories'),
@@ -235,28 +252,38 @@ class _OfficialFeed extends StatelessWidget {
   }
 }
 
-class _CategoryFeed extends StatelessWidget {
-  const _CategoryFeed({required this.category});
+/// Student posts in a category (or all of them), newest or most popular first.
+class _PostFeed extends StatelessWidget {
+  const _PostFeed({required this.category, required this.sort});
   final String category;
+  final String sort;
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final name = categoryName(vm, category);
+    final all = category == 'all';
+    final filter = all ? null : category;
+    final name = all
+        ? vm.pair('學生分享', 'Student posts')
+        : categoryName(vm, category);
     return ResourceView<ExperiencePage>(
-      key: ValueKey(category),
-      resource: (vm) => vm.posts(category),
-      load: (vm) => vm.loadPosts(category),
+      key: ValueKey('$category-$sort'),
+      resource: (vm) => vm.posts(filter, sort),
+      load: (vm) => vm.loadPosts(filter, false, sort),
       builder: (context, page) {
         if (page.items.isEmpty) {
           return EmptyNote(
-            title: vm.pair('「$name」還沒有貼文', 'No posts in $name yet'),
+            title: all
+                ? vm.pair('還沒有同學分享', 'No student posts yet')
+                : vm.pair('「$name」還沒有貼文', 'No posts in $name yet'),
             body: vm.pair(
               '遇過相關的事嗎？寫一句話，幫下一位學生。',
               'Been through something like this? A sentence helps the next student.',
             ),
-            action: vm.pair('分享到「$name」', 'Share in $name'),
+            action: all
+                ? vm.pair('去分享', 'Share something')
+                : vm.pair('分享到「$name」', 'Share in $name'),
             onAction: () {
-              vm.updateDraft(category: category);
+              if (!all) vm.updateDraft(category: category);
               context.go('/share');
             },
           );
@@ -265,12 +292,21 @@ class _CategoryFeed extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SectionLabel(
-              name,
-              note: vm.pair(
-                '${page.items.length}$more 篇 · 新的在上面',
-                '${page.items.length}$more · newest first',
-              ),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                SectionLabel(
+                  name,
+                  note: vm.pair(
+                    '${page.items.length}$more 篇',
+                    '${page.items.length}$more',
+                  ),
+                ),
+                _SortChips(category: category, sort: sort),
+              ],
             ),
             const SizedBox(height: 12),
             CardList(
@@ -280,15 +316,47 @@ class _CategoryFeed extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: OutlinedButton(
-                  onPressed: vm.posts(category).loading
+                  onPressed: vm.posts(filter, sort).loading
                       ? null
-                      : () => vm.loadPosts(category, true),
+                      : () => vm.loadPosts(filter, true, sort),
                   child: Text(vm.t('loadMore')),
                 ),
               ),
           ],
         );
       },
+    );
+  }
+}
+
+/// 最新 / 熱門: newest first, or by "me too" taps and comments.
+class _SortChips extends StatelessWidget {
+  const _SortChips({required this.category, required this.sort});
+  final String category;
+  final String sort;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return Semantics(
+      label: vm.pair('排序', 'Sort'),
+      container: true,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final (value, zh, en) in [
+            ('new', '最新', 'Newest'),
+            ('hot', '熱門', 'Popular'),
+          ])
+            NoteChip(
+              key: Key('sort-$value'),
+              label: vm.pair(zh, en),
+              selected: sort == value,
+              onTap: () =>
+                  context.go(ExplorePage.location(category, '', value)),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -405,38 +473,6 @@ class _SearchResults extends StatelessWidget {
                 children: [for (final e in posts) StudentPostCard(item: e)],
               ),
             ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _HotPosts extends StatelessWidget {
-  const _HotPosts();
-  static const count = 5;
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    return ResourceView<ExperiencePage>(
-      resource: (vm) => vm.hotPosts,
-      load: (vm) => vm.loadHotPosts(),
-      builder: (context, page) {
-        if (page.items.isEmpty) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionLabel(
-              vm.pair('熱門貼文', 'Popular posts'),
-              note: vm.pair('依「我也遇過」和留言數排序', 'By "me too" and comments'),
-            ),
-            const SizedBox(height: 10),
-            CardList(
-              children: [
-                for (final e in page.items.take(count))
-                  StudentPostCard(item: e),
-              ],
-            ),
           ],
         );
       },

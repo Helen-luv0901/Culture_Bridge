@@ -7,13 +7,13 @@ working. Suggestions are never stored: the author picks which ones go out with t
 
 import logging
 import re
-import threading
-from datetime import date, datetime, timedelta, timezone
+from datetime import timedelta, timezone
 
 from pydantic import BaseModel, Field
 
 from app.ai.experience_ai import AIUnavailable, ExperienceAI
 from app.core.auth import CurrentUser
+from app.services.common import DailyAllowance
 from app.services.experiences import clean_tags
 
 logger = logging.getLogger(__name__)
@@ -88,27 +88,8 @@ def keyword_tags(text: str) -> list[str]:
     return clean_tags(found)[:MAX_SUGGESTIONS]
 
 
-class _DailyAllowance:
-    """How many model calls each author has made today (Taiwan time), in this process."""
-
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._day: date | None = None
-        self._used: dict[str, int] = {}
-
-    def take(self, user_id: str, limit: int) -> bool:
-        today = datetime.now(_TAIPEI).date()
-        with self._lock:
-            if self._day != today:
-                self._day, self._used = today, {}
-            used = self._used.get(user_id, 0)
-            if used >= limit:
-                return False
-            self._used[user_id] = used + 1
-            return True
-
-
-_allowance = _DailyAllowance()
+# How many model calls each author has made today.
+_allowance = DailyAllowance()
 
 
 def _locale(text: str) -> str:

@@ -127,8 +127,28 @@ class FakeCultureRepository implements CultureRepository {
       preferredLocale: 'zh-Hant',
       nickname: nickname,
       realName: realName,
+      avatarUrl: avatarUrl,
     );
   }
+
+  String? avatarUrl;
+  final List<String> uploadedPhotos = [];
+
+  @override
+  Future<void> uploadAvatar(String base64Image) async {
+    _requireLogin();
+    uploadedPhotos.add(base64Image);
+    avatarUrl = '/api/avatars/photo-${uploadedPhotos.length}';
+  }
+
+  @override
+  Future<void> deleteAvatar() async {
+    _requireLogin();
+    avatarUrl = null;
+  }
+
+  @override
+  String imageUrl(String path) => path;
 
   @override
   Future<Profile> updateLocale(String locale) => me();

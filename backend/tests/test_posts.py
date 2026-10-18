@@ -77,6 +77,15 @@ def test_signing_needs_the_name_set(api):
     assert item["author_name"] == "小美"
 
 
+def test_cultural_differences_is_its_own_category(api):
+    item = post(api, category="difference", title="說「下次一起吃飯」不一定是邀請")
+    assert item["category"] == "difference" and item["topic_id"] == "culture_communication"
+    ids = [e["id"] for e in api.get("/api/experiences?category=difference").json()["items"]]
+    assert ids == [item["id"]]
+    culture = api.get("/api/experiences?category=culture").json()["items"]
+    assert item["id"] not in [e["id"] for e in culture]
+
+
 def test_categories_hot_sort_search_and_popular_tags(api, db):
     seed(db, get_settings().demo_content_path)
     food = post(api, category="food", title="夜市點餐", tags=["#夜市"])
@@ -119,7 +128,7 @@ def test_posts_shared_under_a_guide(api, db):
 
 
 def test_tag_suggestions_use_ai_then_fall_back_to_keywords(api, ai, monkeypatch):
-    monkeypatch.setattr(tag_svc, "_allowance", tag_svc._DailyAllowance())
+    monkeypatch.setattr(tag_svc, "_allowance", tag_svc.DailyAllowance())
     body = {"title": "居留證", "text": "要先線上預約才能去服務站"}
     url = "/api/experiences/tag-suggestions"
     assert api.post(url, json=body).status_code == 401
