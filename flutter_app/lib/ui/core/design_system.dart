@@ -6,7 +6,8 @@ import '../view_models/bridge_view_model.dart';
 /// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
 abstract final class Palette {
   static const paper = Color(0xFFF1EADC),
-      grid = Color(0xFFE2D7C2),
+      grid =
+          Color(0xFFEBE3D3), // faint, so text over the paper stays easy to read
       header = Color(0xFFF3EDE1),
       nav = Color(0xFFF4EEE0),
       high =
