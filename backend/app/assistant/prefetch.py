@@ -24,6 +24,10 @@ from app.assistant.tools import (
 logger = logging.getLogger(__name__)
 
 PROCEDURES = 2  # full details for the best keyword matches
+# The next matches as a short list, so the model can fetch a better fit: keywords alone often tie
+# (every ARC guide has 居留證 in its title) and can't tell a general question from a special case.
+OTHER_PROCEDURES = 4
+BRIEF_CHARS = 120
 EXPERIENCES = 3
 PASSAGES = 3
 MAX_QUERY = 200
@@ -49,16 +53,18 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     if not query:
         return Prefetched(block="")
     try:
-        actions = ctx.data.search_actions(query, PROCEDURES)
+        matches = ctx.data.search_actions(query, PROCEDURES + OTHER_PROCEDURES)
         experiences = ctx.data.search_experiences(query, None, None, EXPERIENCES)
     except Exception:  # never let a search problem stop the assistant; the tools remain
         logger.exception("Assistant prefetch failed")
         return Prefetched(block="")
+    actions, others = matches[:PROCEDURES], matches[PROCEDURES:]
     passages = _semantic(query, ctx)
     if not actions and not experiences and not _has_passages(passages):
         return Prefetched(block="")  # nothing to add; follow-ups like 「第二個」 stay as written
     payload: dict[str, Any] = {
         "procedures": [_action_detail(a, ctx.locale) for a in actions],
+        "other_matching_procedures": [_brief(a, ctx.locale) for a in others],
         "student_experiences": {
             "notice": EXPERIENCE_NOTICE,
             "results": [_experience_summary(e, ctx.locale) for e in experiences],
@@ -70,6 +76,15 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         payload["related_passages"] = None
         text = _dump(payload)[:MAX_CHARS]
     return Prefetched(block=f"{_HEADER}\n{text}", actions=tuple(actions))
+
+
+def _brief(action: ActionRecord, locale) -> dict[str, str]:
+    description = " ".join(action.description.get(locale).split())
+    return {
+        "action_id": action.id,
+        "title": action.title.get(locale),
+        "description": description[:BRIEF_CHARS],
+    }
 
 
 def _semantic(query: str, ctx: ToolContext) -> dict | None:

@@ -261,3 +261,27 @@ def test_prompt_asks_for_the_related_line(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("hi"), None)
     assert "RELATED: action:<action_id>, post:<experience_id>" in llm.calls[0]["system"]
+
+
+def test_more_matching_guides_are_listed_briefly(make_assistant):
+    import json
+
+    from app.assistant.prefetch import PROCEDURES
+
+    llm = ScriptedLLM(answer("ok"))
+    make_assistant(llm).reply(ask("申請"), USER)
+    message = llm.calls[0]["history"][-1].text
+    # The message is the header line, the JSON block, a blank line, then the question.
+    payload = json.loads(message.split("\n", 1)[1].rsplit("\n\n", 1)[0])
+    assert len(payload["procedures"]) <= PROCEDURES
+    others = payload["other_matching_procedures"]
+    assert others, "guides beyond the top two are listed"
+    assert set(others[0]) == {"action_id", "title", "description"}
+    detailed = {p["action_id"] for p in payload["procedures"]}
+    assert not detailed & {o["action_id"] for o in others}
+
+
+def test_prompt_says_to_fetch_a_better_fitting_guide(make_assistant):
+    llm = ScriptedLLM(answer("hi"))
+    make_assistant(llm).reply(ask("hi"), None)
+    assert "other_matching_procedures" in llm.calls[0]["system"]
