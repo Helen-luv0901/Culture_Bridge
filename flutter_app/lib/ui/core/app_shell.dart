@@ -55,11 +55,14 @@ class _AppShellState extends State<AppShell> {
   String _title(BuildContext context, AppLayout layout) {
     final vm = BridgeScope.of(context);
     final path = widget.uri.path;
-    if (path == '/') return layout == AppLayout.phone ? 'Culture Bridge' : '';
-    if (path.startsWith('/explore')) return vm.pair('探索', 'Explore');
-    if (path == '/share') return vm.pair('分享', 'Share');
+    final phone = layout == AppLayout.phone;
+    if (path == '/') return phone ? 'Culture Bridge' : '';
+    // On wider screens the brand and sidebar are already there, so the tabs
+    // need no page name beside the brand; phones keep it.
+    if (path == '/explore') return phone ? vm.pair('探索', 'Explore') : '';
+    if (path == '/share') return phone ? vm.pair('分享', 'Share') : '';
+    if (path == '/profile') return phone ? vm.pair('我的', 'My') : '';
     if (path == '/profile/settings') return vm.pair('設定', 'Settings');
-    if (path.startsWith('/profile')) return vm.pair('我的', 'My');
     if (path.startsWith('/experiences')) {
       return vm.pair('學生分享', 'Student post');
     }
@@ -333,17 +336,47 @@ class PageFrame extends StatelessWidget {
       AppLayout.tablet => const EdgeInsets.fromLTRB(28, 24, 28, 96),
       AppLayout.web => const EdgeInsets.fromLTRB(32, 28, 32, 96),
     };
-    return NotebookBackground(
-      child: SingleChildScrollView(
-        padding: padding,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppShell.maxContentWidth,
-            ),
-            child: child,
-          ),
+    final scroll = SingleChildScrollView(
+      padding: padding,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppShell.maxContentWidth),
+          child: child,
         ),
+      ),
+    );
+    return NotebookBackground(
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // Decorate the empty paper with two of the team's botanical stickers,
+          // a different pair on each page: beside the column when there is room,
+          // otherwise in the bottom corners behind the cards. Not on phones.
+          if (AppLayout.of(context) == AppLayout.phone) return scroll;
+          final seed = GoRouterState.of(context).uri.path.codeUnits
+              .fold<int>(0, (sum, c) => sum + c);
+          final margin =
+              (box.maxWidth - AppShell.maxContentWidth - padding.horizontal) /
+              2;
+          final wide = margin >= 150;
+          final size = wide ? (margin - 40).clamp(110.0, 200.0) : 150.0;
+          return Stack(
+            children: [
+              Positioned(
+                left: wide ? (margin - size) / 2 : 8,
+                bottom: wide ? 48 : 12,
+                child: Sticker(seed, size: size),
+              ),
+              Positioned(
+                right: wide ? (margin - size) / 2 : 16,
+                // Clear of the chat bubble in the corner.
+                top: wide ? 36 : null,
+                bottom: wide ? null : 96,
+                child: Sticker(seed + 2, size: size * .85),
+              ),
+              Positioned.fill(child: scroll),
+            ],
+          );
+        },
       ),
     );
   }

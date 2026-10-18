@@ -126,6 +126,23 @@ void main() {
     expect(find.byKey(const Key('post-first-rental')), findsNothing);
   });
 
+  testWidgets('A whole card opens its post, not just the title', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(1280, 2400));
+    final pinned = find.byKey(const Key('guide-welcome'));
+    // Tap the empty right side of the card, far from the title.
+    await tester.tapAt(tester.getTopRight(pinned) + const Offset(-40, 60));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('official-account')), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('back')));
+    final post = find.byKey(const Key('post-first-rental'));
+    await tester.tapAt(tester.getTopRight(post) + const Offset(-200, 70));
+    await tester.pumpAndSettle();
+    expect(find.text('學生分享'), findsWidgets);
+  });
+
   testWidgets('Opened posts are dimmed and marked read', (tester) async {
     final app = await mount(tester, '/official', const Size(1280, 2400));
     await tap(tester, find.text('申請或更新 ARC').first);
@@ -192,6 +209,22 @@ void main() {
       expect(heat(life[i - 1]), greaterThanOrEqualTo(heat(life[i])));
     }
   });
+
+  for (final (route, name) in [
+    ('/explore', '探索'),
+    ('/share', '分享'),
+    ('/profile', '我的'),
+  ]) {
+    testWidgets('$route shows its name in the header on phones only', (
+      tester,
+    ) async {
+      await mount(tester, route, const Size(1280, 900));
+      expect(find.text(name), findsOneWidget); // the sidebar
+      await tester.pumpWidget(const SizedBox());
+      await mount(tester, route, const Size(375, 812));
+      expect(find.text(name), findsNWidgets(2)); // header and bottom tab
+    });
+  }
 
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
@@ -388,6 +421,63 @@ void main() {
       expect(find.text('EN'), findsOneWidget);
     });
   }
+
+  testWidgets('An unpublished draft on My page continues in Share', (
+    tester,
+  ) async {
+    final app = await mount(
+      tester,
+      '/profile',
+      const Size(375, 1400),
+      before: (app) async =>
+          app.repository.mine['old-draft'] = const MyExperience(
+            id: 'old-draft',
+            status: 'draft',
+            topicId: 'life_adaptation',
+            identityType: 'other',
+            originalVoice: '去郵局開戶要帶居留證。',
+            latestSummary: null,
+            impact: Impact(0, 0, 0, 0),
+            title: '郵局開戶',
+            category: 'life',
+          ),
+    );
+    expect(find.textContaining('草稿，點標題繼續編輯'), findsOneWidget);
+    await tap(tester, find.text('郵局開戶'));
+    expect(find.widgetWithText(TextField, '郵局開戶'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '去郵局開戶要帶居留證。'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('publish')));
+    expect(app.repository.lastPublish, containsPair('title', '郵局開戶'));
+    // The unpublished copy is gone once it is published.
+    expect(app.repository.mine.containsKey('old-draft'), isFalse);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('A draft on My page can be deleted', (tester) async {
+    final app = await mount(
+      tester,
+      '/profile',
+      const Size(375, 1400),
+      before: (app) async =>
+          app.repository.mine['old-draft'] = const MyExperience(
+            id: 'old-draft',
+            status: 'draft',
+            topicId: 'life_adaptation',
+            identityType: 'other',
+            originalVoice: '文華路的餐廳很好吃。',
+            latestSummary: null,
+            impact: Impact(0, 0, 0, 0),
+            title: '文華路餐廳',
+            category: 'food',
+          ),
+    );
+    await tap(tester, find.byKey(const Key('delete-draft-old-draft')));
+    expect(find.text('刪除這篇草稿？'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('confirm-delete-draft')));
+    expect(app.repository.mine.containsKey('old-draft'), isFalse);
+    expect(find.text('文華路餐廳'), findsNothing);
+  });
 
   testWidgets('Save a post and find it under My › Saved', (tester) async {
     final app = await mount(

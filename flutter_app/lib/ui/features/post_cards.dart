@@ -169,6 +169,7 @@ class OfficialPostCard extends StatelessWidget {
         NoteCard(
           key: Key('guide-$id'),
           read: read,
+          onTap: () => openGuide(context, id),
           padding: const EdgeInsets.fromLTRB(12, 14, 16, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -252,6 +253,7 @@ class StudentPostCard extends StatelessWidget {
     return NoteCard(
       key: Key('post-${item.id}'),
       read: read,
+      onTap: () => openPost(context, item.id),
       padding: const EdgeInsets.fromLTRB(16, 14, 6, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -388,6 +390,8 @@ class EmptyNote extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
     child: Column(
       children: [
+        Sticker(title.length, size: 88),
+        const SizedBox(height: 10),
         Text(title, style: displayStyle(16), textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(

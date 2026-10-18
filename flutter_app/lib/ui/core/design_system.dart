@@ -290,6 +290,24 @@ class Avatar extends StatelessWidget {
 // ---------- paper ----------
 
 /// Warm paper with a flat 1px notebook grid every 20px.
+/// One of the hand-drawn botanical stickers from the team's asset library; decoration only.
+class Sticker extends StatelessWidget {
+  const Sticker(this.index, {super.key, this.size = 120});
+  final int index;
+  final double size;
+  static const count = 5;
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: ExcludeSemantics(
+      child: Image.asset(
+        'assets/images/botanical-${index % count}.png',
+        width: size,
+        fit: BoxFit.contain,
+      ),
+    ),
+  );
+}
+
 class NotebookBackground extends StatelessWidget {
   const NotebookBackground({super.key, required this.child});
   final Widget child;
@@ -328,12 +346,16 @@ class NoteCard extends StatelessWidget {
     this.read = false,
     this.color,
     this.borderColor,
+    this.onTap,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool read;
   final Color? color;
   final Color? borderColor;
+
+  /// Makes the whole card one tap target; buttons inside keep their own actions.
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(right: 4, bottom: 5),
@@ -351,7 +373,12 @@ class NoteCard extends StatelessWidget {
           side: BorderSide(color: borderColor ?? Palette.oat),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Padding(padding: padding, child: child),
+        child: onTap == null
+            ? Padding(padding: padding, child: child)
+            : InkWell(
+                onTap: onTap,
+                child: Padding(padding: padding, child: child),
+              ),
       ),
     ),
   );

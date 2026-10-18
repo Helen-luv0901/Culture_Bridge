@@ -178,10 +178,44 @@ class _MyPosts extends StatelessWidget {
 class _MyPostCard extends StatelessWidget {
   const _MyPostCard({required this.item});
   final MyExperience item;
+
+  /// Open Share with this draft; asks first if Share already has other unsent words.
+  Future<void> _continue(BuildContext context) async {
+    final vm = BridgeScope.of(context);
+    final current = vm.draft;
+    if (!current.isEmpty && current.resumesId != item.id) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(vm.pair('取代分享頁的內容？', 'Replace what is in Share?')),
+          content: Text(
+            vm.pair(
+              '分享頁還有尚未發布的內容。要改成編輯這篇草稿嗎？',
+              'Share has words you have not published. Edit this draft instead?',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: Text(vm.t('cancel')),
+            ),
+            FilledButton(
+              key: const Key('replace-draft'),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: Text(vm.pair('編輯這篇草稿', 'Edit this draft')),
+            ),
+          ],
+        ),
+      );
+      if (replace != true || !context.mounted) return;
+    }
+    if (current.resumesId != item.id) vm.continueDraft(item);
+    context.go('/share');
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final published = item.status == 'published';
     final title = item.title.trim().isNotEmpty
         ? item.title.trim()
         : item.originalVoice.length > 24
@@ -189,7 +223,7 @@ class _MyPostCard extends StatelessWidget {
         : item.originalVoice;
     final parts = [
       switch (item.status) {
-        'draft' => vm.pair('草稿（舊版流程）', 'Draft (old flow)'),
+        'draft' => vm.pair('草稿，點標題繼續編輯', 'Draft. Tap the title to continue'),
         'hidden' => vm.pair('已被隱藏', 'Hidden by moderators'),
         _ => vm.pair('你的分享', 'Your post'),
       },
@@ -213,24 +247,73 @@ class _MyPostCard extends StatelessWidget {
             child: PaperTag(categoryName(vm, item.categoryKey)),
           ),
           CardTitle(
-            title,
-            onTap: published
-                ? () => openPost(context, item.id)
-                : () => vm.showNotice(
-                    vm.pair('這篇沒有公開。', 'This post is not public.'),
+            title.isEmpty ? vm.pair('（還沒有標題）', '(no title yet)') : title,
+            onTap: switch (item.status) {
+              'published' => () => openPost(context, item.id),
+              'draft' => () => _continue(context),
+              _ => () => ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    vm.pair(
+                      '這篇已被管理員隱藏，目前不公開。',
+                      'Moderators hid this post; it is not public.',
+                    ),
                   ),
+                ),
+              ),
+            },
           ),
           const DashedRule(padding: EdgeInsets.only(top: 4)),
           SizedBox(
             height: 44,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(parts.join(' · '), style: mutedStyle),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    parts.join(' · '),
+                    style: mutedStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (item.status == 'draft')
+                  TextButton(
+                    key: Key('delete-draft-${item.id}'),
+                    onPressed: () => _delete(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Palette.brickDeep,
+                    ),
+                    child: Text(vm.pair('刪除', 'Delete')),
+                  ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final vm = BridgeScope.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(vm.pair('刪除這篇草稿？', 'Delete this draft?')),
+        content: Text(vm.pair('刪除後無法復原。', 'This cannot be undone.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: Text(vm.t('cancel')),
+          ),
+          FilledButton(
+            key: const Key('confirm-delete-draft'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(vm.pair('刪除', 'Delete')),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await vm.deleteExperience(item.id);
   }
 }
 
