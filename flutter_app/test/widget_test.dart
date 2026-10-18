@@ -307,6 +307,28 @@ void main() {
     expect(logos().length, greaterThan(2));
   });
 
+  testWidgets('New posts appear on Home without a reload', (tester) async {
+    final app = await mount(tester, '/', const Size(1280, 2400));
+    expect(find.text('剛發的新貼文'), findsNothing);
+    // Someone else publishes while this page is open.
+    await app.repository.publishPost(
+      title: '剛發的新貼文',
+      voice: '測試即時更新。',
+      category: 'life',
+      tags: const [],
+      sourceLocale: 'zh-Hant',
+    );
+    await app.vm.refreshNewPosts();
+    await tester.pumpAndSettle();
+    expect(find.text('剛發的新貼文'), findsOneWidget);
+    // It goes to the top of the feed, under the pinned official card.
+    final fresh = tester.getTopLeft(find.text('剛發的新貼文')).dy;
+    final older = tester
+        .getTopLeft(find.byKey(const Key('post-first-rental')))
+        .dy;
+    expect(fresh, lessThan(older));
+  });
+
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
     await tap(tester, find.text('#居留證'));

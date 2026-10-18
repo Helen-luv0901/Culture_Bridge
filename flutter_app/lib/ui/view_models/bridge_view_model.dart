@@ -32,6 +32,7 @@ class BridgeViewModel extends ChangeNotifier {
     required this.preferences,
     this.admin,
     bool systemEnglish = false,
+    this.livePostsEvery,
   }) {
     _english = preferences.english ?? systemEnglish;
     _draft = preferences.draft;
@@ -48,6 +49,10 @@ class BridgeViewModel extends ChangeNotifier {
 
   /// Reviewer/admin API; the screens only show it to staff, and the server checks roles.
   final AdminRepository? admin;
+
+  /// How often to look for newly published posts while the app is open; null turns it off.
+  final Duration? livePostsEvery;
+  Timer? _liveTimer;
 
   // ---------- language ----------
 
@@ -402,6 +407,72 @@ class BridgeViewModel extends ChangeNotifier {
       _explore[_listKey(null, 'new', actionId)] ?? const Resource();
   Future<void> loadPostsForAction(String actionId) =>
       _loadList(null, 'new', actionId, false);
+
+  /// Starts looking for new posts every [livePostsEvery] while the app is in view.
+  void startLivePosts() {
+    final every = livePostsEvery;
+    if (every == null) return;
+    _liveTimer?.cancel();
+    _liveTimer = Timer.periodic(every, (_) => unawaited(refreshNewPosts()));
+  }
+
+  /// The app went to the background (no checks) or came back (check now, then keep going).
+  void setAppVisible(bool visible) {
+    if (!visible) {
+      _liveTimer?.cancel();
+      _liveTimer = null;
+      return;
+    }
+    unawaited(refreshNewPosts());
+    startLivePosts();
+  }
+
+  bool _refreshing = false;
+
+  /// Puts posts published since a newest-first list was loaded at its top, without a reload.
+  Future<void> refreshNewPosts() async {
+    if (_refreshing) return;
+    _refreshing = true;
+    var changed = false;
+    try {
+      final keys = [
+        for (final entry in _explore.entries)
+          if (entry.key.split('|')[1] == 'new' && entry.value.data != null)
+            entry.key,
+      ];
+      for (final key in keys) {
+        final [category, _, actionId] = key.split('|');
+        final ExperiencePage page;
+        try {
+          page = await repository.explore(
+            category: category == 'all' ? null : category,
+            actionId: actionId.isEmpty ? null : actionId,
+            locale: locale,
+          );
+        } on ApiException {
+          continue; // offline or busy: try again next time
+        }
+        final current = _explore[key]?.data;
+        if (current == null) continue;
+        final known = {for (final e in current.items) e.id};
+        final fresh = [
+          for (final e in page.items)
+            if (!known.contains(e.id)) e,
+        ];
+        if (fresh.isEmpty) continue;
+        _explore[key] = Resource(
+          data: ExperiencePage([
+            ...fresh,
+            ...current.items,
+          ], current.nextOffset),
+        );
+        changed = true;
+      }
+    } finally {
+      _refreshing = false;
+    }
+    if (changed) notifyListeners();
+  }
 
   Future<void> _loadList(
     String? category,
@@ -1094,6 +1165,7 @@ class BridgeViewModel extends ChangeNotifier {
     auth.removeListener(_onAuthChanged);
     _saveTimer?.cancel();
     _suggestTimer?.cancel();
+    _liveTimer?.cancel();
     super.dispose();
   }
 }
