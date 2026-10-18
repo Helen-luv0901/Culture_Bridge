@@ -8,6 +8,7 @@ import 'package:culture_bridge/ui/features/assistant_panel.dart';
 import 'package:culture_bridge/ui/features/me_page.dart';
 import 'package:culture_bridge/ui/features/post_cards.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_helpers.dart';
@@ -225,6 +226,37 @@ void main() {
       expect(find.text(name), findsNWidgets(2)); // header and bottom tab
     });
   }
+
+  testWidgets('Selected chips have readable white labels', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: bridgeTheme(),
+        home: Scaffold(
+          body: Row(
+            children: [
+              ChoiceChip(
+                label: const Text('流程'),
+                selected: true,
+                onSelected: (_) {},
+              ),
+              ChoiceChip(
+                label: const Text('檢舉'),
+                selected: false,
+                onSelected: (_) {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    Color colorOf(String text) => tester
+        .renderObject<RenderParagraph>(find.text(text))
+        .text
+        .style!
+        .color!;
+    expect(colorOf('流程'), Palette.onMoss);
+    expect(colorOf('檢舉'), Palette.ink);
+  });
 
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
