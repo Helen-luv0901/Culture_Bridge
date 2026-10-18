@@ -7,7 +7,7 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 
-/// The pinned guide for students who just arrived; it lives in the app, not the API.
+/// The pinned card for students who just arrived; it opens the official account.
 const welcomeGuideId = 'welcome';
 
 /// Opens a student post and remembers it was read.
@@ -19,11 +19,15 @@ void openPost(BuildContext context, String id) {
 /// Opens an official guide and remembers it was read.
 void openGuide(BuildContext context, String id) {
   BridgeScope.of(context).markRead('guide:$id');
-  context.push(id == welcomeGuideId ? '/guide/welcome' : '/actions/$id');
+  context.push(id == welcomeGuideId ? '/official' : '/actions/$id');
 }
 
-/// Explore, filtered to the official guides (the official avatar links there).
-void showOfficial(BuildContext context) => context.go('/explore?cat=official');
+/// The official account's page (the official avatar links there).
+void showOfficial(BuildContext context) {
+  if (GoRouterState.of(context).uri.path != '/official') {
+    context.push('/official');
+  }
+}
 
 /// Explore, searching for a tag.
 void searchTag(BuildContext context, String tag) =>
@@ -45,7 +49,7 @@ class OfficialByline extends StatelessWidget {
     return Row(
       children: [
         Tooltip(
-          message: vm.pair('看所有官方貼文', 'See all official posts'),
+          message: vm.pair('看官方帳號', 'See the official account'),
           child: InkResponse(
             onTap: () => showOfficial(context),
             radius: 24,

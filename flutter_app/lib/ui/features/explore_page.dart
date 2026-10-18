@@ -8,6 +8,7 @@ import '../../domain/keys.dart';
 import '../core/design_system.dart';
 import '../core/layout.dart';
 import '../core/loading.dart';
+import 'assistant_panel.dart';
 import 'home_page.dart';
 import 'post_cards.dart';
 
@@ -302,7 +303,7 @@ class _AskAssistantRow extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: InkWell(
         key: const Key('ask-assistant'),
-        onTap: () => vm.openAssistant(question: query),
+        onTap: () => openAssistantFor(context, question: query),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(

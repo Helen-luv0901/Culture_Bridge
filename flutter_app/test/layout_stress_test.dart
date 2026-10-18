@@ -24,6 +24,7 @@ void main() {
     '/profile/settings',
     '/profile?tab=saved',
     '/guide/welcome',
+    '/official',
     '/explore?q=居留',
   ];
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/link.dart';
 
 import '../../domain/api_models.dart';
@@ -8,6 +9,39 @@ import '../core/design_system.dart';
 import '../core/layout.dart';
 import '../view_models/bridge_view_model.dart';
 import 'post_cards.dart';
+
+/// Opens the assistant. Only signed-in users may use it; guests are asked to sign in first.
+Future<void> openAssistantFor(BuildContext context, {String? question}) async {
+  final vm = BridgeScope.of(context);
+  if (vm.signedIn) {
+    vm.openAssistant(question: question);
+    return;
+  }
+  final router = GoRouter.of(context);
+  final here = router.routerDelegate.currentConfiguration.uri.toString();
+  final signIn = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      key: const Key('assistant-sign-in'),
+      title: Text(vm.pair('請先登入', 'Please sign in first')),
+      content: Text(
+        vm.pair('登入後才可以使用 AI 助理。', 'Sign in to use the AI assistant.'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialog, false),
+          child: Text(vm.t('cancel')),
+        ),
+        FilledButton(
+          key: const Key('assistant-sign-in-go'),
+          onPressed: () => Navigator.pop(dialog, true),
+          child: Text(vm.t('signIn')),
+        ),
+      ],
+    ),
+  );
+  if (signIn == true) router.push('/signin?next=${Uri.encodeComponent(here)}');
+}
 
 /// The round chat bubble at the bottom right; it opens and closes the assistant.
 class AssistantBubble extends StatelessWidget {
@@ -30,7 +64,9 @@ class AssistantBubble extends StatelessWidget {
           shadowColor: Palette.ink.withValues(alpha: .5),
           child: InkWell(
             customBorder: const CircleBorder(),
-            onTap: vm.assistantOpen ? vm.closeAssistant : vm.openAssistant,
+            onTap: vm.assistantOpen
+                ? vm.closeAssistant
+                : () => openAssistantFor(context),
             child: const SizedBox(
               width: 56,
               height: 56,

@@ -56,7 +56,9 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             ),
             routes: [_page('settings', (state) => const SettingsPage())],
           ),
-          _page('/guide/welcome', (state) => const WelcomeGuidePage()),
+          _page('/official', (state) => const OfficialAccountPage()),
+          // Older links and saved bookmarks to the welcome guide.
+          _page('/guide/welcome', (state) => const OfficialAccountPage()),
           _page(
             '/admin',
             (state) =>

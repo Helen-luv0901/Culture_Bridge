@@ -53,6 +53,7 @@ void main() {
       '/profile/settings',
       '/signin',
       '/guide/welcome',
+      '/official',
       '/experiences/first-rental',
       '/actions/arc',
       '/actions/arc/progress',
@@ -93,24 +94,35 @@ void main() {
     );
   });
 
-  testWidgets('Home: pinned welcome guide, then guides and posts', (
+  testWidgets('Home: the official account pinned, then only student posts', (
     tester,
   ) async {
     await mount(tester, '/', const Size(1280, 2400));
     final pinned = tester.getTopLeft(find.byKey(const Key('guide-welcome')));
-    final guide = tester.getTopLeft(find.byKey(const Key('guide-arc')));
     final post = tester.getTopLeft(find.byKey(const Key('post-first-rental')));
-    expect(pinned.dy, lessThan(guide.dy));
     expect(pinned.dy, lessThan(post.dy));
-    expect(find.text('初次來台灣？先看這篇'), findsOneWidget);
+    expect(find.text('初次來台灣？可以來這邊看看'), findsOneWidget);
+    // Official guides live on the official account's page, not in the feed.
+    expect(find.byKey(const Key('guide-arc')), findsNothing);
     // Official posts carry the seal, not a text badge or a check mark.
     expect(find.byType(OfficialSeal), findsWidgets);
     expect(find.text('官方'), findsNothing);
     expect(find.byIcon(Icons.verified), findsNothing);
   });
 
+  testWidgets('The pinned card opens the official account and its posts', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(375, 812));
+    await tap(tester, find.text('初次來台灣？可以來這邊看看'));
+    expect(find.byKey(const Key('official-account')), findsOneWidget);
+    expect(find.text('官方帳號'), findsWidgets);
+    expect(find.byKey(const Key('guide-arc')), findsOneWidget);
+    expect(find.byKey(const Key('post-first-rental')), findsNothing);
+  });
+
   testWidgets('Opened posts are dimmed and marked read', (tester) async {
-    final app = await mount(tester, '/', const Size(1280, 2400));
+    final app = await mount(tester, '/official', const Size(1280, 2400));
     await tap(tester, find.text('申請或更新 ARC').first);
     expect(app.vm.isRead('guide:arc'), isTrue);
     await tap(tester, find.byKey(const Key('back')));
@@ -320,6 +332,19 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
+  for (final size in [const Size(375, 812), const Size(1280, 900)]) {
+    testWidgets('Header switches language at ${size.width}', (tester) async {
+      final app = await mount(tester, '/', size);
+      expect(find.byKey(const Key('header-language')), findsOneWidget);
+      await tap(tester, find.byKey(const Key('header-language')));
+      expect(app.vm.english, isTrue);
+      expect(find.text('中文'), findsOneWidget);
+      await tap(tester, find.byKey(const Key('header-language')));
+      expect(app.vm.english, isFalse);
+      expect(find.text('EN'), findsOneWidget);
+    });
+  }
+
   testWidgets('Save a post and find it under My › Saved', (tester) async {
     final app = await mount(
       tester,
@@ -428,6 +453,25 @@ void main() {
     await tap(tester, find.byKey(const Key('confirm-op1')));
     expect(app.repository.confirmed, ['op1']);
     expect(find.text('已開始，打開進度'), findsOneWidget);
+  });
+
+  testWidgets('Guests are asked to sign in before using the assistant', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812), signedIn: false);
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    expect(find.text('請先登入'), findsOneWidget);
+    expect(find.text('登入後才可以使用 AI 助理。'), findsOneWidget);
+    expect(app.vm.assistantOpen, isFalse);
+
+    await tap(tester, find.text('取消'));
+    expect(find.byKey(const Key('assistant-sign-in')), findsNothing);
+    expect(app.vm.assistantOpen, isFalse);
+
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    await tap(tester, find.byKey(const Key('assistant-sign-in-go')));
+    expect(find.byKey(const Key('dev-name')), findsOneWidget);
+    expect(app.repository.assistantMessages, isEmpty);
   });
 
   testWidgets('Assistant on a phone covers the page and hides the bubble', (
