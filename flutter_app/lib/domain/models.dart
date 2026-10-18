@@ -12,6 +12,7 @@ class ShareDraft {
     this.authorDisplay = 'anonymous',
     this.differentFromId,
     this.actionId,
+    this.resumesId,
   });
 
   final String title;
@@ -33,6 +34,10 @@ class ShareDraft {
   /// Set when shared from an official guide, so the post also shows under it.
   final String? actionId;
 
+  /// An unpublished post saved on the server that this draft continues; it is
+  /// deleted once the draft is published.
+  final String? resumesId;
+
   bool get isEmpty => title.trim().isEmpty && voice.trim().isEmpty;
 
   ShareDraft copyWith({
@@ -51,6 +56,7 @@ class ShareDraft {
     authorDisplay: authorDisplay ?? this.authorDisplay,
     differentFromId: differentFromId,
     actionId: actionId,
+    resumesId: resumesId,
   );
 
   /// The same draft without the link to another post or guide.
@@ -63,6 +69,7 @@ class ShareDraft {
     authorDisplay: authorDisplay,
     differentFromId: post ? null : differentFromId,
     actionId: guide ? null : actionId,
+    resumesId: resumesId,
   );
 
   Map<String, Object?> toJson() => {
@@ -74,6 +81,7 @@ class ShareDraft {
     'authorDisplay': authorDisplay,
     'differentFromId': differentFromId,
     'actionId': actionId,
+    'resumesId': resumesId,
   };
 
   factory ShareDraft.fromJson(Map<String, dynamic> json) => ShareDraft(
@@ -85,5 +93,6 @@ class ShareDraft {
     authorDisplay: json['authorDisplay'] as String? ?? 'anonymous',
     differentFromId: json['differentFromId'] as String?,
     actionId: json['actionId'] as String?,
+    resumesId: json['resumesId'] as String?,
   );
 }

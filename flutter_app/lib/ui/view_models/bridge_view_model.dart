@@ -932,6 +932,25 @@ class BridgeViewModel extends ChangeNotifier {
 
   bool publishing = false;
 
+  /// Continue an unpublished post (saved on the server) in Share.
+  void continueDraft(MyExperience item) {
+    _draft = ShareDraft(
+      title: item.title,
+      voice: item.originalVoice,
+      category: item.category ?? categoryFor(null, item.topicId),
+      customTags: item.tags,
+      authorDisplay: _draft.authorDisplay,
+      resumesId: item.id,
+    );
+    unawaited(preferences.saveDraft(_draft));
+    tagSuggestions = const [];
+    _suggestedFor = '';
+    _suggestRequest++;
+    suggestingTags = false;
+    notifyListeners();
+    _scheduleTagSuggestions();
+  }
+
   /// Publishes the draft exactly as written. Returns an error message, or the new post.
   Future<(String?, ExperienceItem?)> publishDraft() async {
     final title = _draft.title.trim();
@@ -955,6 +974,15 @@ class BridgeViewModel extends ChangeNotifier {
         differentFromId: _draft.differentFromId,
         actionId: _draft.actionId,
       );
+      final replaced = _draft.resumesId;
+      if (replaced != null) {
+        try {
+          // The unpublished copy it continued is no longer needed.
+          await repository.deleteExperience(replaced);
+        } on ApiException {
+          // Already gone, or offline: the new post is published either way.
+        }
+      }
       _draft = ShareDraft(authorDisplay: _draft.authorDisplay);
       unawaited(preferences.saveDraft(_draft));
       tagSuggestions = const [];

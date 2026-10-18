@@ -389,6 +389,38 @@ void main() {
     });
   }
 
+  testWidgets('An unpublished draft on My page continues in Share', (
+    tester,
+  ) async {
+    final app = await mount(
+      tester,
+      '/profile',
+      const Size(375, 1400),
+      before: (app) async =>
+          app.repository.mine['old-draft'] = const MyExperience(
+            id: 'old-draft',
+            status: 'draft',
+            topicId: 'life_adaptation',
+            identityType: 'other',
+            originalVoice: '去郵局開戶要帶居留證。',
+            latestSummary: null,
+            impact: Impact(0, 0, 0, 0),
+            title: '郵局開戶',
+            category: 'life',
+          ),
+    );
+    expect(find.textContaining('草稿，點標題繼續編輯'), findsOneWidget);
+    await tap(tester, find.text('郵局開戶'));
+    expect(find.widgetWithText(TextField, '郵局開戶'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '去郵局開戶要帶居留證。'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('publish')));
+    expect(app.repository.lastPublish, containsPair('title', '郵局開戶'));
+    // The unpublished copy is gone once it is published.
+    expect(app.repository.mine.containsKey('old-draft'), isFalse);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('Save a post and find it under My › Saved', (tester) async {
     final app = await mount(
       tester,
