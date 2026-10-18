@@ -293,6 +293,20 @@ void main() {
     expect(find.textContaining('Sources: Example Agency'), findsOneWidget);
   });
 
+  testWidgets('Official posts and the account use the team logo', (
+    tester,
+  ) async {
+    await mount(tester, '/official', const Size(1280, 1600));
+    Iterable<String> logos() => tester
+        .widgetList<Image>(find.byType(Image))
+        .map((i) => i.image)
+        .whereType<AssetImage>()
+        .map((a) => a.assetName)
+        .where((name) => name == 'assets/images/logo-mark.png');
+    // The account header plus every official post byline.
+    expect(logos().length, greaterThan(2));
+  });
+
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
     await tap(tester, find.text('#居留證'));
