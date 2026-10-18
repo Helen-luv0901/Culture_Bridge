@@ -266,14 +266,54 @@ class _MyPostCard extends StatelessWidget {
           const DashedRule(padding: EdgeInsets.only(top: 4)),
           SizedBox(
             height: 44,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(parts.join(' · '), style: mutedStyle),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    parts.join(' · '),
+                    style: mutedStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (item.status == 'draft')
+                  TextButton(
+                    key: Key('delete-draft-${item.id}'),
+                    onPressed: () => _delete(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Palette.brickDeep,
+                    ),
+                    child: Text(vm.pair('刪除', 'Delete')),
+                  ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final vm = BridgeScope.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(vm.pair('刪除這篇草稿？', 'Delete this draft?')),
+        content: Text(vm.pair('刪除後無法復原。', 'This cannot be undone.')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: Text(vm.t('cancel')),
+          ),
+          FilledButton(
+            key: const Key('confirm-delete-draft'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(vm.pair('刪除', 'Delete')),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await vm.deleteExperience(item.id);
   }
 }
 

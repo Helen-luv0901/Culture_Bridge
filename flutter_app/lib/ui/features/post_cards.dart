@@ -390,6 +390,8 @@ class EmptyNote extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
     child: Column(
       children: [
+        Sticker(title.length, size: 88),
+        const SizedBox(height: 10),
         Text(title, style: displayStyle(16), textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(

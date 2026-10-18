@@ -91,24 +91,15 @@ class OfficialAccountPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Wrap(
-                          spacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Semantics(
-                              header: true,
-                              child: Text(
-                                'Culture Bridge',
-                                style: displayStyle(20),
-                              ),
-                            ),
-                            const OfficialSeal(size: 18),
-                          ],
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            'Culture Bridge',
+                            style: displayStyle(20),
+                          ),
                         ),
-                        Text(
-                          vm.pair('官方帳號', 'Official account'),
-                          style: mutedStyle,
-                        ),
+                        const SizedBox(height: 4),
+                        _OfficialBadge(vm.pair('官方帳號', 'Official account')),
                       ],
                     ),
                   ),
@@ -226,4 +217,83 @@ class GuideList extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 「官方帳號」 as a bright yellow badge with a light sweeping across it. The shine
+/// plays twice, then rests; it is skipped when the system asks for less motion.
+class _OfficialBadge extends StatefulWidget {
+  const _OfficialBadge(this.label);
+  final String label;
+  @override
+  State<_OfficialBadge> createState() => _OfficialBadgeState();
+}
+
+class _OfficialBadgeState extends State<_OfficialBadge>
+    with SingleTickerProviderStateMixin {
+  static const _yellow = Color(0xFFFFD43B);
+  static const _light = Color(0xFFFFF1A8);
+  late final _shine = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _shine.value = 1;
+    } else if (!_shine.isAnimating && _shine.value == 0) {
+      _shine
+          .forward()
+          .then((_) => _shine.forward(from: 0))
+          .catchError((_) {}, test: (e) => e is TickerCanceled);
+    }
+  }
+
+  @override
+  void dispose() {
+    _shine.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(colors: [_yellow, _light, _yellow]),
+      borderRadius: BorderRadius.circular(999),
+      boxShadow: [
+        BoxShadow(color: _yellow.withValues(alpha: .55), blurRadius: 10),
+      ],
+    ),
+    child: AnimatedBuilder(
+      animation: _shine,
+      builder: (context, child) => ShaderMask(
+        blendMode: BlendMode.srcATop,
+        shaderCallback: (bounds) {
+          final x = -1 + 3 * _shine.value;
+          return LinearGradient(
+            begin: Alignment(x - .6, -.4),
+            end: Alignment(x + .6, .4),
+            colors: [
+              Palette.ochreInk,
+              Colors.white.withValues(alpha: .9),
+              Palette.ochreInk,
+            ],
+            stops: const [.3, .5, .7],
+          ).createShader(bounds);
+        },
+        child: child,
+      ),
+      child: Text(
+        widget.label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Palette.ochreInk,
+          letterSpacing: .5,
+        ),
+      ),
+    ),
+  );
 }

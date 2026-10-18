@@ -290,6 +290,24 @@ class Avatar extends StatelessWidget {
 // ---------- paper ----------
 
 /// Warm paper with a flat 1px notebook grid every 20px.
+/// One of the hand-drawn botanical stickers from the team's asset library; decoration only.
+class Sticker extends StatelessWidget {
+  const Sticker(this.index, {super.key, this.size = 120});
+  final int index;
+  final double size;
+  static const count = 5;
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: ExcludeSemantics(
+      child: Image.asset(
+        'assets/images/botanical-${index % count}.png',
+        width: size,
+        fit: BoxFit.contain,
+      ),
+    ),
+  );
+}
+
 class NotebookBackground extends StatelessWidget {
   const NotebookBackground({super.key, required this.child});
   final Widget child;

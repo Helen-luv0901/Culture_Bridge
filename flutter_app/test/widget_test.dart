@@ -215,9 +215,14 @@ void main() {
     ('/share', '分享'),
     ('/profile', '我的'),
   ]) {
-    testWidgets('$route shows its name only in the navigation', (tester) async {
+    testWidgets('$route shows its name in the header on phones only', (
+      tester,
+    ) async {
       await mount(tester, route, const Size(1280, 900));
-      expect(find.text(name), findsOneWidget);
+      expect(find.text(name), findsOneWidget); // the sidebar
+      await tester.pumpWidget(const SizedBox());
+      await mount(tester, route, const Size(375, 812));
+      expect(find.text(name), findsNWidgets(2)); // header and bottom tab
     });
   }
 
@@ -447,6 +452,31 @@ void main() {
     // The unpublished copy is gone once it is published.
     expect(app.repository.mine.containsKey('old-draft'), isFalse);
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('A draft on My page can be deleted', (tester) async {
+    final app = await mount(
+      tester,
+      '/profile',
+      const Size(375, 1400),
+      before: (app) async =>
+          app.repository.mine['old-draft'] = const MyExperience(
+            id: 'old-draft',
+            status: 'draft',
+            topicId: 'life_adaptation',
+            identityType: 'other',
+            originalVoice: '文華路的餐廳很好吃。',
+            latestSummary: null,
+            impact: Impact(0, 0, 0, 0),
+            title: '文華路餐廳',
+            category: 'food',
+          ),
+    );
+    await tap(tester, find.byKey(const Key('delete-draft-old-draft')));
+    expect(find.text('刪除這篇草稿？'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('confirm-delete-draft')));
+    expect(app.repository.mine.containsKey('old-draft'), isFalse);
+    expect(find.text('文華路餐廳'), findsNothing);
   });
 
   testWidgets('Save a post and find it under My › Saved', (tester) async {
