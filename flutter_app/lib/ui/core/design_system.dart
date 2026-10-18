@@ -261,8 +261,8 @@ class OfficialSeal extends StatelessWidget {
   );
 }
 
-/// A round avatar: the person's photo if they have one, else the author's initial
-/// (or the bridge for the official account).
+/// A round avatar: the person's photo if they have one, else the author's initial,
+/// or the team logo mark for Culture Bridge itself (no initial).
 class Avatar extends StatelessWidget {
   const Avatar({super.key, this.initial, this.size = 32, this.imageUrl});
   final String? initial;
@@ -277,9 +277,15 @@ class Avatar extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: Palette.paleMoss,
+      decoration: BoxDecoration(
+        // The purple logo reads best on white; people's initials sit on pale moss.
+        color: initial == null && imageUrl == null
+            ? Colors.white
+            : Palette.paleMoss,
         shape: BoxShape.circle,
+        border: initial == null && imageUrl == null
+            ? Border.all(color: Palette.edge)
+            : null,
       ),
       child: imageUrl == null
           ? _fallback()
@@ -294,7 +300,12 @@ class Avatar extends StatelessWidget {
   );
 
   Widget _fallback() => initial == null
-      ? AppIcon('bridge', size: size * .56, color: Palette.moss)
+      ? Image.asset(
+          'assets/images/logo-mark.png',
+          width: size * .72,
+          height: size * .72,
+          fit: BoxFit.contain,
+        )
       : Text(
           initial!,
           style: TextStyle(
