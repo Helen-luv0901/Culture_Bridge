@@ -188,3 +188,25 @@ def test_thinking_level_maps_to_gemini_config():
     assert thinking_config("") is None
     assert thinking_config("low").thinking_level.value == "LOW"
     assert thinking_config("minimal").thinking_level.value == "MINIMAL"
+
+
+def test_answers_show_the_closest_student_posts(make_assistant):
+    reply = make_assistant(ScriptedLLM(answer("租屋前先看合約。"))).reply(
+        ask("租房子要注意什麼？"), USER
+    )
+    posts = [c.model_dump() for c in reply.cards if c.type == "experience"]
+    assert 1 <= len(posts) <= 2
+    assert posts[0]["experience_id"] == "first-rental"
+    assert posts[0]["title"] and posts[0]["excerpt"]
+
+
+def test_at_most_two_posts_and_none_when_nothing_matches(make_assistant):
+    reply = make_assistant(ScriptedLLM(answer("ok"))).reply(ask("居留證 租屋 夜市 教授"), USER)
+    assert len([c for c in reply.cards if c.type == "experience"]) <= 2
+    nothing = make_assistant(ScriptedLLM(answer("hi"))).reply(ask("zzzz qqqq"), USER)
+    assert [c for c in nothing.cards if c.type == "experience"] == []
+
+
+def test_fallback_answers_show_no_posts(make_assistant):
+    reply = make_assistant(ScriptedLLM(LLMError("quota"))).reply(ask("租房子要注意什麼？"), USER)
+    assert reply.fallback is True and reply.cards == []

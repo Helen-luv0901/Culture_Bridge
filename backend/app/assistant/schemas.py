@@ -50,6 +50,10 @@ class ExperienceCard(BaseModel):
     experience_id: str
     label: Literal["student_experience"] = "student_experience"
     reminder: str
+    # Shown as a small post card the reader can open.
+    title: str = ""
+    excerpt: str = ""
+    category: str | None = None
 
 
 Card = Annotated[ActionCard | ExperienceCard, Field(discriminator="type")]

@@ -24,7 +24,12 @@ from app.assistant.llm import (
 )
 from app.assistant.memory import ConversationStore
 from app.assistant.operations import OperationStore, PendingOperation
-from app.assistant.prefetch import Prefetched, cite_named_procedures, prefetch
+from app.assistant.prefetch import (
+    Prefetched,
+    cite_named_procedures,
+    prefetch,
+    show_related_posts,
+)
 from app.assistant.prompts import build_system_prompt, build_user_message
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import ToolContext, ToolRegistry
@@ -157,6 +162,7 @@ class Assistant:
             logger.warning("Assistant fallback: model returned an empty answer")
             return self._fallback(conversation_id, ctx.locale, tools_used)
         cite_named_procedures(turn.text, found, ctx)
+        show_related_posts(found, ctx)
         self._memory.save(owner, conversation_id, history)
         return AssistantReply(
             conversation_id=conversation_id,
