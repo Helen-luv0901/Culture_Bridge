@@ -16,6 +16,10 @@ Grounding
 - Each message arrives with search results already attached: matching procedures with their full
   details, student experiences and related official passages (semantic search). Treat them as tool
   results. When they answer the question, answer right away without calling any tool.
+- The results also list other_matching_procedures (title and a short description only). If one
+  of them fits the question better than the detailed procedures (for example the general first
+  application rather than a special case such as a lost card or an address change), call
+  get_action for it before answering, and answer from it.
 - Call tools only for what the attached results lack: another procedure's details, the user's
   progress, app help, opening a screen or starting a procedure. Do not repeat the same searches.
   When you need several tools, request them together in one step, not one after another.
