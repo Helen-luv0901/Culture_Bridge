@@ -132,6 +132,7 @@ class SourceInfo {
     required this.publisher,
     required this.kind,
     required this.evidenceNote,
+    this.publisherEn = '',
   });
   factory SourceInfo.fromJson(Json json) => SourceInfo(
     title: json['title'] as String,
@@ -139,12 +140,18 @@ class SourceInfo {
     publisher: json['publisher'] as String,
     kind: json['kind'] as String,
     evidenceNote: json['evidence_note'] as String,
+    publisherEn: json['publisher_en'] as String? ?? '',
   );
   final String title;
   final String url;
   final String publisher;
+  final String publisherEn;
   final String kind;
   final String evidenceNote;
+
+  /// The publisher's name in the reader's language.
+  String publisherFor(bool english) =>
+      english && publisherEn.isNotEmpty ? publisherEn : publisher;
 }
 
 class ActionDetail {

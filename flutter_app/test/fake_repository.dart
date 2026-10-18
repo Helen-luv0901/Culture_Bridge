@@ -61,6 +61,7 @@ class FakeCultureRepository implements CultureRepository {
               title: title as String,
               url: 'https://example.gov.tw/${c['id']}',
               publisher: title,
+              publisherEn: 'Example Agency',
               kind: 'official',
               evidenceNote: 'demo',
             ),

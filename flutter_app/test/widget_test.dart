@@ -289,6 +289,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Book online first.'), findsOneWidget);
     expect(find.text('先線上預約。'), findsNothing);
+    // Sources show English names, without the Chinese reviewer notes.
+    expect(find.textContaining('Sources: Example Agency'), findsOneWidget);
   });
 
   testWidgets('Tapping a tag searches for it', (tester) async {

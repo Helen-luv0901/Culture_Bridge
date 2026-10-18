@@ -21,6 +21,7 @@ from app.models import (
     VerificationRecord,
 )
 from app.services.common import RECENT_WINDOW, Text2, now, text2
+from app.services.publishers import publisher_en
 
 VerificationStatus = Literal[
     "unverified", "community_supported", "needs_review", "verified", "outdated"
@@ -67,6 +68,8 @@ class SourceOut(BaseModel):
     title: str
     url: str
     publisher: str
+    # The publisher's English name (the same as publisher when none is known).
+    publisher_en: str = ""
     kind: Literal["official", "institution", "partner"]
     evidence_note: str
     accessed_at: datetime
@@ -293,6 +296,7 @@ def get_action(db: Session, action_id: str) -> ActionDetail:
                 title=s.title,
                 url=s.url,
                 publisher=s.publisher,
+                publisher_en=publisher_en(s.publisher),
                 kind=s.kind,  # type: ignore[arg-type]
                 evidence_note=note,
                 accessed_at=s.accessed_at,

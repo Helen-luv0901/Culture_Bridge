@@ -208,6 +208,13 @@ def test_step_notes_have_an_english_version(api, seeded):
     assert v2["steps"][0]["notes_en"] == "The fee is NT$200."
 
 
+def test_sources_have_english_publisher_names():
+    from app.services.publishers import publisher_en
+
+    assert publisher_en("內政部移民署") == "National Immigration Agency"
+    assert publisher_en("某個沒列出的單位") == "某個沒列出的單位"
+
+
 def test_importer_carries_english_notes(db):
     from app.official_content import _content
 
@@ -216,11 +223,14 @@ def test_importer_carries_english_notes(db):
         "title_zh": "標題",
         "title_en": "Title",
         "applicable_to": "所有人",
-        "sources": [{"publisher": "移民署"}],
-        "steps": [{"title_zh": "一", "title_en": "One", "notes": "看[1]", "notes_en": "See NIA"}],
+        "sources": [{"publisher": "內政部移民署"}],
+        "steps": [
+            {"title_zh": "一", "title_en": "One", "notes": "看[1]。", "notes_en": "See it[1]."}
+        ],
     }
     step = _content(card).steps[0]
-    assert (step.notes, step.notes_en) == ("看（移民署）", "See NIA")
+    assert step.notes == "看（內政部移民署）。"
+    assert step.notes_en == "See it (National Immigration Agency)."
 
 
 def test_feedback_review_queue(api, seeded):

@@ -50,8 +50,9 @@ class _ActionDetailState extends State<_ActionDetail> {
 
   String _meta(BridgeViewModel vm) {
     final action = widget.detail.summary;
-    final publishers = {for (final s in widget.detail.sources) s.publisher}
-        .join('、');
+    final publishers = {
+      for (final s in widget.detail.sources) s.publisherFor(vm.english),
+    }.join(vm.english ? ', ' : '、');
     final sources = publishers.isEmpty
         ? vm.pair(' · 來源待補上', '')
         : vm.pair(' · 來源：$publishers', ' · Sources: $publishers');
@@ -370,6 +371,7 @@ class SourceLine extends StatelessWidget {
   final SourceInfo source;
   @override
   Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
     final label = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -377,8 +379,11 @@ class SourceLine extends StatelessWidget {
           source.title,
           style: const TextStyle(decoration: TextDecoration.underline),
         ),
+        // The evidence note is a reviewer's note in Chinese, so English shows the source only.
         Text(
-          '${source.publisher} · ${source.evidenceNote}',
+          vm.english
+              ? source.publisherFor(true)
+              : '${source.publisher} · ${source.evidenceNote}',
           style: const TextStyle(fontSize: 13, color: Palette.muted),
         ),
       ],
