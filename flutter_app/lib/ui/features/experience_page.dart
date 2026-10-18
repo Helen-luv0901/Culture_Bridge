@@ -153,17 +153,6 @@ class _PostCard extends StatelessWidget {
                   TagLink(tag, onTap: () => searchTag(context, tag)),
               ],
             ),
-          const DashedRule(padding: EdgeInsets.only(top: 6, right: 8)),
-          Padding(
-            padding: const EdgeInsets.only(top: 10, right: 8),
-            child: Text(
-              vm.pair(
-                '作者原文，未經 AI 改寫。這是個人經驗，不是官方規定。',
-                "The author's own words, not rewritten by AI. A personal experience, not an official rule.",
-              ),
-              style: mutedStyle.copyWith(fontSize: 12),
-            ),
-          ),
         ],
       ),
     );

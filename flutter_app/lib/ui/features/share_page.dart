@@ -574,20 +574,7 @@ class _Preview extends StatelessWidget {
           Text(draft.voice, style: const TextStyle(fontSize: 15, height: 1.7)),
           if (tags.isNotEmpty)
             Wrap(children: [for (final t in tags) TagLink(t)]),
-          const DashedRule(padding: EdgeInsets.only(top: 8)),
-          SizedBox(
-            height: 44,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                vm.pair(
-                  '作者原文，未經 AI 改寫',
-                  "The author's own words, not rewritten by AI",
-                ),
-                style: mutedStyle,
-              ),
-            ),
-          ),
+          const SizedBox(height: 14),
         ],
       ),
     );
