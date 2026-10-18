@@ -110,8 +110,8 @@ void main() {
     expect(find.text('初次來台灣？可以來這邊看看'), findsOneWidget);
     // Official guides live on the official account's page, not in the feed.
     expect(find.byKey(const Key('guide-arc')), findsNothing);
-    // Official posts carry the seal, not a text badge or a check mark.
-    expect(find.byType(OfficialSeal), findsWidgets);
+    // Official posts are marked only by the name and avatar: no seal, badge or check mark.
+    expect(find.byType(OfficialSeal), findsNothing);
     expect(find.text('官方'), findsNothing);
     expect(find.byIcon(Icons.verified), findsNothing);
   });
@@ -256,6 +256,13 @@ void main() {
         .color!;
     expect(colorOf('流程'), Palette.onMoss);
     expect(colorOf('檢舉'), Palette.ink);
+    // The label keeps the app's font and size (the theme style replaces Material's).
+    final style = tester
+        .renderObject<RenderParagraph>(find.text('檢舉'))
+        .text
+        .style!;
+    expect(style.fontFamily, 'Spectral');
+    expect(style.fontSize, 14);
   });
 
   testWidgets('Tapping a tag searches for it', (tester) async {

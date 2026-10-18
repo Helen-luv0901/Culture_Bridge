@@ -107,8 +107,16 @@ ThemeData bridgeTheme() => ThemeData(
   chipTheme: ChipThemeData(
     backgroundColor: Palette.high,
     selectedColor: Palette.moss,
-    // Selected chips are dark moss, so their label and tick turn white.
+    // Selected chips are dark moss, so their label and tick turn white. A theme
+    // labelStyle replaces Material's default instead of merging with it, so the
+    // font, size and line height are restated here (as labelLarge).
     labelStyle: TextStyle(
+      fontFamily: 'Spectral',
+      fontFamilyFallback: _serifFallback,
+      fontSize: 14,
+      height: 20 / 14,
+      fontWeight: FontWeight.w500,
+      letterSpacing: .1,
       color: WidgetStateColor.resolveWith(
         (states) => states.contains(WidgetState.selected)
             ? Palette.onMoss

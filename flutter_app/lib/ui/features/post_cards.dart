@@ -65,20 +65,13 @@ class OfficialByline extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Wrap(
-                spacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Culture Bridge',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      height: 1.35,
-                    ),
-                  ),
-                  OfficialSeal(),
-                ],
+              const Text(
+                'Culture Bridge',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
               ),
               Text(when, style: mutedStyle.copyWith(fontSize: 12)),
             ],

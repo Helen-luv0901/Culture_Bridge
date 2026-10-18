@@ -219,77 +219,19 @@ class GuideList extends StatelessWidget {
   }
 }
 
-/// 「官方帳號」 as a small bright yellow tag with a light sweeping across the text.
-/// The shine plays twice, then rests; it is skipped when the system asks for less motion.
-class _OfficialBadge extends StatefulWidget {
+/// 「官方帳號」 in a soft, muted yellow.
+class _OfficialBadge extends StatelessWidget {
   const _OfficialBadge(this.label);
   final String label;
+  static const _yellow = Color(0xFFC99A2E);
   @override
-  State<_OfficialBadge> createState() => _OfficialBadgeState();
-}
-
-class _OfficialBadgeState extends State<_OfficialBadge>
-    with SingleTickerProviderStateMixin {
-  static const _yellow = Color(0xFFFFD43B);
-  late final _shine = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  );
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.of(context).disableAnimations) {
-      _shine.value = 1;
-    } else if (!_shine.isAnimating && _shine.value == 0) {
-      _shine
-          .forward()
-          .then((_) => _shine.forward(from: 0))
-          .catchError((_) {}, test: (e) => e is TickerCanceled);
-    }
-  }
-
-  @override
-  void dispose() {
-    _shine.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-    decoration: BoxDecoration(
+  Widget build(BuildContext context) => Text(
+    label,
+    style: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+      letterSpacing: .5,
       color: _yellow,
-      borderRadius: BorderRadius.circular(3),
-    ),
-    child: AnimatedBuilder(
-      animation: _shine,
-      builder: (context, child) => ShaderMask(
-        blendMode: BlendMode.srcATop,
-        shaderCallback: (bounds) {
-          final x = -1 + 3 * _shine.value;
-          return LinearGradient(
-            begin: Alignment(x - .5, 0),
-            end: Alignment(x + .5, 0),
-            colors: const [
-              Palette.ochreInk,
-              Color(0xFFB98A1E),
-              Palette.ochreInk,
-            ],
-            stops: const [.35, .5, .65],
-          ).createShader(bounds);
-        },
-        child: child,
-      ),
-      child: Text(
-        widget.label,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: Palette.ochreInk,
-          height: 1.4,
-        ),
-      ),
     ),
   );
 }
