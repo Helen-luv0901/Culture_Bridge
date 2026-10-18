@@ -195,7 +195,7 @@ def test_thinking_level_maps_to_gemini_config():
 
 def test_answers_show_the_closest_student_posts(make_assistant):
     reply = make_assistant(ScriptedLLM(answer("租屋前先看合約。"))).reply(
-        ask("租房子要注意什麼？"), USER
+        ask("租屋的電費和垃圾怎麼處理？"), USER
     )
     posts = [c.model_dump() for c in reply.cards if c.type == "experience"]
     assert 1 <= len(posts) <= 2
@@ -230,3 +230,22 @@ def test_english_question_in_chinese_app_gets_english_cards(make_assistant):
         ask("What do I need for my ARC?", locale="zh-Hant"), USER
     )
     assert failing.text.startswith("The assistant can't answer")
+
+
+def test_posts_found_by_meaning_come_first():
+    from app.assistant.data import DemoDataSource
+    from app.assistant.prefetch import _closest_posts
+    from app.assistant.tools import ToolContext
+    from app.core.config import get_settings
+
+    data = DemoDataSource.from_file(get_settings().demo_content_path)
+    ctx = ToolContext(data=data, locale="zh-Hant", user=None)
+    passages = {
+        "student_content": [
+            {"content_type": "feedback", "content_id": "x"},
+            {"content_type": "experience", "content_id": "first-rental"},
+        ]
+    }
+    keyword = [data.get_experience("professor-see"), data.get_experience("first-rental")]
+    found = _closest_posts(passages, keyword, ctx)
+    assert [p.id for p in found] == ["first-rental", "professor-see"]

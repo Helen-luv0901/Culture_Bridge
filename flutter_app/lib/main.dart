@@ -41,7 +41,15 @@ Future<void> main() async {
         .locale
         .languageCode
         .startsWith('zh'),
+    livePostsEvery: const Duration(seconds: 20),
   );
   await vm.start();
+  // New posts show up on their own while the app is open; no checks in the background.
+  vm.startLivePosts();
+  // The listener registers itself with Flutter and lives as long as the app.
+  AppLifecycleListener(
+    onShow: () => vm.setAppVisible(true),
+    onHide: () => vm.setAppVisible(false),
+  );
   runApp(CultureBridgeApp(viewModel: vm));
 }
