@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import actions, admin, assistant, comments, experiences, me, moderation
+from app.api import actions, admin, assistant, avatars, comments, experiences, me, moderation
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.web import mount_web_app
@@ -27,6 +27,7 @@ if get_settings().is_development:
 # Everything lives under /api so the web app can own every other path (/explore, /actions/…).
 api = APIRouter(prefix="/api")
 api.include_router(me.router)
+api.include_router(avatars.router)
 api.include_router(actions.router)
 api.include_router(experiences.router)
 api.include_router(comments.router)

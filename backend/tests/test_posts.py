@@ -119,7 +119,7 @@ def test_posts_shared_under_a_guide(api, db):
 
 
 def test_tag_suggestions_use_ai_then_fall_back_to_keywords(api, ai, monkeypatch):
-    monkeypatch.setattr(tag_svc, "_allowance", tag_svc._DailyAllowance())
+    monkeypatch.setattr(tag_svc, "_allowance", tag_svc.DailyAllowance())
     body = {"title": "居留證", "text": "要先線上預約才能去服務站"}
     url = "/api/experiences/tag-suggestions"
     assert api.post(url, json=body).status_code == 401

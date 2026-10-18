@@ -47,6 +47,18 @@ class User(Base):
     created_at: Mapped[datetime] = _created()
 
 
+class UserAvatar(Base):
+    """A profile photo: a 256px square JPEG with no EXIF (migration 0009)."""
+
+    __tablename__ = "user_avatars"
+    # Random and new on every upload, so the URL says nothing about the account.
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    image: Mapped[bytes]
+    content_type: Mapped[str] = mapped_column(Text, default="image/jpeg")
+    created_at: Mapped[datetime] = _created()
+
+
 class Institution(Base):
     __tablename__ = "institutions"
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)

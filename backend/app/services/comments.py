@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, forbidden, not_found
 from app.models import CommentLike, Experience, ExperienceComment, User, UserBlock
+from app.services import avatars
 
 MAX_BODY = 1000
 MAX_COMMENTS = 500  # per post, newest kept visible
@@ -43,6 +44,8 @@ class CommentOut(BaseModel):
     created_at: datetime
     # The nickname when the commenter chose to sign; None means anonymous.
     author_name: str | None
+    # Their photo, only on signed comments.
+    author_avatar_url: str | None = None
     like_count: int
     liked: bool
     by_post_author: bool
@@ -64,6 +67,10 @@ def _hides_author(post: Experience, comment: ExperienceComment) -> bool:
     return comment.author_id == post.author_id and post.author_display == "anonymous"
 
 
+def _signed(post: Experience, comment: ExperienceComment) -> bool:
+    return comment.author_display == "nickname" and not _hides_author(post, comment)
+
+
 def _out(
     db: Session, comments: list[ExperienceComment], post: Experience, viewer: CurrentUser | None
 ) -> list[CommentOut]:
@@ -71,6 +78,7 @@ def _out(
     likes: dict[str, int] = {}
     liked: set[str] = set()
     names: dict[str, str | None] = {}
+    photos: dict[str, str] = {}
     if ids:
         likes = dict(
             db.execute(  # type: ignore[arg-type]
@@ -90,14 +98,16 @@ def _out(
         signed = {c.author_id for c in comments if c.author_display == "nickname"}
         if signed:
             names = {u.id: u.nickname for u in db.scalars(select(User).where(User.id.in_(signed)))}
+            photos = avatars.urls_for(db, signed)
     return [
         CommentOut(
             id=c.id,
             reply_to_id=c.reply_to_id,
             body=c.body,
             created_at=c.created_at,
-            author_name=names.get(c.author_id)
-            if c.author_display == "nickname" and not _hides_author(post, c)
+            author_name=names.get(c.author_id) if _signed(post, c) else None,
+            author_avatar_url=photos.get(c.author_id)
+            if _signed(post, c) and names.get(c.author_id)
             else None,
             like_count=likes.get(c.id, 0),
             liked=c.id in liked,
