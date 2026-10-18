@@ -36,6 +36,7 @@ class StepIn(BaseModel):
     title_zh: str = Field(min_length=1, max_length=200)
     title_en: str = Field(min_length=1, max_length=200)
     notes: str | None = Field(default=None, max_length=2000)
+    notes_en: str | None = Field(default=None, max_length=2000)
 
 
 class DocumentIn(BaseModel):
@@ -89,6 +90,7 @@ class AdminStep(BaseModel):
     title_zh: str
     title_en: str
     notes: str | None
+    notes_en: str | None = None
 
 
 class AdminSource(BaseModel):
@@ -204,6 +206,7 @@ def _replace_steps(db: Session, v: ActionVersion, steps: list[StepIn]) -> None:
                 title_zh=step.title_zh,
                 title_en=step.title_en,
                 notes=step.notes,
+                notes_en=step.notes_en,
             )
         )
 
@@ -245,6 +248,7 @@ def version_out(db: Session, v: ActionVersion) -> AdminVersion:
                 title_zh=s.title_zh,
                 title_en=s.title_en,
                 notes=s.notes,
+                notes_en=s.notes_en,
             )
             for s in steps
         ],
@@ -377,6 +381,7 @@ def create_version(db: Session, actor: CurrentUser, action_id: str) -> AdminVers
                 title_zh=step.title_zh,
                 title_en=step.title_en,
                 notes=step.notes,
+                notes_en=step.notes_en,
             )
         )
     for link in db.scalars(

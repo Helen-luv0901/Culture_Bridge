@@ -193,9 +193,9 @@ class _Steps extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(step.title.of(vm.english)),
-                      if (step.notes != null && step.notes!.isNotEmpty)
+                      if ((step.notesFor(vm.english) ?? '').isNotEmpty)
                         Text(
-                          step.notes!,
+                          step.notesFor(vm.english)!,
                           style: mutedStyle.copyWith(fontSize: 14),
                         ),
                       if (step.recentStuckCount > 0)

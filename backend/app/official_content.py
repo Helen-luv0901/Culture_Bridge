@@ -67,6 +67,7 @@ def _content(card: dict) -> svc.NewAction:
                 title_zh=s["title_zh"],
                 title_en=s["title_en"],
                 notes=_cite(s.get("notes"), publishers),
+                notes_en=s.get("notes_en"),
             )
             for s in card["steps"]
         ],

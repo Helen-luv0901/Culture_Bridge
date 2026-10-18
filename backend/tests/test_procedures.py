@@ -182,6 +182,47 @@ def test_admin_versioning_and_verification(api, db, seeded):
     assert api.get("/api/actions/student-id").status_code == 404
 
 
+def test_step_notes_have_an_english_version(api, seeded):
+    body = NEW_ACTION | {
+        "slug": "notes-en",
+        "steps": [
+            {
+                "title_zh": "繳費",
+                "title_en": "Pay the fee",
+                "notes": "費用200元。",
+                "notes_en": "The fee is NT$200.",
+            },
+            {"title_zh": "領取", "title_en": "Pick up", "notes": "只有中文。"},
+        ],
+    }
+    draft = api.post("/api/admin/actions", json=body, headers=REVIEWER).json()
+    assert [s["notes_en"] for s in draft["steps"]] == ["The fee is NT$200.", None]
+    api.post(f"/api/admin/versions/{draft['id']}/publish", headers=REVIEWER)
+    steps = api.get("/api/actions/notes-en").json()["steps"]
+    assert [(s["notes"], s["notes_en"]) for s in steps] == [
+        ("費用200元。", "The fee is NT$200."),
+        ("只有中文。", None),
+    ]
+    # A new version starts from the published one, English notes included.
+    v2 = api.post("/api/admin/actions/notes-en/versions", headers=REVIEWER).json()
+    assert v2["steps"][0]["notes_en"] == "The fee is NT$200."
+
+
+def test_importer_carries_english_notes(db):
+    from app.official_content import _content
+
+    card = {
+        "slug": "x",
+        "title_zh": "標題",
+        "title_en": "Title",
+        "applicable_to": "所有人",
+        "sources": [{"publisher": "移民署"}],
+        "steps": [{"title_zh": "一", "title_en": "One", "notes": "看[1]", "notes_en": "See NIA"}],
+    }
+    step = _content(card).steps[0]
+    assert (step.notes, step.notes_en) == ("看（移民署）", "See NIA")
+
+
 def test_feedback_review_queue(api, seeded):
     execution = api.post("/api/actions/bank/executions", json={}, headers=STUDENT).json()
     step = execution["steps"][0]["step_id"]

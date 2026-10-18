@@ -103,19 +103,26 @@ class ActionStepInfo {
     required this.title,
     required this.notes,
     required this.recentStuckCount,
+    this.notesEn,
   });
   factory ActionStepInfo.fromJson(Json json) => ActionStepInfo(
     id: json['id'] as String,
     position: json['position'] as int,
     title: Text2.fromJson(json['title'] as Json),
     notes: json['notes'] as String?,
+    notesEn: json['notes_en'] as String?,
     recentStuckCount: json['recent_stuck_count'] as int,
   );
   final String id;
   final int position;
   final Text2 title;
   final String? notes;
+  final String? notesEn;
   final int recentStuckCount;
+
+  /// The notes in the reader's language; English falls back to Chinese.
+  String? notesFor(bool english) =>
+      english && (notesEn ?? '').trim().isNotEmpty ? notesEn : notes;
 }
 
 class SourceInfo {

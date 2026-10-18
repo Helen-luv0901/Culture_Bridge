@@ -282,6 +282,15 @@ void main() {
     });
   }
 
+  testWidgets('Guide steps show English notes in English', (tester) async {
+    final app = await mount(tester, '/actions/arc', const Size(1280, 1600));
+    expect(find.text('先線上預約。'), findsOneWidget);
+    app.vm.setEnglish(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Book online first.'), findsOneWidget);
+    expect(find.text('先線上預約。'), findsNothing);
+  });
+
   testWidgets('Tapping a tag searches for it', (tester) async {
     await mount(tester, '/experiences/first-rental', const Size(1280, 1400));
     await tap(tester, find.text('#居留證'));
