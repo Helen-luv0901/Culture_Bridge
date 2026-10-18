@@ -50,7 +50,7 @@ def test_parallel_calls_all_get_results(make_assistant):
                 ToolCall(id="b", name="get_experience", args={"experience_id": "first-rental"}),
             )
         ),
-        answer("ok"),
+        answer("ok\nRELATED: action:arc, post:first-rental"),
     )
     reply = make_assistant(llm).reply(ask("ARC 和租屋"), USER)
     results = llm.calls[1]["history"][-1].results
@@ -193,23 +193,6 @@ def test_thinking_level_maps_to_gemini_config():
     assert thinking_config("minimal").thinking_level.value == "MINIMAL"
 
 
-def test_answers_show_the_closest_student_posts(make_assistant):
-    reply = make_assistant(ScriptedLLM(answer("租屋前先看合約。"))).reply(
-        ask("租屋的電費和垃圾怎麼處理？"), USER
-    )
-    posts = [c.model_dump() for c in reply.cards if c.type == "experience"]
-    assert 1 <= len(posts) <= 2
-    assert posts[0]["experience_id"] == "first-rental"
-    assert posts[0]["title"] and posts[0]["excerpt"]
-
-
-def test_at_most_two_posts_and_none_when_nothing_matches(make_assistant):
-    reply = make_assistant(ScriptedLLM(answer("ok"))).reply(ask("居留證 租屋 夜市 教授"), USER)
-    assert len([c for c in reply.cards if c.type == "experience"]) <= 2
-    nothing = make_assistant(ScriptedLLM(answer("hi"))).reply(ask("zzzz qqqq"), USER)
-    assert [c for c in nothing.cards if c.type == "experience"] == []
-
-
 def test_fallback_answers_show_no_posts(make_assistant):
     reply = make_assistant(ScriptedLLM(LLMError("quota"))).reply(ask("租房子要注意什麼？"), USER)
     assert reply.fallback is True and reply.cards == []
@@ -232,37 +215,49 @@ def test_english_question_in_chinese_app_gets_english_cards(make_assistant):
     assert failing.text.startswith("The assistant can't answer")
 
 
-def test_posts_found_by_meaning_come_first():
-    from app.assistant.data import DemoDataSource
-    from app.assistant.prefetch import _closest_posts
-    from app.assistant.tools import ToolContext
-    from app.core.config import get_settings
-
-    data = DemoDataSource.from_file(get_settings().demo_content_path)
-    ctx = ToolContext(data=data, locale="zh-Hant", user=None)
-    passages = {
-        "student_content": [
-            {"content_type": "feedback", "content_id": "x"},
-            {"content_type": "experience", "content_id": "first-rental", "distance": 0.21},
-        ]
-    }
-    keyword = [data.get_experience("professor-see"), data.get_experience("first-rental")]
-    found = _closest_posts(passages, keyword, ctx)
-    assert [p.id for p in found] == ["first-rental", "professor-see"]
+def test_cards_are_what_the_model_lists_as_related(make_assistant):
+    llm = ScriptedLLM(
+        answer("看房前先問電費。\nRELATED: action:arc, post:first-rental, post:made-up")
+    )
+    reply = make_assistant(llm).reply(ask("租屋的電費要注意什麼？"), USER)
+    assert reply.text == "看房前先問電費。"  # the RELATED line is not shown
+    kinds = [
+        (c.type, c.model_dump().get("action_id") or c.model_dump().get("experience_id"))
+        for c in reply.cards
+    ]
+    assert kinds == [("action", "arc"), ("experience", "first-rental")]  # made-up ids dropped
+    post = [c for c in reply.cards if c.type == "experience"][0]
+    assert post.title and post.excerpt
+    guide = [c for c in reply.cards if c.type == "action"][0]
+    assert guide.excerpt
 
 
-def test_posts_only_loosely_similar_in_meaning_are_not_shown():
-    from app.assistant.data import DemoDataSource
-    from app.assistant.prefetch import _closest_posts
-    from app.assistant.tools import ToolContext
-    from app.core.config import get_settings
+def test_no_related_line_or_none_shows_no_posts(make_assistant):
+    unlisted = make_assistant(ScriptedLLM(answer("學生證遺失請到註冊組補辦。"))).reply(
+        ask("我的學生證不見了"), USER
+    )
+    assert [c for c in unlisted.cards if c.type == "experience"] == []
+    none = make_assistant(ScriptedLLM(answer("沒有相關資料。\nRELATED: none"))).reply(
+        ask("我的學生證不見了"), USER
+    )
+    assert none.cards == [] and none.text == "沒有相關資料。"
 
-    data = DemoDataSource.from_file(get_settings().demo_content_path)
-    ctx = ToolContext(data=data, locale="en", user=None)
-    # Within semantic search's loose cut-off, but too far to call "related".
-    passages = {
-        "student_content": [
-            {"content_type": "experience", "content_id": "first-rental", "distance": 0.52}
-        ]
-    }
-    assert _closest_posts(passages, [], ctx) == ()
+
+def test_at_most_two_of_each(make_assistant):
+    line = "RELATED: post:first-rental, post:professor-see, post:first-rental"
+    reply = make_assistant(ScriptedLLM(answer(f"ok\n{line}"))).reply(ask("hi"), USER)
+    assert len([c for c in reply.cards if c.type == "experience"]) <= 2
+
+
+def test_related_line_is_parsed_in_any_position_and_colon():
+    from app.assistant.related import parse_related
+
+    r = parse_related("答案第一行\nrelated：action:arc-first, post:abc\n")
+    assert r.text == "答案第一行" and r.actions == ("arc-first",) and r.posts == ("abc",)
+    assert parse_related("no line here").listed is False
+
+
+def test_prompt_asks_for_the_related_line(make_assistant):
+    llm = ScriptedLLM(answer("hi"))
+    make_assistant(llm).reply(ask("hi"), None)
+    assert "RELATED: action:<action_id>, post:<experience_id>" in llm.calls[0]["system"]

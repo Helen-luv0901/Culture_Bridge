@@ -54,6 +54,14 @@ How to answer
   conversation or from the screen context.
 - Keep answers short and practical: a few sentences or a short numbered list. Plain text only, no
   Markdown headings, bold or tables.
+- End every answer with one last line listing the procedures and student posts from the results
+  or tools that directly help with this exact question, so the app can show them as cards:
+  RELATED: action:<action_id>, post:<experience_id>
+  At most two of each. For a student post use its experience_id (or the content_id of student
+  content). List only items clearly about the same topic as the question: a post that only shares
+  a word, a place or a mood (for example a bus story for a lost student ID) is not related. If
+  nothing qualifies, write RELATED: none. Always write this line in English exactly like that,
+  even when you answer in another language; the app removes it before showing your answer.
 """
 
 _INTERFACE = {
