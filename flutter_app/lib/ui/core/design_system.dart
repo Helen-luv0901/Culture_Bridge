@@ -6,7 +6,8 @@ import '../view_models/bridge_view_model.dart';
 /// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
 abstract final class Palette {
   static const paper = Color(0xFFF1EADC),
-      grid = Color(0xFFE2D7C2),
+      grid =
+          Color(0xFFEBE3D3), // faint, so text over the paper stays easy to read
       header = Color(0xFFF3EDE1),
       nav = Color(0xFFF4EEE0),
       high =
@@ -106,6 +107,16 @@ ThemeData bridgeTheme() => ThemeData(
   chipTheme: ChipThemeData(
     backgroundColor: Palette.high,
     selectedColor: Palette.moss,
+    // Selected chips are dark moss, so their label and tick turn white.
+    labelStyle: TextStyle(
+      color: WidgetStateColor.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? Palette.onMoss
+            : Palette.ink,
+      ),
+    ),
+    secondaryLabelStyle: const TextStyle(color: Palette.onMoss),
+    checkmarkColor: Palette.onMoss,
     side: const BorderSide(color: Palette.control),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
