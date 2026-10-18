@@ -219,7 +219,7 @@ class GuideList extends StatelessWidget {
   }
 }
 
-/// 「官方帳號」 in blue letters with a light sweeping across them.
+/// 「官方帳號」 in light yellow letters with a light sweeping across them.
 /// The shine plays twice, then rests; it is skipped when the system asks for less motion.
 class _OfficialBadge extends StatefulWidget {
   const _OfficialBadge(this.label);
@@ -230,9 +230,9 @@ class _OfficialBadge extends StatefulWidget {
 
 class _OfficialBadgeState extends State<_OfficialBadge>
     with SingleTickerProviderStateMixin {
-  // Readable blue on the cream card (about 5:1), with a light blue glint.
-  static const _blue = Color(0xFF2F6DB5);
-  static const _glint = Color(0xFF9CC8F2);
+  // A light yellow, with a paler glint for the shine.
+  static const _yellow = Color(0xFFF2C335);
+  static const _glint = Color(0xFFFFF0A8);
   late final _shine = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
@@ -267,7 +267,7 @@ class _OfficialBadgeState extends State<_OfficialBadge>
         return LinearGradient(
           begin: Alignment(x - .5, 0),
           end: Alignment(x + .5, 0),
-          colors: const [_blue, _glint, _blue],
+          colors: const [_yellow, _glint, _yellow],
           stops: const [.35, .5, .65],
         ).createShader(bounds);
       },
@@ -279,7 +279,9 @@ class _OfficialBadgeState extends State<_OfficialBadge>
         fontSize: 13,
         fontWeight: FontWeight.w700,
         letterSpacing: .5,
-        color: _blue,
+        color: _yellow,
+        // A faint edge so the light yellow letters hold up on the cream card.
+        shadows: [Shadow(color: Color(0x40000000), blurRadius: .6)],
       ),
     ),
   );
