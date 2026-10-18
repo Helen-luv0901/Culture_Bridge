@@ -343,15 +343,15 @@ class BridgeViewModel extends ChangeNotifier {
       '${category ?? 'all'}|$sort|${actionId ?? ''}';
 
   /// Newest student posts in [category] (null: every category).
-  Resource<ExperiencePage> posts([String? category]) =>
-      _explore[_listKey(category, 'new', null)] ?? const Resource();
-  Future<void> loadPosts([String? category, bool more = false]) =>
-      _loadList(category, 'new', null, more);
-
-  /// The most discussed posts: "me too" taps plus comments.
-  Resource<ExperiencePage> get hotPosts =>
-      _explore[_listKey(null, 'hot', null)] ?? const Resource();
-  Future<void> loadHotPosts() => _loadList(null, 'hot', null, false);
+  /// Student posts, newest first (`'new'`) or most discussed first (`'hot'`:
+  /// "me too" taps plus comments).
+  Resource<ExperiencePage> posts([String? category, String sort = 'new']) =>
+      _explore[_listKey(category, sort, null)] ?? const Resource();
+  Future<void> loadPosts([
+    String? category,
+    bool more = false,
+    String sort = 'new',
+  ]) => _loadList(category, sort, null, more);
 
   /// Student posts shared under an official guide.
   Resource<ExperiencePage> postsForAction(String actionId) =>

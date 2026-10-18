@@ -44,6 +44,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             return ExplorePage(
               category: categoryLabels.containsKey(cat) ? cat! : 'all',
               query: state.uri.queryParameters['q'] ?? '',
+              sort: state.uri.queryParameters['sort'] == 'hot' ? 'hot' : 'new',
             );
           }),
           _page('/share', (state) => const SharePage()),

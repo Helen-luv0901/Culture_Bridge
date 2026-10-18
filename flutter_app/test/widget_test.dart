@@ -2,6 +2,7 @@ import 'package:culture_bridge/app.dart';
 import 'package:culture_bridge/domain/api_models.dart';
 import 'package:culture_bridge/ui/core/design_system.dart';
 import 'package:culture_bridge/ui/features/assistant_panel.dart';
+import 'package:culture_bridge/ui/features/post_cards.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -133,10 +134,14 @@ void main() {
     tester,
   ) async {
     await mount(tester, '/explore', const Size(375, 1600));
-    for (final label in ['全部', '官方', '生活', '美食', '住宿', '交通', '學業', '文化']) {
+    for (final label in ['全部', '生活', '美食', '住宿', '交通', '學業', '文化']) {
       expect(find.text(label), findsWidgets);
     }
-    expect(find.text('熱門貼文'.toUpperCase()), findsOneWidget);
+    // Official posts live on the official account's page, not in a tab here.
+    expect(find.byKey(const Key('cat-official')), findsNothing);
+    expect(find.byKey(const Key('guide-arc')), findsNothing);
+    expect(find.text('學生分享'.toUpperCase()), findsOneWidget);
+    expect(find.byKey(const Key('sort-new')), findsOneWidget);
     expect(find.text('#夜市'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('explore-search')), 'ARC');
@@ -148,6 +153,40 @@ void main() {
 
     await tap(tester, find.byKey(const Key('cat-food')));
     expect(find.textContaining('找不到'), findsOneWidget);
+  });
+
+  testWidgets('Explore sorts student posts by newest or popular', (
+    tester,
+  ) async {
+    await mount(tester, '/explore', const Size(1280, 3000));
+    List<ExperienceItem> shown() => [
+      for (final card in tester.widgetList<StudentPostCard>(
+        find.byType(StudentPostCard),
+      ))
+        card.item,
+    ];
+    final newest = shown();
+    expect(newest.length, greaterThan(1));
+    for (var i = 1; i < newest.length; i++) {
+      expect(
+        newest[i - 1].publishedAt.isBefore(newest[i].publishedAt),
+        isFalse,
+      );
+    }
+
+    await tap(tester, find.byKey(const Key('sort-hot')));
+    int heat(ExperienceItem e) => e.experiencedTooCount + 2 * e.commentCount;
+    final popular = shown();
+    expect(popular.length, newest.length);
+    for (var i = 1; i < popular.length; i++) {
+      expect(heat(popular[i - 1]), greaterThanOrEqualTo(heat(popular[i])));
+    }
+    // The order sticks when switching categories.
+    await tap(tester, find.byKey(const Key('cat-life')));
+    final life = shown();
+    for (var i = 1; i < life.length; i++) {
+      expect(heat(life[i - 1]), greaterThanOrEqualTo(heat(life[i])));
+    }
   });
 
   testWidgets('Tapping a tag searches for it', (tester) async {
