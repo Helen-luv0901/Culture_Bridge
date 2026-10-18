@@ -12,7 +12,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from app.assistant.data import ActionRecord, ExperienceRecord
+from app.assistant.data import ActionRecord, ExperienceRecord, score, search_units
 from app.assistant.tools import (
     EXPERIENCE_NOTICE,
     ToolContext,
@@ -28,6 +28,9 @@ PROCEDURES = 2  # full details for the best keyword matches
 EXPERIENCES = 3
 PASSAGES = 3
 RELATED_POSTS = 2  # student posts shown as cards under each answer
+# A post found by keywords must share at least this share of the question's terms; one
+# common word in common ("need") is not enough to call it related.
+KEYWORD_POST_MATCH = 0.5
 MAX_QUERY = 200
 MAX_CHARS = 8000  # keep the attached block (and the remembered history) small
 
@@ -59,7 +62,7 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         logger.exception("Assistant prefetch failed")
         return Prefetched(block="")
     passages = _semantic(query, ctx)
-    posts = _closest_posts(passages, experiences, ctx)
+    posts = _closest_posts(passages, _clearly_matching(experiences, query), ctx)
     if not actions and not experiences and not _has_passages(passages):
         return Prefetched(block="")  # nothing to add; follow-ups like 「第二個」 stay as written
     payload: dict[str, Any] = {
@@ -75,6 +78,18 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         payload["related_passages"] = None
         text = _dump(payload)[:MAX_CHARS]
     return Prefetched(block=f"{_HEADER}\n{text}", actions=tuple(actions), posts=posts)
+
+
+def _clearly_matching(posts: list[ExperienceRecord], query: str) -> list[ExperienceRecord]:
+    units = search_units(query)
+    if not units:
+        return []
+
+    def text(e: ExperienceRecord) -> str:
+        parts = (e.title, e.original_voice, e.summary, e.reminder)
+        return " ".join(f"{p.zh} {p.en}" for p in parts).lower()
+
+    return [e for e in posts if score(units, text(e)) >= KEYWORD_POST_MATCH]
 
 
 def _closest_posts(

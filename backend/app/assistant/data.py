@@ -141,7 +141,10 @@ def search_units(query: str) -> list[str]:
     Latin words are cut to a stem so "sharing" matches "share" and "anonymously" "anonymous"."""
     units: list[str] = []
     for token in re.findall(r"[a-z0-9]+|[^\sa-z0-9]+", query.lower()):
+        if not re.search(r"\w", token):
+            continue  # punctuation alone ("?", "！") is not something to match
         if _CJK.search(token):
+            token = re.sub(r"\W", "", token)  # 「處理？」 -> 「處理」
             if len(token) <= 2:
                 units.append(token)
                 continue
