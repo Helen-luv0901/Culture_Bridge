@@ -350,7 +350,8 @@ void main() {
     expect(app.repository.lastPublish!['tags'], ['#居留證']);
     // Opens the new post: the author's words, not an AI rewrite.
     expect(find.text('居留證要先預約'), findsOneWidget);
-    expect(find.textContaining('作者原文，未經 AI 改寫'), findsOneWidget);
+    // Only the author's words: no sentence the app adds under the post.
+    expect(find.textContaining('未經 AI 改寫'), findsNothing);
     expect(app.vm.draft.isEmpty, isTrue);
   });
 
