@@ -219,8 +219,8 @@ class GuideList extends StatelessWidget {
   }
 }
 
-/// 「官方帳號」 as a bright yellow badge with a light sweeping across it. The shine
-/// plays twice, then rests; it is skipped when the system asks for less motion.
+/// 「官方帳號」 as a small bright yellow tag with a light sweeping across the text.
+/// The shine plays twice, then rests; it is skipped when the system asks for less motion.
 class _OfficialBadge extends StatefulWidget {
   const _OfficialBadge(this.label);
   final String label;
@@ -231,7 +231,6 @@ class _OfficialBadge extends StatefulWidget {
 class _OfficialBadgeState extends State<_OfficialBadge>
     with SingleTickerProviderStateMixin {
   static const _yellow = Color(0xFFFFD43B);
-  static const _light = Color(0xFFFFF1A8);
   late final _shine = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
@@ -258,13 +257,10 @@ class _OfficialBadgeState extends State<_OfficialBadge>
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(colors: [_yellow, _light, _yellow]),
-      borderRadius: BorderRadius.circular(999),
-      boxShadow: [
-        BoxShadow(color: _yellow.withValues(alpha: .55), blurRadius: 10),
-      ],
+      color: _yellow,
+      borderRadius: BorderRadius.circular(3),
     ),
     child: AnimatedBuilder(
       animation: _shine,
@@ -273,14 +269,14 @@ class _OfficialBadgeState extends State<_OfficialBadge>
         shaderCallback: (bounds) {
           final x = -1 + 3 * _shine.value;
           return LinearGradient(
-            begin: Alignment(x - .6, -.4),
-            end: Alignment(x + .6, .4),
-            colors: [
+            begin: Alignment(x - .5, 0),
+            end: Alignment(x + .5, 0),
+            colors: const [
               Palette.ochreInk,
-              Colors.white.withValues(alpha: .9),
+              Color(0xFFB98A1E),
               Palette.ochreInk,
             ],
-            stops: const [.3, .5, .7],
+            stops: const [.35, .5, .65],
           ).createShader(bounds);
         },
         child: child,
@@ -288,10 +284,10 @@ class _OfficialBadgeState extends State<_OfficialBadge>
       child: Text(
         widget.label,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 11.5,
           fontWeight: FontWeight.w700,
           color: Palette.ochreInk,
-          letterSpacing: .5,
+          height: 1.4,
         ),
       ),
     ),
