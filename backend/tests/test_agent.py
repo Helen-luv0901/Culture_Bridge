@@ -243,9 +243,26 @@ def test_posts_found_by_meaning_come_first():
     passages = {
         "student_content": [
             {"content_type": "feedback", "content_id": "x"},
-            {"content_type": "experience", "content_id": "first-rental"},
+            {"content_type": "experience", "content_id": "first-rental", "distance": 0.21},
         ]
     }
     keyword = [data.get_experience("professor-see"), data.get_experience("first-rental")]
     found = _closest_posts(passages, keyword, ctx)
     assert [p.id for p in found] == ["first-rental", "professor-see"]
+
+
+def test_posts_only_loosely_similar_in_meaning_are_not_shown():
+    from app.assistant.data import DemoDataSource
+    from app.assistant.prefetch import _closest_posts
+    from app.assistant.tools import ToolContext
+    from app.core.config import get_settings
+
+    data = DemoDataSource.from_file(get_settings().demo_content_path)
+    ctx = ToolContext(data=data, locale="en", user=None)
+    # Within semantic search's loose cut-off, but too far to call "related".
+    passages = {
+        "student_content": [
+            {"content_type": "experience", "content_id": "first-rental", "distance": 0.52}
+        ]
+    }
+    assert _closest_posts(passages, [], ctx) == ()

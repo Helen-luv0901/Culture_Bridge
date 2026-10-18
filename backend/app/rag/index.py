@@ -273,7 +273,9 @@ def semantic_search(
                 "content_id": row.content_id,
                 "shared_on": row.published_at.date().isoformat() if row.published_at else None,
                 "text": row.content,
+                # Cosine distance to the question: lower is closer.
+                "distance": round(float(d), 4),
             }
-            for row, _ in students
+            for row, d in students
         ],
     }
