@@ -144,10 +144,19 @@ def import_card(db: Session, card: dict, accessed_at: datetime) -> str:
             version = svc.create_version(db, IMPORTER, slug)
             version = svc.update_draft(db, IMPORTER, version.id, body)
             result = f"new draft v{version.version_number}"
+    listed = set()
     for source in card["sources"]:
         source_id = _source_id(db, source, accessed_at)
+        listed.add(source_id)
         note = source.get("evidence_note") or "見來源"
-        svc.attach_source(db, IMPORTER, version.id, source_id, svc.AttachSource(evidence_note=note))
+        version = svc.attach_source(
+            db, IMPORTER, version.id, source_id, svc.AttachSource(evidence_note=note)
+        )
+    # A new version starts with the old one's sources; drop those the card no longer lists
+    # (dead or superseded links), so the guide shows exactly the file's sources.
+    for source in version.sources:
+        if source.id not in listed:
+            svc.detach_source(db, IMPORTER, version.id, source.id)
     return result
 
 

@@ -26,6 +26,7 @@ PUBLISHERS_EN = {
     "逢甲大學新生專區": "FCU New Students",
     "逢甲大學華語教學中心": "FCU Chinese Language Center",
     "逢甲大學註冊課務組": "FCU Registration Section",
+    "逢甲大學總務處": "FCU Office of General Affairs",
     "逢甲大學財務處": "FCU Office of Finance",
     "逢甲大學資訊處": "FCU Information Technology Office",
     "金融監督管理委員會": "Financial Supervisory Commission",
