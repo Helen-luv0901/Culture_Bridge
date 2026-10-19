@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
@@ -71,6 +72,34 @@ def test_import_creates_unpublished_drafts_with_sources(db):
     api.post(f"/api/admin/versions/{draft['id']}/publish", headers=REVIEWER)
     assert import_card(db, CARD, WHEN) == "new draft v2"
     assert len(api.get("/api/admin/sources", headers=REVIEWER).json()) == 2
+
+
+def test_reimport_drops_sources_the_card_no_longer_lists(db):
+    """A replaced link (e.g. a dead page) leaves the next version instead of piling up."""
+    _importer(db)
+    import_card(db, CARD, WHEN)
+    api = TestClient(app)
+    [draft] = api.get("/api/admin/actions/arc-extension/versions", headers=REVIEWER).json()
+    api.post(f"/api/admin/versions/{draft['id']}/publish", headers=REVIEWER)
+
+    moved = {**CARD["sources"][1], "url": "https://www.fcu.edu.tw/new-page"}
+    assert import_card(db, {**CARD, "sources": [CARD["sources"][0], moved]}, WHEN) == "new draft v2"
+    v2, v1 = api.get("/api/admin/actions/arc-extension/versions", headers=REVIEWER).json()
+    assert {s["url"] for s in v2["sources"]} == {
+        "https://www.immigration.gov.tw/example.pdf",
+        "https://www.fcu.edu.tw/new-page",
+    }
+    assert len(v1["sources"]) == 2  # the published version keeps what it was checked against
+
+
+def test_bundled_cards_cite_only_listed_sources():
+    """Every [n] marker in the bundled cards points at one of the card's own sources."""
+    data = json.loads(DEFAULT_PATH.read_text(encoding="utf-8"))
+    for card in data["cards"]:
+        texts = [card.get(k) or "" for k in ("description_zh", "description_en")]
+        texts += [s.get(k) or "" for s in card["steps"] for k in ("notes", "notes_en")]
+        cited = {int(n) for t in texts for n in re.findall(r"\[(\d+)\]", t)}
+        assert cited <= set(range(1, len(card["sources"]) + 1)), card["slug"]
 
 
 def test_bundled_cards_import_cleanly(db):

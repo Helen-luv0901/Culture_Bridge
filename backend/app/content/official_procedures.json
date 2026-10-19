@@ -16,14 +16,14 @@
         {
           "title_zh": "確認資格與申請期限",
           "title_en": "Check eligibility and deadline",
-          "notes": "適用對象是經主管教育行政機關核定可招收外國學生的學校所許可就學的學生，以及僑生等[1][3]。應於入國翌日起算30日內申請居留[1][4]。沒有在期限內申請的，處新臺幣2,000元以上10,000元以下罰鍰[1][4]。",
-          "notes_en": "This applies to students admitted by schools that the education authorities have approved to enrol foreign students, and to overseas compatriot students and others[1][3]. Apply for residence within 30 days, counted from the day after you enter Taiwan[1][4]. Missing the deadline can bring a fine of NT$2,000 to NT$10,000[1][4]."
+          "notes": "適用對象是經主管教育行政機關核定可招收外國學生的學校所許可就學的學生，以及僑生等[1][3]。應於入國翌日起算30日內申請居留[1][3]。沒有在期限內申請的，處新臺幣2,000元以上10,000元以下罰鍰[1][3]。",
+          "notes_en": "This applies to students admitted by schools that the education authorities have approved to enrol foreign students, and to overseas compatriot students and others[1][3]. Apply for residence within 30 days, counted from the day after you enter Taiwan[1][3]. Missing the deadline can bring a fine of NT$2,000 to NT$10,000[1][3]."
         },
         {
           "title_zh": "備妥文件電子檔",
           "title_en": "Prepare scanned documents",
-          "notes": "共同文件：護照、最近二年內二吋半身脫帽正面相片（規格同國民身分證相片）[1][3]。個別文件：居留簽證或就學事由之停留簽證、入學許可或一個月內的在學證明（含學生證）、在臺居留住址證明[1][3]。持停留簽證者另附最近三個月內的健康檢查合格證明[1][3]。",
-          "notes_en": "Documents for everyone: your passport and a 2-inch, bare-headed, front-facing photo taken within the last two years (same rules as Taiwanese ID photos)[1][3]. Your own documents: a resident visa or a visitor visa issued for study, your admission letter or a certificate of enrollment issued within one month (a student ID also works), and proof of your address in Taiwan[1][3]. If you hold a visitor visa, also attach a health certificate issued within the last three months[1][3]."
+          "notes": "共同文件：護照、最近二年內二吋半身脫帽正面相片（規格同國民身分證相片）[1][3]。個別文件：居留簽證或就學事由之停留簽證、入學許可或一個月內的在學證明、在臺居留住址證明[1][3]。持停留簽證者另附最近三個月內的健康檢查合格證明[1][3]。",
+          "notes_en": "Documents for everyone: your passport and a 2-inch, bare-headed, front-facing photo taken within the last two years (same rules as Taiwanese ID photos)[1][3]. Your own documents: a resident visa or a visitor visa issued for study, your admission letter or a certificate of enrollment issued within one month, and proof of your address in Taiwan[1][3]. If you hold a visitor visa, also attach a health certificate issued within the last three months[1][3]."
         },
         {
           "title_zh": "線上註冊並送出申請",
@@ -46,8 +46,8 @@
         {
           "title_zh": "列印電子證或領取晶片卡",
           "title_en": "Print the e-ARC or collect the chip card",
-          "notes": "居留效期六個月的電子居留證，可在系統上下載列印[1][2]。晶片居留證：在系統下載列印線上繳款收據，三個工作日後持收據到申請時指定的服務站領取[1][2]。臺中市第一服務站位於臺中市南屯區文心南三路22號1樓，電話(04)2472-5103[5]。",
-          "notes_en": "An e-ARC valid for six months can be downloaded and printed from the system[1][2]. For the chip ARC card, download and print your online payment receipt, then collect the card with the receipt at the service station you chose, three working days later[1][2]. The Taichung City First Service Station is at 1F, No. 22, Wenxin S. 3rd Rd., Nantun Dist., Taichung, tel. (04)2472-5103[5]."
+          "notes": "居留效期六個月以下的電子居留證，可在系統上下載列印[1][2]。晶片居留證：在系統下載列印線上繳款收據，三個工作日後持收據到申請時指定的服務站領取[1][2]。臺中市第一服務站位於臺中市南屯區文心南三路22號1樓，電話(04)2472-5103[4]。",
+          "notes_en": "An e-ARC valid for six months or less can be downloaded and printed from the system[1][2]. For the chip ARC card, download and print your online payment receipt, then collect the card with the receipt at the service station you chose, three working days later[1][2]. The Taichung City First Service Station is at 1F, No. 22, Wenxin S. 3rd Rd., Nantun Dist., Taichung, tel. (04)2472-5103[4]."
         }
       ],
       "sources": [
@@ -73,13 +73,6 @@
           "evidence_note": "英文版適用對象、應備文件（含健康檢查）、規費、客服專線與信箱"
         },
         {
-          "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（前一版）",
-          "url": "https://www.immigration.gov.tw/media/101057/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5.pdf",
-          "publisher": "內政部移民署",
-          "kind": "official",
-          "evidence_note": "入國翌日起30日內申請居留、逾期罰鍰2,000至10,000元、住址變更30日內登記"
-        },
-        {
           "title": "移民署申辦地點（服務站）",
           "url": "https://www.immigration.gov.tw/5385/7445/7889/7892/50767/",
           "publisher": "內政部移民署",
@@ -101,8 +94,8 @@
       "slug": "arc-extension",
       "title_zh": "外國學生外僑居留證延期",
       "title_en": "Extending the ARC for Foreign Students",
-      "description_zh": "仍在學的外國學生，應在外僑居留證效期屆滿前三個月內，透過移民署學生線上申辦系統申請延期。需上傳護照、相片、在學證明及住址證明，核准後繳費並領取新證。逾期居留會被處罰，逾期30日以上還須出國重新申請簽證。",
-      "description_en": "Foreign students who are still enrolled should apply to extend their ARC within the three months before it expires, using the NIA online system for students. Upload your passport, a photo, an enrollment certificate and proof of address, then pay and collect the new card after approval. Overstaying is penalized; overstaying 30 days or more means leaving Taiwan and applying for a new visa.",
+      "description_zh": "仍在學的外國學生，應在外僑居留證效期屆滿前三個月內，透過移民署學生線上申辦系統申請延期。需上傳護照、相片、外僑居留證和一個月內的在學證明，核准後繳費並領取新證。逾期居留會被處罰，逾期30日以上還須出國重新申請簽證。",
+      "description_en": "Foreign students who are still enrolled should apply to extend their ARC within the three months before it expires, using the NIA online system for students. Upload your passport, a photo, your ARC and a certificate of enrollment issued within one month, then pay and collect the new card after approval. Overstaying is penalized; overstaying 30 days or more means leaving Taiwan and applying for a new visa.",
       "applicable_to": "已持有外僑居留證、仍在核定學校就學的外國學生（僑生適用同一須知，規費減半）",
       "applicable_to_en": "Foreign students who already hold an ARC and are still enrolled at an approved school (overseas compatriot students follow the same guideline at half the fee)",
       "location": "移民署學生線上申辦系統；晶片居留證到申請時指定的移民署服務站領取",
@@ -111,14 +104,14 @@
         {
           "title_zh": "在到期前三個月內申請",
           "title_en": "Apply within 3 months before expiry",
-          "notes": "外僑居留證延期應在居留效期屆滿前三個月內申辦[1][4]。逾期居留未滿30日、原居留原因仍存在的，依規定處罰後可以重新申請居留；逾期30日以上的，處罰後須出國，再重新申請簽證入國[1][4]。",
-          "notes_en": "Apply to extend your ARC within the three months before it expires[1][4]. If you have overstayed for less than 30 days and your original reason for residence still applies, you can apply again after paying the penalty; if you have overstayed 30 days or more, you must leave Taiwan after the penalty and apply for a new visa[1][4]."
+          "notes": "外僑居留證延期應在居留效期屆滿前三個月內申辦[1][3]。逾期居留未滿30日、原居留原因仍存在的，依規定處罰後可以重新申請居留；逾期30日以上的，處罰後須出國，再重新申請簽證入國[1][3]。",
+          "notes_en": "Apply to extend your ARC within the three months before it expires[1][3]. If you have overstayed for less than 30 days and your original reason for residence still applies, you can apply again after paying the penalty; if you have overstayed 30 days or more, you must leave Taiwan after the penalty and apply for a new visa[1][3]."
         },
         {
           "title_zh": "申請一個月內的在學證明",
           "title_en": "Get an enrollment certificate (within 1 month)",
-          "notes": "需要入學許可或一個月內的在學證明（含學生證）、在臺居留住址證明，以及護照、最近二年內二吋半身脫帽正面相片[1][3]。在學證明有一個月時效，請在送件前不久再申請。",
-          "notes_en": "You need your admission letter or a certificate of enrollment issued within one month (a student ID also works), proof of your address in Taiwan, your passport, and a 2-inch, bare-headed, front-facing photo taken within the last two years[1][3]. The certificate of enrollment is only valid for one month, so request it shortly before you apply."
+          "notes": "延期要準備外僑居留證和一個月內的在學證明，另加每個人都要的護照、最近二年內二吋半身脫帽正面相片；不需要住址證明，也不能用入學許可代替在學證明[1][2]。在學證明有一個月時效，請在送件前不久再申請。",
+          "notes_en": "For an extension you need your ARC and a certificate of enrollment issued within one month, plus what everyone needs: your passport and a 2-inch, bare-headed, front-facing photo taken within the last two years. No proof of address is needed, and an admission letter cannot replace the certificate of enrollment[1][2]. The certificate of enrollment is only valid for one month, so request it shortly before you apply."
         },
         {
           "title_zh": "登入系統送出延期申請",
@@ -135,8 +128,8 @@
         {
           "title_zh": "領取新證並繳回舊證",
           "title_en": "Collect the new card and return the old one",
-          "notes": "居留效期六個月的電子居留證可線上下載列印[1][2]。晶片居留證：列印繳款收據，三個工作日後持收據到指定服務站領取；延期者領證時須繳回舊證[1]。",
-          "notes_en": "An e-ARC valid for six months can be downloaded and printed online[1][2]. For the chip card, print your payment receipt and collect the card with it at your chosen service station three working days later; when extending, hand back your old card when you collect the new one[1]."
+          "notes": "居留效期六個月以下的電子居留證可線上下載列印[1][2]。晶片居留證：列印繳款收據，三個工作日後持收據到指定服務站領取；延期者領證時須繳回舊證[1]。",
+          "notes_en": "An e-ARC valid for six months or less can be downloaded and printed online[1][2]. For the chip card, print your payment receipt and collect the card with it at your chosen service station three working days later; when extending, hand back your old card when you collect the new one[1]."
         }
       ],
       "sources": [
@@ -160,20 +153,11 @@
           "publisher": "內政部移民署",
           "kind": "official",
           "evidence_note": "英文版應備文件與規費"
-        },
-        {
-          "title": "外國學生與僑生線上申請居留或延期居留及異動登記送件須知（前一版）",
-          "url": "https://www.immigration.gov.tw/media/101057/0929%E5%A4%96%E5%9C%8B%E5%AD%B8%E7%94%9F%E8%88%87%E5%83%91%E7%94%9F%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E5%B1%85%E7%95%99%E6%88%96%E5%BB%B6%E6%9C%9F%E5%B1%85%E7%95%99%E5%8F%8A%E7%95%B0%E5%8B%95%E7%99%BB%E8%A8%98%E9%80%81%E4%BB%B6%E9%A0%88%E7%9F%A5.pdf",
-          "publisher": "內政部移民署",
-          "kind": "official",
-          "evidence_note": "延期三個月內申辦及逾期處理、住址異動30日內登記與罰鍰"
         }
       ],
       "uncertain": [
         "申請時點：移民署送件須知寫「效期屆滿前三個月內」，但多所大學與一份服務站簡報寫「到期前30日內」；卡片採移民署的三個月。",
-        "延期是否須上傳現持居留證、是否須再附健康檢查，學生版須知摘錄中未確認。",
         "每次延期核給的效期長度（一年或依在學期間）未能確認。",
-        "華語生延期另須最近一學期出缺勤紀錄（見國際生流程總覽研究），本卡未列入，需確認是否加註。",
         "以上依搜尋引擎讀取官方文件整理，沒有逐字核對PDF全文。"
       ]
     },
@@ -278,10 +262,10 @@
           "notes_en": "You must show a passing health certificate issued within the last three months. Changing to a resident visa in Taiwan takes about eight working days, so apply at least eight working days before your permitted stay ends[7]. After you receive the resident visa, apply to the NIA for your ARC within 30 days[7]."
         },
         {
-          "title_zh": "完成逢甲校內新生健檢",
-          "title_en": "Complete FCU's on-campus freshman health check",
-          "notes": "逢甲規定所有境外新生都必須參加校內新生健檢，項目和居留健檢不同，不能互相替代[10][11]。2025年秋季班的作法：用NID帳號登入MYFCU填寫健康問題評估表；校內健檢費用新臺幣575元，須空腹6至8小時；錯過者可到合約醫院童綜合醫院梧棲院區補檢；在其他醫院受檢者須使用「逢甲大學學生健康資料表」[11]。每學年的日期與費用請以學校最新公告為準。",
-          "notes_en": "FCU requires every international freshman to take the on-campus freshman health check. It covers different items from the residence health check, so one cannot replace the other[10][11]. For fall 2025: log in to MyFCU with your NID and fill in the health questionnaire; the on-campus check costs NT$575 and you must fast for 6 to 8 hours; if you miss it, you can make it up at the partner hospital, Tungs' Taichung MetroHarbor Hospital (Wuqi); if you are examined at another hospital, use FCU's student health record form[11]. Dates and fees change each year, so follow the school's latest notice."
+          "title_zh": "完成逢甲新生健檢",
+          "title_en": "Complete FCU's freshman health check",
+          "notes": "逢甲規定所有境外新生都必須完成新生健檢，項目和居留健檢不同，不能互相替代[10][11]。2026秋季班（115-1）的作法：8月1日至9月30日用NID帳號登入MyFCU填寫新生健康問題評估表；校內統一健檢線上報名期間是7月1日至8月23日，9月4日至9日在育樂館1樓禮堂受檢，費用新臺幣575元，須空腹6至8小時；無法參加的人，9月10日至10月16日到合約醫院童綜合醫院梧棲院區受檢，非指定時段另加掛號費200元；在其他醫院受檢的人須使用「逢甲大學學生健康資料表」，健檢日期要在2026年6月1日之後，9月30日前繳交[11]。每學期的日期與費用請以學校最新公告為準。",
+          "notes_en": "FCU requires every international freshman to complete the freshman health check. It covers different items from the residence health check, so one cannot replace the other[10][11]. For fall 2026 (115-1): fill in the freshman health questionnaire in MyFCU with your NID between 1 August and 30 September; sign up online for the on-campus check from 1 July to 23 August, then take it on 4–9 September in the auditorium on the 1st floor of the Sports & Recreation Building; it costs NT$575 and you must fast for 6 to 8 hours. If you can't make it, go to the partner hospital, Tungs' Taichung MetroHarbor Hospital (Wuqi), between 10 September and 16 October; outside its set hours there is an extra NT$200 registration fee. If you are examined at another hospital, use FCU's student health record form, with a check dated after 1 June 2026, and hand it in by 30 September[11]. Dates and fees change each term, so follow the school's latest notice."
         }
       ],
       "sources": [
@@ -329,7 +313,7 @@
         },
         {
           "title": "外國學生申請居留簽證手續說明",
-          "url": "https://www.boca.gov.tw/fp-9-186-c060a-1.html",
+          "url": "https://www.boca.gov.tw/cp-402-185-35222-1.html",
           "publisher": "外交部領事事務局",
           "kind": "official",
           "evidence_note": "3個月內合格健康證明、國外證明須驗證、在臺改辦8個工作天、免簽等不得改辦、取得居留簽證後30日內申請居留證"
@@ -404,8 +388,8 @@
         {
           "title_zh": "由學校辦理加保",
           "title_en": "Get enrolled through your school",
-          "notes": "經許可在臺就學的僑外生屬第6類第2目被保險人，由就讀學校擔任投保單位[1]。逢甲國際事務處依簽證種類和出入境紀錄推算加保日[9]。在臺沒有工作，且配偶、父母或子女是健保被保險人的，也可以眷屬身分依附加保[1]。逢甲提醒，符合資格卻沒有加保，可能被處新臺幣3,000至5,000元罰鍰[10]。",
-          "notes_en": "International students studying in Taiwan with permission are Category 6, Subcategory 2 insured persons, and their school is the enrolling unit[1]. FCU's Office of International Affairs works out your start date from your visa type and entry and exit records[9]. If you do not work in Taiwan and your spouse, parent or child is insured, you can also be enrolled as their dependant[1]. FCU warns that not joining when you qualify can bring a fine of NT$3,000 to NT$5,000[10]."
+          "notes": "經許可在臺就學的僑外生屬第6類第2目被保險人，由就讀學校擔任投保單位[1]。逢甲國際事務處依簽證種類和出入境紀錄推算加保日[9]。在臺沒有工作，且配偶、父母或子女是健保被保險人的，應以眷屬身分依附加保[1]。健保是強制保險，符合資格卻沒有加保，可處新臺幣3,000元以上15,000元以下罰鍰，並要追溯補辦投保；罰鍰和保費繳清前暫停給付[13]。",
+          "notes_en": "International students studying in Taiwan with permission are Category 6, Subcategory 2 insured persons, and their school is the enrolling unit[1]. FCU's Office of International Affairs works out your start date from your visa type and entry and exit records[9]. If you do not work in Taiwan and your spouse, parent or child is insured, you must be enrolled as their dependant[1]. NHI is compulsory: not joining when you qualify can bring a fine of NT$3,000 to NT$15,000, and you are enrolled retroactively; benefits are suspended until the fine and the premiums are paid[13]."
         },
         {
           "title_zh": "隨學雜費繳交保費",
@@ -416,8 +400,8 @@
         {
           "title_zh": "申請健保卡",
           "title_en": "Apply for your NHI card",
-          "notes": "完成加保後才能申請健保卡。填寫健保署「請領健保卡申請表」，黏貼一張近2年內拍攝的2吋半身、正面、脫帽、未戴有色眼鏡、五官清晰的大頭照[5][6]。首次投保時可由學校連同加保一起送件，也可以持居留證正本到健保署臨櫃辦理[5]。逢甲國際事務處會在加保後協助首次申請（校方較舊頁面寫需居留證正反面影本和照片1張）[13]。",
-          "notes_en": "You can apply for the NHI card only after you are enrolled. Fill in the NHIA's application form for an NHI card and attach a 2-inch, front-facing, bare-headed photo taken within the last two years, without tinted glasses and with your features clearly visible[5][6]. The first time, the school can submit it together with your enrolment, or you can apply at an NHIA counter with your original ARC[5]. FCU's Office of International Affairs helps with the first application after you are enrolled (an older school page says to bring copies of both sides of your ARC and one photo)[13]."
+          "notes": "完成加保後才能申請健保卡[5]。在逢甲，符合健保資格後由國際事務處用居留證上的照片送件製卡，約需7個工作天，首次申請免費；遺失補發要到國際處印繳費單，繳新臺幣200元製卡費[9]。自己到健保署臨櫃申請的話，持居留證正本，填寫「請領健保卡申請表」，並黏貼一張近2年內拍攝的2吋半身、正面、脫帽、未戴有色眼鏡、五官清晰的大頭照[5][6]。",
+          "notes_en": "You can apply for the NHI card only after you are enrolled[5]. At FCU, once you qualify, the Office of International Affairs applies for your card using the photo on your ARC; it takes about 7 working days and the first card is free. To replace a lost card, print a payment slip at the Office of International Affairs and pay the NT$200 card fee[9]. To apply yourself at an NHIA counter, bring your original ARC and fill in the NHIA's application form for an NHI card with a 2-inch, front-facing, bare-headed photo taken within the last two years, without tinted glasses and with your features clearly visible[5][6]."
         },
         {
           "title_zh": "維持居留效期，異動時退保",
@@ -443,7 +427,7 @@
         },
         {
           "title": "Foreign Nationals from Hong Kong, Macau, China, or Other Countries who Reside in Taiwan with an ARC",
-          "url": "https://eng.nhi.gov.tw/en/cp-49-fb4a6-24-2.html",
+          "url": "https://www.nhi.gov.tw/en/cp-49-fb4a6-24-2.html",
           "publisher": "衛生福利部中央健康保險署",
           "kind": "official",
           "evidence_note": "居留滿6個月應加保；出境1次未逾30日扣除天數；受僱者從受僱日起加保"
@@ -512,19 +496,17 @@
           "evidence_note": "學校只投保到畢業當月，畢業後須自行加保"
         },
         {
-          "title": "Health 醫療資訊（華語教學中心）",
-          "url": "https://clc.fcu.edu.tw/en/health/",
-          "publisher": "逢甲大學華語教學中心",
-          "kind": "institution",
-          "evidence_note": "國際處協助首次申請健保卡；需居留證影本與照片（頁面較舊）"
+          "title": "全民健康保險法 第91條",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=L0060001&flno=91",
+          "publisher": "法務部全國法規資料庫",
+          "kind": "official",
+          "evidence_note": "未依規定投保處3,000至15,000元罰鍰、追溯補辦投保、繳清前暫停給付"
         }
       ],
       "uncertain": [
         "每月826元是健保署自110年起的標準，2026年是否調整無法確認。",
         "衛福部曾研議取消外籍生須居留滿6個月才能加保的限制，查不到正式施行公告，仍以6個月為準。",
-        "逢甲國際學生醫療保險的費用與理賠上限未標示適用學年，可能已調整。",
-        "首次申領健保卡是否免工本費、製卡天數，未在官方頁面確認。",
-        "罰鍰3,000至5,000元取自逢甲網頁，沒有直接核對健保法條文。"
+        "逢甲國際學生醫療保險的費用與理賠上限未標示適用學年，可能已調整。"
       ]
     },
     {
@@ -533,22 +515,22 @@
       "title_en": "Applying for a Student Work Permit (Part-time Work)",
       "description_zh": "在臺就讀的外國留學生要打工，必須先取得勞動部核發的工作許可。申請一律在「外國專業人員工作許可申辦網」線上辦理，每件審查費新臺幣100元。學期中每週最多工作20小時，寒暑假不受這項限制。",
       "description_en": "International students must hold a work permit from the Ministry of Labor before taking any part-time job. Apply online through the EZ Work Permit system (ezwp.wda.gov.tw); the review fee is NT$100. During the semester you may work at most 20 hours a week; the cap does not apply during winter and summer breaks.",
-      "applicable_to": "正式入學修讀科、系、所課程的外國留學生（含港澳生、僑生），入學後即可申請；就讀語言課程者須修業滿6個月以上。高中（含）以下學生及大陸學生不得申請。",
-      "applicable_to_en": "Foreign (including Hong Kong/Macau and overseas Chinese) students formally enrolled in degree programs, once enrolled; language-program students after at least 6 months of study. Not open to students at senior high level or below, or to mainland Chinese students.",
+      "applicable_to": "就讀大專校院、正式入學修讀科、系、所課程的外國留學生，入學後即可申請；就讀語言課程者須修業滿6個月以上。僑生和其他華裔學生（含港澳生）就讀高級中等以上學校即可申請。大陸學生不得申請。",
+      "applicable_to_en": "Foreign students formally enrolled in degree programs at a university or college, once enrolled; language-program students after at least 6 months of study. Overseas Chinese and other ethnic Chinese students (including Hong Kong/Macau) can apply from senior high school upward. Not open to mainland Chinese students.",
       "location": "外國專業人員工作許可申辦網（ezwp.wda.gov.tw）線上申辦；校內窗口：逢甲大學國際事務處（行政二館303室，04-24517250 分機2498，陸港澳生分機2493）",
       "location_en": "Online at ezwp.wda.gov.tw; on campus: FCU Office of International Affairs (Admin Building II, Room 303, ext. 2498)",
       "steps": [
         {
           "title_zh": "確認自己是否具申請資格",
           "title_en": "Check your eligibility",
-          "notes": "正式入學修讀科、系、所課程的學生入學後就能申請；就讀語言課程的外國學生須修業滿6個月以上[1][3]。法規另規定須經就讀學校認定符合條件，例如財力不足無法維持學業生活，或學校教學研究單位需要協助[3]。高中（含）以下學生不能申請[11]，大陸學生目前不得申請學生工作許可[10]。",
-          "notes_en": "Students formally admitted to a degree programme can apply as soon as they enrol; foreign students in language courses must have studied for at least six months[1][3]. The rules also require your school to confirm you meet the conditions, for example that you cannot cover your study and living costs, or that a teaching or research unit needs your help[3]. High school students cannot apply[11], and mainland Chinese students currently cannot get a student work permit[10]."
+          "notes": "正式入學修讀科、系、所課程的學生入學後就能申請；就讀語言課程的外國學生須修業滿6個月以上[1][3]。法規另規定須經就讀學校認定符合條件，例如財力不足無法維持學業生活，或學校教學研究單位需要協助[3]。外國留學生要就讀大專校院才能申請；僑生和其他華裔學生（含港澳生）就讀高級中等以上學校即可申請[13]。大陸學生目前不得申請學生工作許可[10]。",
+          "notes_en": "Students formally admitted to a degree programme can apply as soon as they enrol; foreign students in language courses must have studied for at least six months[1][3]. The rules also require your school to confirm you meet the conditions, for example that you cannot cover your study and living costs, or that a teaching or research unit needs your help[3]. Foreign students must be at a university or college to apply; overseas Chinese and other ethnic Chinese students (including Hong Kong and Macao students) can apply from senior high school upward[13]. Mainland Chinese students currently cannot get a student work permit[10]."
         },
         {
           "title_zh": "先填寫逢甲國際處的工讀問卷",
           "title_en": "Fill out FCU OIA's work survey first",
-          "notes": "逢甲國際處要求先完成當學年度的境外生工讀問卷，沒有填寫的申請不受理[9]。港澳生在線上系統的身分欄位要選「華僑學生」[9]。",
-          "notes_en": "FCU's Office of International Affairs requires you to complete this academic year's survey for international students who work first; applications without it are not accepted[9]. Hong Kong and Macao students should choose 'overseas Chinese student' as their status in the online system[9]."
+          "notes": "逢甲國際處要求先完成當學年度的境外生工讀問卷，沒有填寫的申請不受理[9]。港澳生在線上系統的身分欄位要選「華裔學生」，不是「僑生」[14]。",
+          "notes_en": "FCU's Office of International Affairs requires you to complete this academic year's survey for international students who work first; applications without it are not accepted[9]. Hong Kong and Macao students should choose 'ethnic Chinese student' (華裔學生), not 'overseas Chinese student' (僑生), as their status in the online system[14]."
         },
         {
           "title_zh": "註冊帳號並線上送件",
@@ -563,10 +545,10 @@
           "notes_en": "The review fee for a foreigner's work permit is NT$100 per application[4]. You can pay by postal transfer and then enter the receipt details in the system, or pay at an ATM; after you get a payment number, pay soon[2]. An ATM payment can only be submitted after the system reconciles it at noon the next day; with Taiwan Pay you must pay within five minutes of generating the QR code[12]. Postal transfer slips are available at the Office of International Affairs or any post office[9]. Switching payment methods halfway can mean paying twice[12]."
         },
         {
-          "title_zh": "8日內下載電子工作許可函",
-          "title_en": "Download the e-permit within 8 days of approval",
-          "notes": "核准後系統會寄電子郵件通知，請在8日內登入申辦網下載並列印電子工作許可函；逾期沒領取，改寄紙本公文[8]。勞動部已不再核發實體工作證卡[11]。需要補件時，勞動部會用電子郵件通知[9]。",
-          "notes_en": "After approval you will get an email. Log in to the website within eight days to download and print your electronic work permit; if you don't, a paper letter is posted to you instead[8]. The Ministry of Labor no longer issues physical permit cards[11]. If documents are missing, the Ministry will tell you by email[9]."
+          "title_zh": "發文後8天內下載電子工作許可函",
+          "title_en": "Download the e-permit within 8 days of issue",
+          "notes": "核准後系統會寄電子郵件通知。同意電子送達的人，請在發文日起8個日曆天內登入申辦網下載並列印電子工作許可函；逾期沒領取，改寄紙本公文[8]。實際期限以系統通知為準。勞動部已不再核發實體工作證卡[11]。需要補件時，勞動部會用電子郵件通知[9]。",
+          "notes_en": "After approval you will get an email. If you agreed to electronic delivery, log in to the website within eight calendar days of the date the permit was issued to download and print your electronic work permit; if you don't, a paper letter is posted to you instead[8]. Follow the deadline in the system's notice. The Ministry of Labor no longer issues physical permit cards[11]. If documents are missing, the Ministry will tell you by email[9]."
         },
         {
           "title_zh": "遵守工時與許可期限",
@@ -654,11 +636,25 @@
           "evidence_note": "寒暑假放寬20小時、不再核發實體工作證卡、高中以下不得申請"
         },
         {
-          "title": "外國專業人員工作許可申辦網操作手冊",
-          "url": "https://ezwp.wda.gov.tw/wcfonline/wSite/download/std20230311_060101.pdf",
+          "title": "外國專業人員工作許可申辦網操作手冊（繳費方式與案件送審，2026-09版）",
+          "url": "https://ezwp.wda.gov.tw/wcfonline/wSite/download/std20260929_060102.pdf",
           "publisher": "勞動部勞動力發展署",
           "kind": "official",
           "evidence_note": "ATM隔日中午對帳後才能送件、臺灣Pay須5分鐘內付款、更換繳費方式可能重複繳費"
+        },
+        {
+          "title": "就業服務法 第50條",
+          "url": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?FLNO=50&Pcode=N0090001",
+          "publisher": "法務部全國法規資料庫",
+          "kind": "official",
+          "evidence_note": "外國留學生限大專校院；僑生及其他華裔學生為高級中等以上學校；每週最長20小時"
+        },
+        {
+          "title": "工作證線上申請須知（Online Work Permit Application Instruction）",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/web-content.fcu.edu.tw/wp-content/uploads/sites/97/2026/09/25225218/%EF%BC%88%E4%B8%AD%E6%96%87%E7%89%88%EF%BC%89%E5%B7%A5%E4%BD%9C%E8%AD%89%E7%B7%9A%E4%B8%8A%E7%94%B3%E8%AB%8B%E9%A0%88%E7%9F%A5-Online-Work-Permit-Application-Instruction.pdf",
+          "publisher": "逢甲大學國際事務處",
+          "kind": "institution",
+          "evidence_note": "系統身分欄位：港澳生選「華裔學生」"
         }
       ],
       "uncertain": [
@@ -666,8 +662,7 @@
         "學生工作許可的審核天數官方未寫明，所以卡片沒有寫。",
         "交換學生是否適用、是否另有限制，未取得原文確認。",
         "逢甲華語中心頁面寫華語生第一年不得工作、每週最多12小時，與現行法規（語言生滿6個月、每週20小時）不一致，疑為舊資料，需向華語中心或國際處確認。",
-        "逢甲國際處寫核發後3至5天到國際處領取，與電子許可函流程的關係未確認。",
-        "臺灣Pay繳費依據是2023年版操作手冊，現行介面未確認。"
+        "逢甲國際處寫核發後3至5天到國際處領取，與電子許可函流程的關係未確認。"
       ]
     },
     {
@@ -690,8 +685,8 @@
         {
           "title_zh": "向註冊課務組申請",
           "title_en": "Apply at the Registration Section",
-          "notes": "註冊課務組負責學籍、成績等相關文件的申請業務[3]，地點在資訊電機館123室，電話 04-2451-7250 分機2111，Email：registration@fcu.edu.tw[2]。官方頁面沒有寫明在校生能否線上或用自助機申請，建議出發前先打電話或寫信確認。",
-          "notes_en": "The Registration Section handles requests for enrolment, grade and other student records[3]. It is in Room 123 of the Information and Electrical Engineering Building, tel. 04-2451-7250 ext. 2111, email registration@fcu.edu.tw[2]. The official pages don't say whether current students can apply online or at a self-service machine, so call or email before you go."
+          "notes": "註冊課務組負責學籍、成績等相關文件的申請業務[3]，地點在資訊電機館123室，電話 04-2451-7250 分機2111，Email：registration@fcu.edu.tw[2]。可以帶身分證到註冊課務組櫃台申請；委託別人辦的話，要帶委託書、你的證件影本和受託人的證件正本[9]。學校另有自助列印機台，在工學館左側、忠勤樓一樓和育樂館後側[9]，能不能印在學證明請到現場確認。",
+          "notes_en": "The Registration Section handles requests for enrolment, grade and other student records[3]. It is in Room 123 of the Information and Electrical Engineering Building, tel. 04-2451-7250 ext. 2111, email registration@fcu.edu.tw[2]. You can apply at the Registration Section counter with your ID; if someone applies for you, they bring a letter of authorization, a copy of your ID and their own ID[9]. There are also self-service printing machines to the left of the Engineering Building, on the 1st floor of Zhongqin Building and behind the Sports & Recreation Building[9]; check there whether they print certificates of enrollment."
         },
         {
           "title_zh": "繳交工本費",
@@ -708,8 +703,8 @@
       ],
       "sources": [
         {
-          "title": "收費標準－註冊課務組",
-          "url": "https://registration.fcu.edu.tw/%E9%A6%96%E9%A0%81-2/%E6%9C%8D%E5%8B%99%E5%B0%8D%E8%B1%A1/%E6%94%B6%E8%B2%BB%E6%A8%99%E6%BA%96/",
+          "title": "各項證明文件申請工本費－註冊課務組",
+          "url": "https://registration.fcu.edu.tw/doc-fees/",
           "publisher": "逢甲大學教務處註冊課務組",
           "kind": "institution",
           "evidence_note": "在校生申請中、英文在學證明書每份10元"
@@ -722,8 +717,8 @@
           "evidence_note": "辦公地點、電話分機、Email"
         },
         {
-          "title": "業務職掌－註冊課務組",
-          "url": "https://registration.fcu.edu.tw/en/%E9%A6%96%E9%A0%81-2/team/",
+          "title": "行政團隊／業務職掌－註冊課務組",
+          "url": "https://registration.fcu.edu.tw/admin-team/",
           "publisher": "逢甲大學教務處註冊課務組",
           "kind": "institution",
           "evidence_note": "註冊課務組負責學籍、成績相關文件申請"
@@ -762,6 +757,13 @@
           "publisher": "逢甲大學華語教學中心",
           "kind": "institution",
           "evidence_note": "華語中心在學及出席證明須填表、至少預留1個工作天"
+        },
+        {
+          "title": "文件申請－註冊課務組",
+          "url": "https://registration.fcu.edu.tw/alumni/",
+          "publisher": "逢甲大學註冊課務組",
+          "kind": "institution",
+          "evidence_note": "臨櫃（身分證、委託書）、自助列印機台地點、線上申請（郵寄）"
         }
       ],
       "uncertain": [
@@ -803,8 +805,8 @@
         {
           "title_zh": "親自臨櫃辦理並存入開戶金額",
           "title_en": "Apply in person and make the opening deposit",
-          "notes": "郵局規定外籍人士必須本人親自辦理，要填寫立帳申請書、存款單和CRS自我證明表格，具美國身分者另填W-9[8]。銀行會查核雙重身分證明文件；居留證在期滿前已被註銷或屬逾期居留的，銀行應拒絕開戶[9]。最低開戶金額：台新新臺幣活期性存款1,000元[5]，郵局存簿儲金頁面列為10元[8]。",
-          "notes_en": "The post office requires foreigners to apply in person and fill in an account application, a deposit slip and a CRS self-certification; US persons also fill in a W-9[8]. Banks check two forms of ID and must refuse to open an account if the ARC has been cancelled before its expiry date or if you have overstayed[9]. Minimum opening deposits: NT$1,000 for a Taishin NT$ demand deposit account[5]; the post office's savings page lists NT$10[8]."
+          "notes": "郵局規定外籍人士必須本人親自辦理，要填寫立帳申請書、存款單和CRS自我證明表格，具美國身分者另填W-9[8]。臨櫃開戶時，銀行會查核雙重身分證明文件[9]。最低開戶金額：台新新臺幣活期性存款1,000元[5]，郵局存簿儲金頁面列為10元[8]。",
+          "notes_en": "The post office requires foreigners to apply in person and fill in an account application, a deposit slip and a CRS self-certification; US persons also fill in a W-9[8]. When you open an account at the counter, the bank checks two forms of ID[9]. Minimum opening deposits: NT$1,000 for a Taishin NT$ demand deposit account[5]; the post office's savings page lists NT$10[8]."
         },
         {
           "title_zh": "（選擇性）線上開立數位帳戶",
@@ -931,12 +933,12 @@
       "slug": "fcu-bank-binding",
       "title_zh": "在MyFCU登錄撥款銀行帳戶",
       "title_en": "Registering Your Bank Account in MyFCU",
-      "description_zh": "逢甲是無現金校園，工讀金、獎學金、助學金等款項都匯入學生在MyFCU「銀行帳號維護」登錄的本人帳戶。學生要填寫帳號並上傳存摺封面，由財務處出納組人工審核。郵局、農漁會和銀行帳戶都可以登錄。",
+      "description_zh": "逢甲是無現金校園，工讀金、獎學金、助學金等款項都匯入學生在MyFCU「銀行帳號維護」登錄的本人帳戶。學生要填寫帳號並上傳存摺封面，由總務處出納組人工審核。郵局、農漁會和銀行帳戶都可以登錄。",
       "description_en": "FCU is a cashless campus: work-study pay, scholarships and grants go into the account in your own name that you register under 'Bank Account Maintenance' in MyFCU. Enter the account number and upload the passbook cover; the Cashier Section checks it by hand. Post office, farmers'/fishermen's association and bank accounts are all accepted.",
       "applicable_to": "所有逢甲在學學生（含境外生），尤其是要領工讀金、獎助學金或生活助學金的人",
       "applicable_to_en": "All FCU students, including international students, especially anyone receiving work-study pay, scholarships or grants",
-      "location": "線上：MyFCU；承辦單位為財務處出納組",
-      "location_en": "Online in MyFCU; handled by the Cashier Section, Office of Financial Affairs",
+      "location": "線上：MyFCU；承辦單位為總務處出納組（行政二館2樓）",
+      "location_en": "Online in MyFCU; handled by the Cashier Section, Office of General Affairs (Administration Building II, 2F)",
       "steps": [
         {
           "title_zh": "準備本人金融帳戶",
@@ -1008,13 +1010,13 @@
         {
           "title": "出納組",
           "url": "https://ga.fcu.edu.tw/%E5%87%BA%E7%B4%8D%E7%B5%84/",
-          "publisher": "逢甲大學財務處",
+          "publisher": "逢甲大學總務處",
           "kind": "institution",
           "evidence_note": "出納組業務與聯絡資訊"
         },
         {
           "title": "MyFCU",
-          "url": "https://its.fcu.edu.tw/myfcu-0",
+          "url": "https://its.fcu.edu.tw/myfcu",
           "publisher": "逢甲大學資訊處",
           "kind": "institution",
           "evidence_note": "MyFCU用學號或NID登入"
@@ -1054,8 +1056,8 @@
         {
           "title_zh": "填寫假單並上傳證明",
           "title_en": "Fill in the form and upload proof",
-          "notes": "請假要經請假系統完成，並依請假原因上傳證明文件[1][2]。病假2日以內可用醫療院所的診療單，超過2日要診斷證明書；事假要家長或監護人證明或其他證明；喪假可附訃文或死亡證明；生理假不需要證明[2]。",
-          "notes_en": "Request leave in the leave system and upload proof for your reason[1][2]. For sick leave of up to 2 days a clinic or hospital receipt is enough; for more than 2 days you need a medical certificate. Personal leave needs proof from a parent or guardian or other proof; bereavement leave can use an obituary or death certificate; menstrual leave needs no proof[2]."
+          "notes": "請假要經請假系統完成，並依請假原因上傳證明文件[1][2]。病假2日以內可用醫療院所的診療單，超過2日要診斷證明書；事假須提供相關證明；喪假可附訃文或死亡證明；生理假不需要證明[2]。",
+          "notes_en": "Request leave in the leave system and upload proof for your reason[1][2]. For sick leave of up to 2 days a doctor's note (診療單) from a clinic or hospital is enough; for more than 2 days you need a medical certificate. Personal leave needs relevant proof; bereavement leave can use an obituary or death certificate; menstrual leave needs no proof[2]."
         },
         {
           "title_zh": "注意申請時限",
@@ -1159,15 +1161,15 @@
           "evidence_note": "遺失等情形可在MyFCU申請補發學生證；逢甲卡同時是悠遊卡"
         },
         {
-          "title": "收費標準－註冊課務組",
-          "url": "https://registration.fcu.edu.tw/%E9%A6%96%E9%A0%81-2/%E6%9C%8D%E5%8B%99%E5%B0%8D%E8%B1%A1/%E6%94%B6%E8%B2%BB%E6%A8%99%E6%BA%96/",
+          "title": "各項證明文件申請工本費－註冊課務組",
+          "url": "https://registration.fcu.edu.tw/doc-fees/",
           "publisher": "逢甲大學教務處註冊課務組",
           "kind": "institution",
           "evidence_note": "在校生補發學生證工本費250元"
         },
         {
-          "title": "業務職掌－註冊課務組",
-          "url": "https://registration.fcu.edu.tw/en/%E9%A6%96%E9%A0%81-2/team/",
+          "title": "行政團隊／業務職掌－註冊課務組",
+          "url": "https://registration.fcu.edu.tw/admin-team/",
           "publisher": "逢甲大學教務處註冊課務組",
           "kind": "institution",
           "evidence_note": "聯絡電話、信箱、服務時間"
@@ -1184,12 +1186,12 @@
       "slug": "fcu-newcomer-registration",
       "title_zh": "境外新生報到（國際事務處）",
       "title_en": "Overseas Newcomer Registration at the Office of International Affairs",
-      "description_zh": "逢甲大學境外新生抵臺後，須依國際事務處公告的日期與時段，帶齊正本文件到場報到。報到前要先在 MyFCU 完成新生報到檢核等應辦事項。報到後須參加學校的新生成長營。",
-      "description_en": "After arriving in Taiwan, FCU's new overseas students register in person with the Office of International Affairs (OIA), bringing original documents on the announced date and time slot. Finish the MyFCU checklist and other tasks first. New students then attend the Freshman Growth Camp.",
+      "description_zh": "逢甲大學境外新生抵臺後，須依國際事務處公告的日期與時段，帶齊正本文件到場報到。報到前要先在 MyFCU 完成新生報到檢核等應辦事項。秋季班新生還要參加學校的新生成長營，2026年的成長營在國際處報到之前舉行。",
+      "description_en": "After arriving in Taiwan, FCU's new overseas students register in person with the Office of International Affairs (OIA), bringing original documents on the announced date and time slot. Finish the MyFCU checklist and other tasks first. Fall freshmen also attend the Freshman Growth Camp, which in 2026 took place before OIA registration.",
       "applicable_to": "逢甲大學學位班境外新生（外國學生、僑生、港澳生），含秋季班與春季班入學者。交換生另有規定，不適用本卡。",
       "applicable_to_en": "New overseas degree students at FCU (international, overseas Chinese and Hong Kong/Macao students), fall or spring intake. Exchange students follow separate rules.",
-      "location": "逢甲大學國際事務處，行政二館303室（秋季班第一梯次可能改在行政二館4樓411教室，以當期公告為準）",
-      "location_en": "FCU Office of International Affairs, Room 303, Administration Building II (fall first session may be in Room 411, 4F; check each intake's notice)",
+      "location": "逢甲大學國際事務處，行政二館303室（2026秋季班報到在行政二館4樓411教室，以當期公告為準）",
+      "location_en": "FCU Office of International Affairs, Room 303, Administration Building II (fall 2026 registration was in Room 411, 4F; check each intake's notice)",
       "steps": [
         {
           "title_zh": "報到前完成應辦事項",
@@ -1210,22 +1212,22 @@
           "notes_en": "Hong Kong and Macao students aged 20 or over should bring a Hong Kong or Macao police clearance certificate when they register[1][2]. It must have been issued within the last three months; students under 20 don't need one[4]."
         },
         {
+          "title_zh": "參加新生成長營",
+          "title_en": "Attend the Freshman Growth Camp",
+          "notes": "115學年度所有新生都必須參加2026新生成長營；無法出席者請在 MyFCU 請假[6]。2026年新生成長營於9月1日至3日舉行，在9月4日國際處報到之前[5][1]。",
+          "notes_en": "All new students in the 2026–27 academic year must attend the 2026 Freshman Growth Camp; if you can't attend, request leave in MyFCU[6]. The 2026 camp ran from 1 to 3 September, before OIA registration on 4 September[5][1]."
+        },
+        {
           "title_zh": "依公告時段到場報到",
           "title_en": "Register at your assigned time slot",
-          "notes": "2026春季班報到時間是 2026/2/23 10:00，地點為行政二館303室[2]。秋季班第一梯次依國別分時段，地點為行政二館4樓411教室；無法參加者改第二梯次，地點為303室[1]。每學期日期不同，請以當期公告為準。",
-          "notes_en": "Registration for spring 2026 is on 23 February 2026 at 10:00 in Room 303, Administration Building II[2]. For the fall term, the first round is in time slots by country, in Room 411 on the 4th floor of Administration Building II; if you can't make it, join the second round in Room 303[1]. Dates change every term, so follow the current notice."
+          "notes": "2026秋季班於2026年9月4日在行政二館4樓411教室報到，依國別分時段[1]。2027春季班的報到時間官方尚未公告[3]。每學期日期、地點都不同，請以國際處當期公告為準。",
+          "notes_en": "Fall 2026 registration was on 4 September 2026 in Room 411 on the 4th floor of Administration Building II, in time slots by country[1]. The date for spring 2027 has not been announced yet[3]. Dates and rooms change every term, so follow the Office of International Affairs' current notice."
         },
         {
           "title_zh": "加入國際處LINE群組",
           "title_en": "Join the OIA LINE group",
           "notes": "LINE 顯示名稱請改為「學號＋姓名」。外國學生與僑生加入國際學生群組，港澳生加入港澳生群組[2]。國際處電話 04-24517250，外國學生及僑生分機2498，港澳生分機2493[2]。",
           "notes_en": "Change your LINE display name to your student number plus your name. Foreign and overseas compatriot students join the international student group; Hong Kong and Macao students join the Hong Kong and Macao group[2]. The Office of International Affairs: tel. 04-24517250, ext. 2498 for foreign and overseas compatriot students, ext. 2493 for Hong Kong and Macao students[2]."
-        },
-        {
-          "title_zh": "參加新生成長營",
-          "title_en": "Attend the Freshman Growth Camp",
-          "notes": "115學年度所有新生都必須參加2026新生成長營；無法出席者請在 MyFCU 請假[6]。2026年新生成長營於9月1日至3日舉行[5]。",
-          "notes_en": "All new students in the 2026–27 academic year must attend the 2026 Freshman Growth Camp; if you can't attend, request leave in MyFCU[6]. The 2026 camp runs from 1 to 3 September[5]."
         }
       ],
       "sources": [
@@ -1358,9 +1360,9 @@
           "evidence_note": "健康問題評估表、三種健檢方式"
         },
         {
-          "title": "境外新生繳交學雜費",
-          "url": "https://oia.fcu.edu.tw/overseas-students/new/payment/",
-          "publisher": "逢甲大學國際事務處",
+          "title": "境外新生繳交學雜費（秋季班）",
+          "url": "https://freshman.fcu.edu.tw/overseas-students/payment-fall/",
+          "publisher": "逢甲大學新生專區",
           "kind": "institution",
           "evidence_note": "繳費方式、現金匯款須 email 證明、超商繳費燈號延遲"
         }
@@ -1504,8 +1506,8 @@
         {
           "title_zh": "延期時繼續符合上課規定",
           "title_en": "Keep meeting class rules when you extend",
-          "notes": "延期時要附外僑居留證和1個月內的在學證明[2]，並繼續符合每週15小時、缺課不超過四分之一的規定[1][2]。臺中市第一服務站週一至週五08:00–17:00[4]。",
-          "notes_en": "When you extend, attach your ARC and a certificate of enrollment issued within 1 month[2], and keep meeting the rules of 15 hours a week and absences of no more than a quarter[1][2]. The Taichung City First Service Station is open Mon–Fri 08:00–17:00[4]."
+          "notes": "延期時要附外僑居留證、1個月內的在學證明，以及最近一學期的上課出席紀錄證明，缺課含請假不能超過上課總時數的四分之一[2]。居留效期依在學證明的效期核發，最長不超過6個月；總停留及居留期間原則上不超過2年[2]。臺中市第一服務站週一至週五08:00–17:00[4]。",
+          "notes_en": "When you extend, attach your ARC, a certificate of enrollment issued within 1 month and your attendance record for the last term, with absences, including leave, no more than a quarter of total class hours[2]. Each extension is granted for as long as your certificate of enrollment covers, at most 6 months, and your total stay and residence should not exceed 2 years[2]. The Taichung City First Service Station is open Mon–Fri 08:00–17:00[4]."
         }
       ],
       "sources": [
@@ -1539,7 +1541,6 @@
         }
       ],
       "uncertain": [
-        "延期居留是否每次都要附出席紀錄，未看到全文確認。",
         "直接向移民署申請時是否必附財力證明、研習計畫書，無法確認。",
         "規費1,000元／加收2,200元是否適用華語生，未看到全文確認。",
         "華語中心「到期前10天內延期」未與移民署現行規定交叉核對。"
@@ -1711,18 +1712,18 @@
       "slug": "post-graduation-stay",
       "title_zh": "畢業後延期居留在臺覓職",
       "title_en": "Staying in Taiwan After Graduation to Look for Work",
-      "description_zh": "在臺灣取得副學士以上學位的外國學生，畢業後可在居留期限屆滿前申請延期居留，每次1年，有必要時可再申請1次，最長2年。自2026年1月1日起，這段延期居留期間在臺工作不必另外申請工作許可。學校會通報畢業，請及早辦理，以免原居留證被廢止。",
-      "description_en": "Foreign students with an associate degree or higher from Taiwan can extend residence for 1 year before it expires, plus one more extension if needed, up to 2 years. Since 1 January 2026 they can work during this extension without a separate work permit. Your school reports your graduation, so apply early to keep your ARC from being revoked.",
+      "description_zh": "在臺灣取得副學士以上學位的外國學生，畢業後可在居留期限屆滿前申請延期居留，每次1年，有必要時可再申請1次，最長2年。自2026年1月1日起，這段延期居留期間在臺工作不必另外申請工作許可。學校會通報畢業，逢甲要求領到畢業證書後幾天內就辦理，以免原居留證被廢止。",
+      "description_en": "Foreign students with an associate degree or higher from Taiwan can extend residence for 1 year before it expires, plus one more extension if needed, up to 2 years. Since 1 January 2026 they can work during this extension without a separate work permit. Your school reports your graduation, and FCU asks you to apply within days of getting your diploma to keep your ARC from being revoked.",
       "applicable_to": "在臺取得副學士以上學位、畢業後想留臺找工作的外國學位生（港澳生另有規定）",
       "applicable_to_en": "Foreign degree students with an associate degree or higher from Taiwan who want to stay to look for work (Hong Kong and Macao students follow different rules)",
       "location": "移民署臺中市第一服務站（南屯區文心南三路22號1樓）；健保：居住地的區公所",
       "location_en": "NIA Taichung 1st Service Center (No. 22, Wenxin S. 3rd Rd., Nantun Dist.); NHI: your district office",
       "steps": [
         {
-          "title_zh": "在居留期限屆滿前申請延期",
-          "title_en": "Apply before your ARC expires",
-          "notes": "在臺畢業的外國人可在居留期限屆滿前申請延期居留；核准後從原期限屆滿翌日起延長1年，有必要可再申請1次，最長2年[1][2][3]。學校會通報畢業，沒有及時辦理，原居留證可能被廢止[4]；逢甲國際處建議領到畢業證書後盡快辦理[4]。",
-          "notes_en": "Foreigners who graduate in Taiwan can apply to extend their residence before it expires; if approved, it is extended by 1 year from the day after the original expiry date, and you can apply once more if needed, up to 2 years in total[1][2][3]. The school reports your graduation, so if you don't apply in time your original ARC may be revoked[4]; FCU's Office of International Affairs suggests applying soon after you receive your diploma[4]."
+          "title_zh": "領到畢業證書後盡快申請延期",
+          "title_en": "Apply soon after you get your diploma",
+          "notes": "在臺畢業的外國人可在居留期限屆滿前申請延期居留；核准後從原期限屆滿翌日起延長1年，有必要可再申請1次，最長2年[1][2][3]。學校會通報畢業，沒有及時辦理，原居留證可能被廢止[4]；逢甲國際處要求領到畢業證書後幾天內就辦理，不要等到居留快到期（國際處頁面同時寫了10日內和15天內，以國際處通知為準）[4]。",
+          "notes_en": "Foreigners who graduate in Taiwan can apply to extend their residence before it expires; if approved, it is extended by 1 year from the day after the original expiry date, and you can apply once more if needed, up to 2 years in total[1][2][3]. The school reports your graduation, so if you don't apply in time your original ARC may be revoked[4]; FCU's Office of International Affairs requires you to apply within days of receiving your diploma, not when your ARC is about to expire (its page says both 10 days and 15 days, so follow what the office tells you)[4]."
         },
         {
           "title_zh": "準備畢業證書等文件",
@@ -1828,8 +1829,8 @@
         {
           "title_zh": "啟用 NID，在 MyFCU 申請床位",
           "title_en": "Activate your NID and apply on MyFCU",
-          "notes": "先啟用逢甲 NID 帳號，登入 MyFCU，路徑：新生資訊 → 新生必做 → 報到流程檢核 → 宿舍申請[1][2]。2026學年秋季班的申請與繳費時間是2026年8月5日上午9時到8月18日24時[1][2]；2026年春季班申請到2026年1月21日[1]。每年日期不同，請以宿舍服務網站公告為準。",
-          "notes_en": "First activate your FCU NID account, then log in to MyFCU and go to For New Students → Things to Do → Check List of Registration → Dormitory Application[1][2]. For fall 2026, application and payment run from 9:00 on 5 August to 24:00 on 18 August 2026[1][2]; for spring 2026, applications closed on 21 January 2026[1]. Dates change every year, so follow the notices on the Housing Services website."
+          "notes": "先啟用逢甲 NID 帳號，登入 MyFCU，路徑：新生資訊 → 新生必做 → 報到流程檢核 → 宿舍申請[1][2]。2026學年秋季班的申請與繳費時間是2026年8月5日上午9時到8月18日24時，已經結束[1][2]；2027年春季班的申請時間官方尚未公告。以下步驟的日期都是2026秋季班的時程，每學期日期不同，請以宿舍服務網站公告為準。",
+          "notes_en": "First activate your FCU NID account, then log in to MyFCU and go to For New Students → Things to Do → Check List of Registration → Dormitory Application[1][2]. For fall 2026, application and payment ran from 9:00 on 5 August to 24:00 on 18 August 2026 and have closed[1][2]; dates for spring 2027 have not been announced yet. The dates in the steps below are for fall 2026; they change every term, so follow the notices on the Housing Services website."
         },
         {
           "title_zh": "線上繳住宿費和保證金",
