@@ -48,6 +48,5 @@ flutter:
     - family: Caveat
       fonts:
         - asset: assets/fonts/Caveat-Variable.ttf
-    - family: NotoSerifTC
-      fonts:
-        - asset: assets/fonts/NotoSerifTC-Variable.ttf
+    # NotoSerifTC (Chinese) is loaded in lib/main.dart after start-up, so the first screen does
+    # not wait for its 3 MB download; see tool/subset_chinese_font.py.

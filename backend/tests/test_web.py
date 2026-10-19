@@ -1,3 +1,5 @@
+import gzip
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -31,6 +33,40 @@ def test_spa_fallback_and_files(tmp_path):
     assert client.get("/api/unknown").status_code == 404
     # No escaping the web directory.
     assert client.get("/..%2F..%2Fetc%2Fpasswd").text == "<html>app</html>"
+
+
+def test_gzipped_copy_is_sent_when_the_browser_accepts_it(tmp_path):
+    client = make(tmp_path)
+    code = "console.log('culture bridge');" * 200
+    (tmp_path / "main.dart.js").write_text(code)
+    (tmp_path / "main.dart.js.gz").write_bytes(gzip.compress(code.encode()))
+
+    packed = client.get("/main.dart.js", headers={"Accept-Encoding": "gzip, br"})
+    assert packed.headers["content-encoding"] == "gzip"
+    assert packed.headers["vary"] == "Accept-Encoding"
+    assert packed.headers["content-type"].startswith("text/javascript")
+    assert packed.text == code  # the test client unpacks it
+
+    plain = client.get("/main.dart.js", headers={"Accept-Encoding": "identity"})
+    assert "content-encoding" not in plain.headers and plain.text == code
+    refused = client.get("/main.dart.js", headers={"Accept-Encoding": "gzip;q=0"})
+    assert "content-encoding" not in refused.headers
+    # Files without a packed copy are sent as they are.
+    assert "content-encoding" not in client.get("/assets/logo.png").headers
+
+
+def test_unchanged_files_are_not_sent_again(tmp_path):
+    client = make(tmp_path)
+    for path in ("/main.dart.js", "/assets/logo.png", "/", "/explore"):
+        first = client.get(path)
+        assert first.headers["cache-control"] == "no-cache"
+        again = client.get(path, headers={"If-None-Match": first.headers["etag"]})
+        assert again.status_code == 304 and again.content == b""
+        assert again.headers["etag"] == first.headers["etag"]
+    # After a deploy the file changes, so its tag no longer matches.
+    old = client.get("/main.dart.js").headers["etag"]
+    (tmp_path / "main.dart.js").write_text("new build, longer")
+    assert client.get("/main.dart.js", headers={"If-None-Match": old}).status_code == 200
 
 
 def test_account_deletion_page_and_config():
