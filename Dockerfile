@@ -17,6 +17,10 @@ RUN flutter --disable-analytics >/dev/null && flutter pub get
 COPY flutter_app/ ./
 # Firebase settings are read at runtime from /api/config, so the build carries no project config.
 RUN flutter build web --release --no-web-resources-cdn
+# Gzipped copies of the big files (app code, CanvasKit, fonts); backend/app/web.py sends them.
+RUN find build/web -type f -size +1k \( -name '*.js' -o -name '*.wasm' -o -name '*.json' \
+      -o -name '*.html' -o -name '*.css' -o -name '*.svg' -o -name '*.ttf' -o -name '*.otf' \
+      -o -name NOTICES \) -exec gzip -k -9 -n {} +
 
 # ---------- 2. API ----------
 FROM python:3.12-slim
