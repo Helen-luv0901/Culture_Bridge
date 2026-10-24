@@ -15,8 +15,8 @@ class AppShell extends StatefulWidget {
   final Widget child;
   final Uri uri;
 
-  static const tabs = ['/', '/explore', '/share', '/profile'];
-  static const icons = ['home', 'explore', 'share', 'me'];
+  static const tabs = ['/', '/explore', '/share', '/profile', '/assistant'];
+  static const icons = ['home', 'explore', 'share', 'me', 'chat'];
   static const maxContentWidth = 880.0;
 
   @override
@@ -33,6 +33,7 @@ class _AppShellState extends State<AppShell> {
     if (path.startsWith('/explore')) return 1;
     if (path == '/share') return 2;
     if (path.startsWith('/profile')) return 3;
+    if (path == '/assistant') return 4;
     return null;
   }
 
@@ -62,6 +63,7 @@ class _AppShellState extends State<AppShell> {
     if (path == '/explore') return phone ? vm.pair('探索', 'Explore') : '';
     if (path == '/share') return phone ? vm.pair('分享', 'Share') : '';
     if (path == '/profile') return phone ? vm.pair('我的', 'My') : '';
+    if (path == '/assistant') return phone ? vm.pair('助理', 'Assistant') : '';
     if (path == '/profile/settings') return vm.pair('設定', 'Settings');
     if (path.startsWith('/experiences')) {
       return vm.pair('學生分享', 'Student post');
@@ -99,10 +101,16 @@ class _AppShellState extends State<AppShell> {
 
   void _goTab(BuildContext context, int i) {
     final tab = AppShell.tabs[i];
-    // Sharing needs an account: guests are asked to sign in instead.
-    if (tab == '/share' && !BridgeScope.of(context).signedIn) {
-      askToSignIn(context, signInForSharing, next: tab);
-      return;
+    // Sharing and the assistant need an account: guests are asked to sign in instead.
+    if (!BridgeScope.of(context).signedIn) {
+      if (tab == '/share') {
+        askToSignIn(context, signInForSharing, next: tab);
+        return;
+      }
+      if (tab == '/assistant') {
+        askToSignIn(context, signInForAssistant, next: tab);
+        return;
+      }
     }
     context.go(tab);
   }
@@ -127,6 +135,14 @@ class _AppShellState extends State<AppShell> {
     _showNotice(context);
     final layout = AppLayout.of(context);
     final phone = layout == AppLayout.phone;
+    // The assistant tab is the chat itself: no bubble or window over it, and a
+    // window left open closes (its conversation carries on in the page).
+    final onAssistantPage = widget.uri.path == '/assistant';
+    if (onAssistantPage && vm.assistantOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (vm.assistantOpen) vm.closeAssistant();
+      });
+    }
     // The route navigator; each page brings its own scrolling frame (PageFrame).
     final content = widget.child;
     final header = _Header(
@@ -163,7 +179,7 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
           // Phone: the panel covers the page, so the bubble hides. Elsewhere it toggles.
-          if (!(phone && vm.assistantOpen))
+          if (!onAssistantPage && !(phone && vm.assistantOpen))
             Positioned(
               right: phone ? 16 : 28,
               bottom: phone ? 16 : 28,
@@ -184,7 +200,7 @@ class _AppShellState extends State<AppShell> {
       child: Stack(
         children: [
           Positioned.fill(child: scaffold),
-          if (vm.assistantOpen)
+          if (vm.assistantOpen && !onAssistantPage)
             AssistantOverlay(
               uri: widget.uri,
               onNavigate: (path) => context.push(path),
@@ -406,6 +422,7 @@ List<String> _navLabels(BuildContext context) {
     vm.pair('探索', 'Explore'),
     vm.pair('分享', 'Share'),
     vm.pair('我的', 'My'),
+    vm.pair('助理', 'Assistant'),
   ];
 }
 
@@ -430,25 +447,28 @@ class _Sidebar extends StatelessWidget {
         color: Palette.nav,
         border: Border(right: BorderSide(color: Palette.edge)),
       ),
-      padding: EdgeInsets.symmetric(
-        vertical: compact ? 20 : 24,
-        horizontal: compact ? 10 : 16,
-      ),
-      child: Column(
-        children: [
-          for (int i = 0; i < AppShell.tabs.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: _SidebarItem(
-                key: Key('nav-$i'),
-                icon: AppShell.icons[i],
-                label: labels[i],
-                selected: index == i,
-                compact: compact,
-                onTap: () => onTap(i),
+      // Short landscape screens with large text scroll the tabs instead of clipping them.
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          vertical: compact ? 20 : 24,
+          horizontal: compact ? 10 : 16,
+        ),
+        child: Column(
+          children: [
+            for (int i = 0; i < AppShell.tabs.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _SidebarItem(
+                  key: Key('nav-$i'),
+                  icon: AppShell.icons[i],
+                  label: labels[i],
+                  selected: index == i,
+                  compact: compact,
+                  onTap: () => onTap(i),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

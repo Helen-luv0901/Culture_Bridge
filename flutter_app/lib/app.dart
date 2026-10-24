@@ -8,6 +8,7 @@ import 'ui/core/design_system.dart';
 import 'ui/features/account_pages.dart';
 import 'ui/features/action_pages.dart';
 import 'ui/features/admin_pages.dart';
+import 'ui/features/assistant_page.dart';
 import 'ui/features/browse_pages.dart';
 import 'ui/features/experience_page.dart';
 import 'ui/features/explore_page.dart';
@@ -48,6 +49,11 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             );
           }),
           _page('/share', (state) => const SharePage()),
+          // The chat fills the page and scrolls inside itself, so no PageFrame.
+          GoRoute(
+            path: '/assistant',
+            builder: (context, state) => const AssistantPage(),
+          ),
           _page(
             '/profile',
             (state) => ProfilePage(
