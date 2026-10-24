@@ -15,8 +15,8 @@ class AppShell extends StatefulWidget {
   final Widget child;
   final Uri uri;
 
-  static const tabs = ['/', '/explore', '/share', '/profile', '/assistant'];
-  static const icons = ['home', 'explore', 'share', 'me', 'chat'];
+  static const tabs = ['/', '/explore', '/share', '/assistant', '/profile'];
+  static const icons = ['home', 'explore', 'share', 'chat', 'me'];
   static const maxContentWidth = 880.0;
 
   @override
@@ -32,8 +32,8 @@ class _AppShellState extends State<AppShell> {
     if (path == '/') return 0;
     if (path.startsWith('/explore')) return 1;
     if (path == '/share') return 2;
-    if (path.startsWith('/profile')) return 3;
-    if (path == '/assistant') return 4;
+    if (path == '/assistant') return 3;
+    if (path.startsWith('/profile')) return 4;
     return null;
   }
 
@@ -421,8 +421,8 @@ List<String> _navLabels(BuildContext context) {
     vm.pair('首頁', 'Home'),
     vm.pair('探索', 'Explore'),
     vm.pair('分享', 'Share'),
-    vm.pair('我的', 'My'),
     vm.pair('助理', 'Assistant'),
+    vm.pair('我的', 'My'),
   ];
 }
 

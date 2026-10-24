@@ -506,7 +506,7 @@ void main() {
 
   testWidgets('Mobile tabs, My page and the language setting', (tester) async {
     await mount(tester, '/', const Size(375, 812));
-    await tap(tester, find.byKey(const Key('nav-3')));
+    await tap(tester, find.byKey(const Key('nav-4')));
     expect(find.text('我的分享'), findsOneWidget);
     expect(find.text('收藏'), findsOneWidget);
     await tap(tester, find.byKey(const Key('open-settings')));
@@ -838,7 +838,7 @@ void main() {
       pendingOperations: [],
       fallback: false,
     );
-    await tap(tester, find.byKey(const Key('nav-4')));
+    await tap(tester, find.byKey(const Key('nav-3')));
     expect(find.byKey(const Key('assistant-page')), findsOneWidget);
     expect(find.text('居留證要準備什麼？'), findsOneWidget);
     // The page is the chat: no bubble, no close button, nothing over it.
@@ -865,7 +865,7 @@ void main() {
     await tap(tester, find.text('怎麼加入健保？'));
     expect(app.repository.assistantMessages, ['怎麼加入健保？']);
 
-    await tap(tester, find.byKey(const Key('nav-4')));
+    await tap(tester, find.byKey(const Key('nav-3')));
     // The floating window closes; the same conversation fills the page.
     expect(app.vm.assistantOpen, isFalse);
     expect(find.byKey(const Key('assistant-button')), findsNothing);
@@ -881,7 +881,7 @@ void main() {
     tester,
   ) async {
     await mount(tester, '/', const Size(375, 812), signedIn: false);
-    await tap(tester, find.byKey(const Key('nav-4')));
+    await tap(tester, find.byKey(const Key('nav-3')));
     expect(find.text('AI 助理僅提供給已登入的使用者，請先登入後再使用。'), findsOneWidget);
     await tap(tester, find.text('取消'));
     expect(find.byKey(const Key('assistant-page')), findsNothing);
