@@ -64,6 +64,7 @@ void main() {
       '/actions/arc',
       '/actions/arc/progress',
       '/actions/arc/complete',
+      '/assistant',
     ]) {
       testWidgets('$route renders without overflow at $width', (tester) async {
         await mount(
@@ -810,6 +811,94 @@ void main() {
     expect(find.byKey(const Key('assistant-button')), findsNothing);
     await tap(tester, find.byKey(const Key('assistant-close')));
     expect(find.byKey(const Key('assistant-button')), findsOneWidget);
+  });
+
+  testWidgets('The assistant tab opens the chat as a whole page', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812));
+    app.repository.assistantReply = (message) => const AssistantReply(
+      conversationId: 'c1',
+      text: '租屋前先看清楚合約。',
+      cards: [
+        AssistantCard(
+          type: 'experience',
+          id: 'first-rental',
+          title: '第一次在台中租房子',
+          verificationStatus: null,
+          lastVerifiedAt: null,
+          recentSuccessCount: 0,
+          sources: [],
+          reminder: '',
+          excerpt: '看房時記得問電費怎麼算……',
+          category: 'housing',
+        ),
+      ],
+      screenActions: [],
+      pendingOperations: [],
+      fallback: false,
+    );
+    await tap(tester, find.byKey(const Key('nav-4')));
+    expect(find.byKey(const Key('assistant-page')), findsOneWidget);
+    expect(find.text('居留證要準備什麼？'), findsOneWidget);
+    // The page is the chat: no bubble, no close button, nothing over it.
+    expect(find.byKey(const Key('assistant-button')), findsNothing);
+    expect(find.byKey(const Key('assistant-close')), findsNothing);
+    expect(app.vm.assistantOpen, isFalse);
+
+    await tap(tester, find.text('租屋要注意什麼？'));
+    expect(app.repository.assistantMessages, ['租屋要注意什麼？']);
+    await tap(tester, find.byKey(const Key('assistant-post-first-rental')));
+    expect(find.byKey(const Key('save-post')), findsOneWidget);
+
+    // Back on the tab, the conversation is still there.
+    await tap(tester, find.byKey(const Key('back')));
+    expect(find.byKey(const Key('assistant-page')), findsOneWidget);
+    expect(find.text('租屋前先看清楚合約。'), findsOneWidget);
+  });
+
+  testWidgets('The bubble chat continues on the assistant page', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(1280, 900));
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    await tap(tester, find.text('怎麼加入健保？'));
+    expect(app.repository.assistantMessages, ['怎麼加入健保？']);
+
+    await tap(tester, find.byKey(const Key('nav-4')));
+    // The floating window closes; the same conversation fills the page.
+    expect(app.vm.assistantOpen, isFalse);
+    expect(find.byKey(const Key('assistant-button')), findsNothing);
+    expect(find.byKey(const Key('assistant-page')), findsOneWidget);
+    expect(find.text('怎麼加入健保？'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('nav-0')));
+    expect(find.byKey(const Key('assistant-button')), findsOneWidget);
+    expect(app.vm.assistantOpen, isFalse);
+  });
+
+  testWidgets('Guests are asked to sign in before the assistant tab', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(375, 812), signedIn: false);
+    await tap(tester, find.byKey(const Key('nav-4')));
+    expect(find.text('AI 助理僅提供給已登入的使用者，請先登入後再使用。'), findsOneWidget);
+    await tap(tester, find.text('取消'));
+    expect(find.byKey(const Key('assistant-page')), findsNothing);
+  });
+
+  testWidgets('A guest opening the assistant page directly sees sign in', (
+    tester,
+  ) async {
+    final app = await mount(
+      tester,
+      '/assistant',
+      const Size(375, 812),
+      signedIn: false,
+    );
+    expect(find.byKey(const Key('assistant-sign-in')), findsOneWidget);
+    expect(find.byKey(const Key('assistant-input')), findsNothing);
+    expect(app.repository.assistantMessages, isEmpty);
   });
 
   test('Only whitelisted screen actions become routes', () {

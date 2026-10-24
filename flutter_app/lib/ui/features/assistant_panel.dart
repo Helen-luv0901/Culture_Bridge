@@ -171,9 +171,13 @@ class AssistantPanel extends StatefulWidget {
     super.key,
     required this.uri,
     required this.onNavigate,
+    this.closable = true,
   });
   final Uri uri;
   final void Function(String path) onNavigate;
+
+  /// The window has a close button; the assistant tab's page does not.
+  final bool closable;
 
   @override
   State<AssistantPanel> createState() => _AssistantPanelState();
@@ -257,12 +261,13 @@ class _AssistantPanelState extends State<AssistantPanel> {
                     color: Palette.muted,
                   ),
                 ),
-              IconButton(
-                key: const Key('assistant-close'),
-                tooltip: vm.pair('關閉', 'Close'),
-                onPressed: vm.closeAssistant,
-                icon: const AppIcon('close', size: 20),
-              ),
+              if (widget.closable)
+                IconButton(
+                  key: const Key('assistant-close'),
+                  tooltip: vm.pair('關閉', 'Close'),
+                  onPressed: vm.closeAssistant,
+                  icon: const AppIcon('close', size: 20),
+                ),
             ],
           ),
           const SizedBox(height: 6),
@@ -406,7 +411,9 @@ class _Bubble extends StatelessWidget {
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+        // On the full-width assistant page, long lines stay readable.
         child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
