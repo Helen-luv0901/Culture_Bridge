@@ -24,6 +24,15 @@ from app.web import mount_web_app
 
 logger = logging.getLogger(__name__)
 
+# Nothing configured logging before, so INFO lines (assistant timings, model hand-overs) were
+# dropped. One handler on "app"; uvicorn keeps its own access log.
+_app_log = logging.getLogger("app")
+if not _app_log.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    _app_log.addHandler(_handler)
+    _app_log.setLevel(logging.INFO)
+
 _dev = get_settings().is_development
 app = FastAPI(
     title="Culture Bridge API",

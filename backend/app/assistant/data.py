@@ -115,6 +115,11 @@ class AssistantDataSource(Protocol):
         thinks (it can take many seconds)."""
         ...
 
+    def prepare_semantic(self, query: str) -> None:
+        """Start the slow part of semantic_search(query) (a call to Gemini) in the background,
+        so it overlaps the keyword searches."""
+        ...
+
 
 # Demo JSON uses UI labels and camelCase keys; map them onto the schema vocabulary.
 _DEMO_STATUS: dict[str, VerificationStatus] = {
@@ -182,6 +187,9 @@ class DemoDataSource:
         return None
 
     def release(self) -> None:
+        pass
+
+    def prepare_semantic(self, query: str) -> None:
         pass
 
 

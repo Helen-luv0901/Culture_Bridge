@@ -254,10 +254,13 @@ def semantic_search(
     viewer: CurrentUser | None,
     limit: int = 4,
     max_distance: float | None = None,
+    vector: list[float] | None = None,
 ) -> dict[str, Any]:
-    """Nearest official passages and student content; matches beyond max_distance are noise."""
+    """Nearest official passages and student content; matches beyond max_distance are noise.
+    `vector` is the query already embedded (the assistant starts that early)."""
     cutoff = max_distance if max_distance is not None else get_settings().semantic_max_distance
-    vector = embedder.embed_query(query)
+    if vector is None:
+        vector = embedder.embed_query(query)
     official_distance = KbChunk.embedding.cosine_distance(vector)
     official = db.execute(
         select(KbChunk, KbDocument, official_distance.label("d"))
