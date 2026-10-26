@@ -130,6 +130,12 @@ fi
 live_image="$(gc run revisions describe "$(serving_revision)" --region="${REGION}" \
   --format='value(spec.containers[0].image)')"
 live_tag="${live_image##*:}"
+if [[ "${live_image}" == *@sha256:* ]]; then
+  # Cloud Run records the image by digest; the commit is the tag on that digest.
+  live_tag="$(gcloud artifacts docker images list "${live_image%@*}" --include-tags \
+    --filter="version=${live_image##*@}" --format='value(tags)' 2>/dev/null \
+    | tr ',' '\n' | grep -m1 -E '^[0-9a-f]{7,40}$' || true)"
+fi
 
 if [[ -n "${PREVIEW}" ]]; then
   # A preview shares the production database, so it must run on the schema already there.
