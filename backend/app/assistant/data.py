@@ -7,10 +7,11 @@ search for B-16) replaces it without touching the tools.
 """
 
 import json
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Protocol
+
+from app.core.text_search import rank
 
 Locale = Literal["zh-Hant", "en"]
 VerificationStatus = Literal[
@@ -126,55 +127,6 @@ _DEMO_IDENTITY: dict[str, IdentityType] = {
     "exchangeStudent": "exchange_student",
     "languageStudent": "language_student",
 }
-_CJK = re.compile(r"[㐀-鿿豈-﫿]")
-
-
-# Question words carry no topic, so they must not make every document "match".
-_STOPWORDS = frozenset(
-    "a an and are can do does for how i in is it me mean my of on the to what where why you".split()
-)
-_CJK_FILLER = set("的了嗎呢吧什麼怎哪我你他她是要")
-
-
-def search_units(query: str) -> list[str]:
-    """Query -> match units. CJK runs become bigrams so 「工作證怎麼辦」 still matches 「工作證」;
-    Latin words are cut to a stem so "sharing" matches "share" and "anonymously" "anonymous"."""
-    units: list[str] = []
-    for token in re.findall(r"[a-z0-9]+|[^\sa-z0-9]+", query.lower()):
-        if not re.search(r"\w", token):
-            continue  # punctuation alone ("?", "！") is not something to match
-        if _CJK.search(token):
-            token = re.sub(r"\W", "", token)  # 「處理？」 -> 「處理」
-            if len(token) <= 2:
-                units.append(token)
-                continue
-            bigrams = (token[i : i + 2] for i in range(len(token) - 1))
-            units.extend(b for b in bigrams if not _CJK_FILLER.intersection(b))
-        elif token not in _STOPWORDS:
-            units.append(token if len(token) <= 4 else token[: max(4, len(token) - 3)])
-    return units
-
-
-def _matches(unit: str, haystack: str) -> bool:
-    if _CJK.search(unit):
-        return unit in haystack
-    return re.search(rf"\b{re.escape(unit)}", haystack) is not None
-
-
-def score(units: list[str], haystack: str) -> float:
-    if not units:
-        return 1.0
-    return sum(1 for unit in units if _matches(unit, haystack)) / len(units)
-
-
-def rank[T](items: list[tuple[T, str, str]], query: str, limit: int) -> list[T]:
-    """Rank (item, heading, body) triples; heading hits count double, so the document *about*
-    a topic beats ones that only mention it."""
-    units = search_units(query)
-    scored = [(item, 2 * score(units, head) + score(units, body)) for item, head, body in items]
-    scored = [pair for pair in scored if pair[1] > 0]
-    scored.sort(key=lambda pair: pair[1], reverse=True)
-    return [item for item, _ in scored[:limit]]
 
 
 @dataclass

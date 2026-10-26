@@ -203,10 +203,8 @@ def search(
     locale: svc.Locale | None = None,
     kind: Literal["all", "actions", "experiences"] = "all",
 ) -> SearchResults:
-    """Keyword search over procedures and experiences (B-16); the assistant uses it too."""
+    """Keyword search over procedures and experiences (B-16), best matches first."""
     return SearchResults(
         actions=action_svc.search_actions(db, q, 10) if kind != "experiences" else [],
-        experiences=(
-            svc.explore(db, viewer, None, None, q, locale, 10, 0).items if kind != "actions" else []
-        ),
+        experiences=svc.search(db, viewer, q, locale, 10) if kind != "actions" else [],
     )
