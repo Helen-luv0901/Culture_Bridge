@@ -105,7 +105,11 @@ class Assistant:
         )
         # Run the obvious searches now, so most questions need one model call instead of several.
         found = prefetch(request.message, ctx)
-        history.append(UserTurn(found.attach(build_user_message(request.message, request.screen))))
+        history.append(
+            UserTurn(
+                found.attach(build_user_message(request.message, request.screen, request.locale))
+            )
+        )
         system = build_system_prompt(request.locale, taipei_today())
         specs = self._registry.specs()
         tools_used: list[str] = []
