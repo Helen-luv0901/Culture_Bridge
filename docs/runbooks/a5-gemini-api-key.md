@@ -23,7 +23,7 @@
 
 免費方案的代價：
 
-- 每分鐘、每天的次數有限制，超過時 AI 功能會暫時無法使用（`429`），隔天恢復
+- 每分鐘、每天的次數有限制（每個模型分開算，見 AI Studio → Usage → Rate limit）。`GEMINI_MODEL` 用完時後端自動改用 `GEMINI_FALLBACK_MODELS`（預設 `gemini-3.1-flash-lite`，額度和 3.5 Flash Lite 一樣），兩個都用完才會暫時無法使用（`429`），隔天恢復。`bash scripts/check-ai.sh` 第 4b 步會一起測備用模型
 - Google 可能用送出的內容改善產品：上架前要在隱私權政策寫清楚，Play「資料安全性」也要重新評估（D-11、D-12）
 
 ## 2. 限制金鑰

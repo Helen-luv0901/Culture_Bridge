@@ -39,6 +39,7 @@ def get_services() -> AssistantServices:
             settings.gemini_model,
             settings.gemini_timeout_seconds,
             settings.gemini_thinking_level,
+            fallbacks=settings.gemini_fallback_models,
         )
         if settings.gemini_api_key
         else UnavailableLLM()

@@ -7,6 +7,7 @@ next to them.
 
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal, Protocol
@@ -128,25 +129,27 @@ class GeminiExperienceAI:
         timeout_seconds: float,
         attempts: int = 2,
         thinking_level: str = "",
+        fallbacks: Sequence[str] = (),
     ):
         self._client = genai.Client(
             api_key=api_key, http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000))
         )
-        self._model = model
+        self._models = tuple(dict.fromkeys((model, *fallbacks)))
         self._attempts = attempts
         # Only tag suggestions run while someone waits; summaries and translations keep the default.
         self._tag_thinking = thinking_config(thinking_level)
 
-    def _json(self, prompt: str, schema: dict) -> dict[str, str]:
+    def _json(self, prompt: str, schema: dict) -> tuple[dict[str, str], str]:
+        """The answer's fields and the model that wrote it."""
         config = types.GenerateContentConfig(
             temperature=0.2,
             response_mime_type="application/json",
             response_json_schema=schema,
         )
 
-        def request() -> dict[str, str]:
+        def request(model: str) -> dict[str, str]:
             response = self._client.models.generate_content(
-                model=self._model, contents=prompt, config=config
+                model=model, contents=prompt, config=config
             )
             data = json.loads(response.text or "")
             if all(isinstance(data.get(k), str) for k in schema["required"]):
@@ -154,7 +157,7 @@ class GeminiExperienceAI:
             raise ValueError(f"missing keys in {list(data)}")
 
         try:
-            return call_gemini(request, self._attempts)
+            return call_gemini(request, self._models, self._attempts)
         except Exception as exc:  # network, quota, safety block, bad JSON, daily budget
             logger.warning("Gemini experience call failed: %s", exc)
             raise AIUnavailable(str(exc)) from exc
@@ -170,10 +173,11 @@ class GeminiExperienceAI:
             count=MAX_SUGGESTED_TAGS, language=_LANGUAGE[locale], title=title, text=text
         )
         try:
-            response = call_gemini(
-                lambda: self._client.models.generate_content(
-                    model=self._model, contents=prompt, config=config
-                )
+            response, _ = call_gemini(
+                lambda model: self._client.models.generate_content(
+                    model=model, contents=prompt, config=config
+                ),
+                self._models,
             )
             tags = json.loads(response.text or "").get("tags")
         except Exception as exc:  # network, quota, safety block, bad JSON, daily budget
@@ -184,19 +188,19 @@ class GeminiExperienceAI:
         return [t for t in tags if isinstance(t, str)]
 
     def summarize(self, original_voice: str, locale: Locale) -> SummaryDraft:
-        data = self._json(
+        data, model = self._json(
             _SUMMARY_PROMPT.format(language=_LANGUAGE[locale], voice=original_voice),
             _SUMMARY_SCHEMA,
         )
         if not data["situation"] or not data["reminder"]:
             raise AIUnavailable("empty summary")
-        return SummaryDraft(**data, model_name=self._model)
+        return SummaryDraft(**data, model_name=model)
 
     def translate(
         self, fields: TranslatedExperience, source: Locale, target: Locale
     ) -> TranslatedExperience:
         payload = json.dumps(fields.__dict__, ensure_ascii=False)
-        data = self._json(
+        data, _ = self._json(
             _TRANSLATE_PROMPT.format(
                 source=_LANGUAGE[source], target=_LANGUAGE[target], payload=payload
             ),
@@ -228,4 +232,5 @@ def get_experience_ai() -> ExperienceAI:
         settings.gemini_model,
         settings.gemini_timeout_seconds,
         thinking_level=settings.gemini_thinking_level,
+        fallbacks=settings.gemini_fallback_models,
     )

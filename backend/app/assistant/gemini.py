@@ -1,6 +1,7 @@
 """Gemini adapter: manual function calling so the agent loop owns every tool execution."""
 
 import logging
+from collections.abc import Sequence
 
 from google import genai
 from google.genai import types
@@ -28,13 +29,18 @@ def thinking_config(level: str) -> types.ThinkingConfig | None:
 
 class GeminiLLM:
     def __init__(
-        self, api_key: str, model: str, timeout_seconds: float, thinking_level: str = ""
+        self,
+        api_key: str,
+        model: str,
+        timeout_seconds: float,
+        thinking_level: str = "",
+        fallbacks: Sequence[str] = (),
     ) -> None:
         self._client = genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000)),
         )
-        self._model = model
+        self._models = tuple(dict.fromkeys((model, *fallbacks)))
         self._thinking = thinking_config(thinking_level)
 
     def generate(self, system: str, history: list[Turn], tools: list[ToolSpec]) -> ModelTurn:
@@ -46,10 +52,11 @@ class GeminiLLM:
             thinking_config=self._thinking,
         )
         try:
-            response = call_gemini(
-                lambda: self._client.models.generate_content(
-                    model=self._model, contents=to_contents(history), config=config
-                )
+            response, _ = call_gemini(
+                lambda model: self._client.models.generate_content(
+                    model=model, contents=to_contents(history), config=config
+                ),
+                self._models,
             )
         except Exception as exc:  # SDK errors or the daily budget; all mean "no answer".
             logger.warning("Gemini request failed: %s", exc)

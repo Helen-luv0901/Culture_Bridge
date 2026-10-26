@@ -57,6 +57,11 @@ def render(cases: list[dict], replies: list[AssistantReply]) -> str:
         "# 助理品質檢查（D-17）",
         "",
         f"產生時間 {datetime.now():%Y-%m-%d %H:%M}，模型 {settings.gemini_model}"
+        + (
+            f"（額度用完時改用 {', '.join(settings.gemini_fallback_models)}）"
+            if settings.gemini_fallback_models
+            else ""
+        )
         + ("" if settings.gemini_api_key else "（沒有 GEMINI_API_KEY：全部是備用回覆）"),
         "",
     ]

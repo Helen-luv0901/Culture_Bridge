@@ -8,6 +8,7 @@ points back to the reports it came from so the reviewer can read the students' o
 
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Protocol
@@ -117,11 +118,18 @@ def _parse(data: object, known_ids: set[str], model: str) -> FeedbackSummaryDraf
 
 
 class GeminiFeedbackAI:
-    def __init__(self, api_key: str, model: str, timeout_seconds: float, attempts: int = 2):
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        timeout_seconds: float,
+        attempts: int = 2,
+        fallbacks: Sequence[str] = (),
+    ):
         self._client = genai.Client(
             api_key=api_key, http_options=types.HttpOptions(timeout=int(timeout_seconds * 1000))
         )
-        self._model = model
+        self._models = tuple(dict.fromkeys((model, *fallbacks)))
         self._attempts = attempts
 
     def summarize(
@@ -134,14 +142,15 @@ class GeminiFeedbackAI:
         )
         known = {item.id for item in items}
 
-        def request() -> FeedbackSummaryDraft:
+        def request(model: str) -> FeedbackSummaryDraft:
             response = self._client.models.generate_content(
-                model=self._model, contents=prompt, config=config
+                model=model, contents=prompt, config=config
             )
-            return _parse(json.loads(response.text or ""), known, self._model)
+            return _parse(json.loads(response.text or ""), known, model)
 
         try:
-            return call_gemini(request, self._attempts)
+            draft, _ = call_gemini(request, self._models, self._attempts)
+            return draft
         except Exception as exc:  # network, quota, safety block, bad JSON, daily budget
             logger.warning("Gemini feedback summary failed: %s", exc)
             raise AIUnavailable(str(exc)) from exc
@@ -160,5 +169,8 @@ def get_feedback_ai() -> FeedbackAI:
     if not settings.gemini_api_key:
         return UnavailableFeedbackAI()
     return GeminiFeedbackAI(
-        settings.gemini_api_key, settings.gemini_model, settings.gemini_timeout_seconds
+        settings.gemini_api_key,
+        settings.gemini_model,
+        settings.gemini_timeout_seconds,
+        fallbacks=settings.gemini_fallback_models,
     )

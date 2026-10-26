@@ -44,8 +44,17 @@ image="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --projec
 code_default="$(git -C "$(dirname "$0")/.." show "${image##*:}:backend/app/core/config.py" 2>/dev/null \
   | sed -n 's/.*GEMINI_MODEL", "\([^"]*\)".*/\1/p')"
 MODEL="${env_model:-${code_default:-gemini-3.8-flash}}"
+# Backup models for when MODEL's free quota is used up (GEMINI_FALLBACK_MODELS, comma-separated).
+env_fallbacks="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" \
+  --format=json 2>/dev/null | python3 -c 'import json,sys
+env=json.load(sys.stdin)["spec"]["template"]["spec"]["containers"][0].get("env",[])
+print(next((e.get("value","") for e in env if e["name"]=="GEMINI_FALLBACK_MODELS"),""))' 2>/dev/null || true)"
+code_fallbacks="$(git -C "$(dirname "$0")/.." show "${image##*:}:backend/app/core/config.py" 2>/dev/null \
+  | sed -n 's/.*GEMINI_FALLBACK_MODELS", "\([^"]*\)".*/\1/p')"
+FALLBACKS="${env_fallbacks:-${code_fallbacks}}"
 note "線上版本：${image##*:}"
 note "模型：${MODEL}$([[ -n "${env_model}" ]] && echo '（服務的 GEMINI_MODEL 設定）' || echo '（程式預設值）')"
+note "備用模型：${FALLBACKS:-（沒有）}"
 
 bold "2. 金鑰"
 if ! KEY="$(gcloud secrets versions access latest --secret=gemini-api-key --project="${PROJECT}" 2>/dev/null)" \
@@ -83,6 +92,12 @@ if [[ "${result%% *}" == "200" ]]; then
 else
   bad "失敗：HTTP ${result%% *} $(error_of <<<"${result}")"
 fi
+
+for fallback in ${FALLBACKS//,/ }; do
+  bold "4b. 備用模型 ${fallback}（${MODEL} 額度用完時改用）"
+  result="$(call POST "models/${fallback}:generateContent" "${body}")"
+  if [[ "${result%% *}" == "200" ]]; then ok "可以用"; else bad "失敗：HTTP ${result%% *} $(error_of <<<"${result}")"; fi
+done
 
 bold "5. 語意搜尋用的 embedding（${EMBEDDING_MODEL}）"
 result="$(call POST "models/${EMBEDDING_MODEL}:embedContent" '{"content":{"parts":[{"text":"居留證"}]}}')"

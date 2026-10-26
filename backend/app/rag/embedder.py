@@ -35,14 +35,16 @@ class GeminiEmbedder:
 
     def _embed(self, texts: list[str], task: str) -> list[list[float]]:
         try:
-            response = call_gemini(
-                lambda: self._client.models.embed_content(
-                    model=self._model,
+            # No backup model: another embedding model's vectors wouldn't match the index.
+            response, _ = call_gemini(
+                lambda model: self._client.models.embed_content(
+                    model=model,
                     contents=texts,
                     config=types.EmbedContentConfig(
                         task_type=task, output_dimensionality=EMBEDDING_DIMENSIONS
                     ),
                 ),
+                (self._model,),
                 attempts=2,
             )
         except Exception as exc:  # network, quota, daily budget
