@@ -348,6 +348,15 @@ class UserBlock(Base):
     created_at: Mapped[datetime] = _created()
 
 
+class UsageCounter(Base):
+    """How often something was used on one Taiwan day, for daily caps (migration 0013)."""
+
+    __tablename__ = "usage_counters"
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer)
+
+
 class AdminAction(Base):
     __tablename__ = "admin_actions"
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)

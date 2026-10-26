@@ -18,6 +18,7 @@ from app.core.auth import OptionalUser
 from app.core.config import get_settings
 from app.core.db import DbSession
 from app.core.errors import ApiError
+from app.core.usage import DatabaseCounter
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -43,7 +44,9 @@ def get_services() -> AssistantServices:
         else UnavailableLLM()
     )
     assistant = Assistant(
-        llm=BudgetedLLM(llm, DailyBudget(settings.assistant_daily_llm_calls)),
+        llm=BudgetedLLM(
+            llm, DailyBudget(settings.assistant_daily_llm_calls, counter=DatabaseCounter())
+        ),
         data=None,  # each request reads through its own database session
         registry=default_registry(),
         memory=ConversationStore(max_exchanges=settings.assistant_memory_exchanges),
@@ -51,7 +54,9 @@ def get_services() -> AssistantServices:
     )
     return AssistantServices(
         assistant=assistant,
-        limiter=UsageLimiter(settings.assistant_per_minute, settings.assistant_per_day),
+        limiter=UsageLimiter(
+            settings.assistant_per_minute, settings.assistant_per_day, counter=DatabaseCounter()
+        ),
         allow_guests=settings.assistant_allow_guests,
     )
 

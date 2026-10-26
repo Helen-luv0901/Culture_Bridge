@@ -10,13 +10,16 @@ import logging
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, Field
 
+from app.core.usage import MemoryCounter
 from app.services.common import DailyAllowance
 
 router = APIRouter(tags=["client-errors"])
 logger = logging.getLogger("app.client")
 
 REPORTS_PER_DAY = 500  # per server process; enough to notice a problem, too few to flood logs
-_reports = DailyAllowance()
+_reports = DailyAllowance("client-errors")
+# Checked first, in memory: a flood past the cap never reaches the database.
+_reports_here = MemoryCounter()
 
 
 class ClientErrorIn(BaseModel):
@@ -33,7 +36,7 @@ def _one_line(text: str) -> str:
 
 @router.post("/client-errors", status_code=status.HTTP_204_NO_CONTENT)
 def report_client_error(body: ClientErrorIn) -> Response:
-    if _reports.take("all", REPORTS_PER_DAY):
+    if _reports_here.take("all", REPORTS_PER_DAY) and _reports.take("all", REPORTS_PER_DAY):
         logger.error(
             "App error on %s (%s): %s :: %s",
             _one_line(body.route or "?"),

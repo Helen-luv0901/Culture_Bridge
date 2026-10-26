@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -75,7 +77,8 @@ def test_dev_tokens_rejected_outside_development(monkeypatch):
 
 def test_firebase_verifier_checks_issuer(monkeypatch):
     verifier = FirebaseTokenVerifier("culture-bridge")
-    monkeypatch.setattr(verifier, "_get_certs", lambda: {"k": "cert"})
+    certs = {"k": "cert"}
+    monkeypatch.setattr(verifier, "_get_certs", lambda max_age=None: certs)
     monkeypatch.setattr(
         "app.core.auth.jwt.decode",
         lambda *a, **k: {"iss": "https://securetoken.google.com/other", "sub": "u"},
@@ -95,6 +98,31 @@ def test_firebase_verifier_checks_issuer(monkeypatch):
     with pytest.raises(ApiError) as exc:
         verifier.verify("t")
     assert exc.value.code == "invalid_token"
+
+
+def test_firebase_keys_are_fetched_again_when_google_rotates_them(monkeypatch):
+    verifier = FirebaseTokenVerifier("culture-bridge")
+    clock = [1000.0]
+    monkeypatch.setattr("app.core.auth.time.monotonic", lambda: clock[0])
+    published = iter([{"old-key": "cert"}, {"new-key": "cert"}])
+    fetches: list[str] = []
+
+    def get(url, timeout):
+        fetches.append(url)
+        certs = next(published)
+        return SimpleNamespace(raise_for_status=lambda: None, json=lambda: certs)
+
+    def decode(token, certs, **_):
+        if "new-key" not in certs:
+            raise ValueError("unknown key id")
+        return {"iss": "https://securetoken.google.com/culture-bridge", "sub": "uid1"}
+
+    monkeypatch.setattr("app.core.auth.requests.get", get)
+    monkeypatch.setattr("app.core.auth.jwt.decode", decode)
+    verifier._get_certs()  # the old keys are cached
+    clock[0] += 120  # Google switches keys; tokens are now signed with the new one
+    assert verifier.verify("t").subject == "firebase:uid1"
+    assert len(fetches) == 2
 
 
 def test_current_user_staff_flag():

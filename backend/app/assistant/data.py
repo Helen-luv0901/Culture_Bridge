@@ -110,6 +110,11 @@ class AssistantDataSource(Protocol):
         """Official passages and student content by meaning; None when unavailable."""
         ...
 
+    def release(self) -> None:
+        """Called before each model call: stop holding a database connection while the model
+        thinks (it can take many seconds)."""
+        ...
+
 
 # Demo JSON uses UI labels and camelCase keys; map them onto the schema vocabulary.
 _DEMO_STATUS: dict[str, VerificationStatus] = {
@@ -175,6 +180,9 @@ class DemoDataSource:
 
     def semantic_search(self, query: str, limit: int) -> dict | None:
         return None
+
+    def release(self) -> None:
+        pass
 
 
 def _localized(zh: str, en: str | None) -> Localized:

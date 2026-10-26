@@ -1,5 +1,7 @@
 """AssistantDataSource over the real services, as seen by one viewer (blocks apply)."""
 
+import threading
+import time
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
@@ -100,10 +102,7 @@ class PostgresAssistantData:
 
     def _all_actions(self) -> dict[str, ActionRecord]:
         if self._actions is None:
-            self._actions = {
-                a.id: _action_record(actions.get_action(self.db, a.id))
-                for a in actions.list_actions(self.db)
-            }
+            self._actions = _published_actions(self.db)
         return self._actions
 
     def search_actions(self, query: str, limit: int) -> list[ActionRecord]:
@@ -144,10 +143,41 @@ class PostgresAssistantData:
         ]
 
     def semantic_search(self, query: str, limit: int) -> dict | None:
+        self.release()  # the query is embedded first, a call to Gemini
         try:
             return semantic_search(self.db, self.embedder, query, self.viewer, limit)
         except EmbeddingUnavailable:
             return None
+
+    def release(self) -> None:
+        # Nothing is written through this session before the model answers; ending the read
+        # transaction returns the connection to the pool (loaded objects stay usable).
+        self.db.commit()
+
+
+# Every message searches the procedures, and loading them all is a few queries per card, so
+# they're kept for a minute (a newly published version reaches the assistant within that).
+_ACTIONS_TTL_SECONDS = 60.0
+_actions_cache: tuple[float, dict[str, ActionRecord]] | None = None
+_actions_lock = threading.Lock()
+
+
+def _published_actions(db: Session) -> dict[str, ActionRecord]:
+    global _actions_cache
+    with _actions_lock:
+        cached = _actions_cache
+    if cached is not None and time.monotonic() - cached[0] < _ACTIONS_TTL_SECONDS:
+        return cached[1]
+    records = {a.id: _action_record(actions.get_action(db, a.id)) for a in actions.list_actions(db)}
+    with _actions_lock:
+        _actions_cache = (time.monotonic(), records)
+    return records
+
+
+def forget_cached_actions() -> None:
+    global _actions_cache
+    with _actions_lock:
+        _actions_cache = None
 
 
 def _action_text(a: ActionRecord) -> str:

@@ -17,7 +17,11 @@ def get_engine() -> Engine:
     return create_engine(
         get_settings().database_url,
         pool_pre_ping=True,
+        # Per instance, plus app.core.usage's 2: Cloud SQL db-f1-micro allows about 25
+        # connections for two instances and the jobs. A request waits at most 15 s for one.
         pool_size=5,
+        max_overflow=3,
+        pool_timeout=15,
         connect_args={"connect_timeout": 10},
     )
 

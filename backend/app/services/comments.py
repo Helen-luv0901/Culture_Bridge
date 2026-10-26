@@ -17,6 +17,7 @@ from app.core.errors import ApiError, forbidden, not_found
 from app.models import CommentLike, Experience, ExperienceComment, User
 from app.services import avatars
 from app.services.blocking import blocks_post, hides_comment
+from app.services.common import log_admin
 
 MAX_BODY = 1000
 MAX_COMMENTS = 500  # per post, newest kept visible
@@ -201,6 +202,8 @@ def delete_comment(db: Session, user: CurrentUser, comment_id: str) -> None:
         raise not_found("comment_not_found")
     if comment.author_id != user.id and not user.is_staff:
         raise forbidden("not_comment_author")
+    if comment.author_id != user.id:
+        log_admin(db, user, "delete", "comment", comment.id, experience_id=comment.experience_id)
     thread = select(ExperienceComment.id).where(
         (ExperienceComment.id == comment.id) | (ExperienceComment.reply_to_id == comment.id)
     )

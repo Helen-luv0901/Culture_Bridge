@@ -5,6 +5,7 @@ import logging
 from google import genai
 from google.genai import types
 
+from app.ai.calls import call_gemini
 from app.assistant.llm import (
     LLMError,
     ModelTurn,
@@ -45,10 +46,12 @@ class GeminiLLM:
             thinking_config=self._thinking,
         )
         try:
-            response = self._client.models.generate_content(
-                model=self._model, contents=to_contents(history), config=config
+            response = call_gemini(
+                lambda: self._client.models.generate_content(
+                    model=self._model, contents=to_contents(history), config=config
+                )
             )
-        except Exception as exc:  # SDK raises several error types; all mean "no answer".
+        except Exception as exc:  # SDK errors or the daily budget; all mean "no answer".
             logger.warning("Gemini request failed: %s", exc)
             raise LLMError(str(exc)) from exc
         return from_response(response)

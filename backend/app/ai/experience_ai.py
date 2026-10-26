@@ -14,6 +14,7 @@ from typing import Literal, Protocol
 from google import genai
 from google.genai import types
 
+from app.ai.calls import call_gemini
 from app.assistant.gemini import thinking_config
 from app.core.config import get_settings
 
@@ -142,20 +143,21 @@ class GeminiExperienceAI:
             response_mime_type="application/json",
             response_json_schema=schema,
         )
-        last: Exception | None = None
-        for _ in range(self._attempts):
-            try:
-                response = self._client.models.generate_content(
-                    model=self._model, contents=prompt, config=config
-                )
-                data = json.loads(response.text or "")
-                if all(isinstance(data.get(k), str) for k in schema["required"]):
-                    return {k: data[k].strip() for k in schema["required"]}
-                last = ValueError(f"missing keys in {list(data)}")
-            except Exception as exc:  # network, quota, safety block, bad JSON
-                last = exc
-        logger.warning("Gemini experience call failed: %s", last)
-        raise AIUnavailable(str(last))
+
+        def request() -> dict[str, str]:
+            response = self._client.models.generate_content(
+                model=self._model, contents=prompt, config=config
+            )
+            data = json.loads(response.text or "")
+            if all(isinstance(data.get(k), str) for k in schema["required"]):
+                return {k: data[k].strip() for k in schema["required"]}
+            raise ValueError(f"missing keys in {list(data)}")
+
+        try:
+            return call_gemini(request, self._attempts)
+        except Exception as exc:  # network, quota, safety block, bad JSON, daily budget
+            logger.warning("Gemini experience call failed: %s", exc)
+            raise AIUnavailable(str(exc)) from exc
 
     def suggest_tags(self, title: str, text: str, locale: Locale) -> list[str]:
         config = types.GenerateContentConfig(
@@ -168,11 +170,13 @@ class GeminiExperienceAI:
             count=MAX_SUGGESTED_TAGS, language=_LANGUAGE[locale], title=title, text=text
         )
         try:
-            response = self._client.models.generate_content(
-                model=self._model, contents=prompt, config=config
+            response = call_gemini(
+                lambda: self._client.models.generate_content(
+                    model=self._model, contents=prompt, config=config
+                )
             )
             tags = json.loads(response.text or "").get("tags")
-        except Exception as exc:  # network, quota, safety block, bad JSON
+        except Exception as exc:  # network, quota, safety block, bad JSON, daily budget
             logger.warning("Gemini tag suggestion failed: %s", exc)
             raise AIUnavailable(str(exc)) from exc
         if not isinstance(tags, list):

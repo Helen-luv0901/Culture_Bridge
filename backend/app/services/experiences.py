@@ -12,11 +12,13 @@ with their nickname or real name, read live from the account.
 
 import logging
 import re
+import threading
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Select, delete, exists, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ai.experience_ai import AIUnavailable, ExperienceAI, TranslatedExperience
@@ -38,7 +40,7 @@ from app.models import (
 )
 from app.rag.index import remove_content
 from app.services import avatars
-from app.services.blocking import hides_experience
+from app.services.blocking import hides_comment_on_its_post, hides_experience
 from app.services.common import now
 
 logger = logging.getLogger(__name__)
@@ -299,19 +301,25 @@ def _category(experience: Experience) -> str:
     )
 
 
-def _visible_comments(db: Session, ids: list[str]) -> dict[str, int]:
+def _visible_comments(
+    db: Session, ids: list[str], viewer: CurrentUser | None = None
+) -> dict[str, int]:
+    """Comments on each post as `viewer` sees them: without the ones they blocked, or the
+    count would tell them a blocked author commented there."""
     if not ids:
         return {}
-    return dict(
-        db.execute(  # type: ignore[arg-type]
-            select(ExperienceComment.experience_id, func.count())
-            .where(
-                ExperienceComment.experience_id.in_(ids),
-                ExperienceComment.status == "visible",
-            )
-            .group_by(ExperienceComment.experience_id)
-        ).all()
+    query = (
+        select(ExperienceComment.experience_id, func.count())
+        .join(Experience, Experience.id == ExperienceComment.experience_id)
+        .where(
+            ExperienceComment.experience_id.in_(ids),
+            ExperienceComment.status == "visible",
+        )
+        .group_by(ExperienceComment.experience_id)
     )
+    if viewer is not None:
+        query = query.where(~hides_comment_on_its_post(viewer.id))
+    return dict(db.execute(query).all())  # type: ignore[arg-type]
 
 
 def _counts(db: Session, ids: list[str]) -> dict[str, dict[str, int]]:
@@ -372,7 +380,7 @@ def _public_items(
             elif author is not None and experience.author_display == "real_name":
                 names[experience.id] = author.real_name
     photos = avatars.urls_for(db, signed)
-    comments = _visible_comments(db, ids)
+    comments = _visible_comments(db, ids, viewer)
     guides: dict[str, str] = {}
     if ids:
         for action_id, experience_id in db.execute(
@@ -692,6 +700,7 @@ def generate_summary(
     experience = _own_draft(db, user, experience_id)
     if _summaries_today(db, user) >= daily_limit:
         raise ApiError(429, "ai_daily_limit_reached")
+    db.commit()  # hand the connection back while the AI works (up to a minute)
     try:
         draft = ai.summarize(experience.original_voice, experience.source_locale)  # type: ignore[arg-type]
     except AIUnavailable as exc:
@@ -1001,34 +1010,57 @@ def translate(db: Session, ai: ExperienceAI, experience_id: str, target: Locale)
         return False
     summary = db.get(ExperienceSummary, experience.confirmed_summary_id)
     assert summary is not None
-    if db.get(ExperienceTranslation, (experience.id, summary.id, target)) is not None:
+    key = (experience.id, summary.id, target)
+    if db.get(ExperienceTranslation, key) is not None:
         return False
-    translated = ai.translate(
-        TranslatedExperience(
-            original_voice=experience.original_voice,
-            situation=summary.situation,
-            feeling_or_attempt=summary.feeling_or_attempt,
-            reminder=summary.reminder,
-            title=experience.title or "",
-        ),
-        experience.source_locale,  # type: ignore[arg-type]
-        target,
+    fields = TranslatedExperience(
+        original_voice=experience.original_voice,
+        situation=summary.situation,
+        feeling_or_attempt=summary.feeling_or_attempt,
+        reminder=summary.reminder,
+        title=experience.title or "",
     )
-    db.add(
-        ExperienceTranslation(
-            experience_id=experience.id,
-            summary_id=summary.id,
-            locale=target,
-            method="ai",
-            original_voice=translated.original_voice,
-            situation=translated.situation,
-            feeling_or_attempt=translated.feeling_or_attempt,
-            reminder=translated.reminder,
-            title=translated.title or None,
+    source: Locale = experience.source_locale  # type: ignore[assignment]
+    db.commit()  # hand the connection back while the AI works
+    # Readers opening the same new post at once would each pay for the same translation;
+    # while one request is translating it, the others show the original instead of waiting.
+    lock = _translation_lock(key)
+    if not lock.acquire(blocking=False):
+        return False
+    try:
+        if db.get(ExperienceTranslation, key) is not None:  # finished just before
+            return False
+        translated = ai.translate(fields, source, target)
+        db.add(
+            ExperienceTranslation(
+                experience_id=key[0],
+                summary_id=key[1],
+                locale=target,
+                method="ai",
+                original_voice=translated.original_voice,
+                situation=translated.situation,
+                feeling_or_attempt=translated.feeling_or_attempt,
+                reminder=translated.reminder,
+                title=translated.title or None,
+            )
         )
-    )
-    db.commit()
+        try:
+            db.commit()
+        except IntegrityError:  # another server instance stored it first
+            db.rollback()
+            return False
+    finally:
+        lock.release()
     return True
+
+
+_translation_locks: dict[tuple[str, str, str], threading.Lock] = {}
+_translation_locks_guard = threading.Lock()
+
+
+def _translation_lock(key: tuple[str, str, str]) -> threading.Lock:
+    with _translation_locks_guard:
+        return _translation_locks.setdefault(key, threading.Lock())
 
 
 def translate_in_background(session_factory, ai: ExperienceAI, experience_id: str) -> None:

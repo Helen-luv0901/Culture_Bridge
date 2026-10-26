@@ -148,7 +148,7 @@ def test_blocks_from_before_personas_still_hide_both(api, db):
 
 def test_new_blocks_are_capped_per_day(api, monkeypatch):
     monkeypatch.setattr(moderation, "MAX_BLOCKS_PER_DAY", 1)
-    monkeypatch.setattr(moderation, "_new_blocks", DailyAllowance())
+    monkeypatch.setattr(moderation, "_new_blocks", DailyAllowance("blocks"))
     first = publish_new(api)["id"]
     second = publish_new(api, headers=LIN)["id"]
     assert api.post("/api/blocks", json={"experience_id": first}, headers=KAI).status_code == 201
@@ -233,3 +233,37 @@ def test_deleting_a_reviewer_keeps_verification_evidence(api, db):
     db.expire_all()
     assert db.get(VerificationRecord, record.id).reviewer_id == "deleted-staff"
     assert api.get("/api/actions/work-permit").json()["verification_status"] == "verified"
+
+
+def test_reports_are_capped_per_day(api, monkeypatch):
+    monkeypatch.setattr(moderation, "MAX_REPORTS_PER_DAY", 1)
+    first = publish_new(api)["id"]
+    second = publish_new(api, original_voice="另一則經驗")["id"]
+    assert report(api, first, KAI).status_code == 201
+    over = report(api, second, KAI)
+    assert over.status_code == 429 and over.json()["detail"]["code"] == "daily_limit_reached"
+
+
+def test_staff_deleting_a_comment_is_logged(api, db):
+    eid = publish_new(api)["id"]
+    url = f"/api/experiences/{eid}/comments"
+    comment = api.post(url, json={"body": "買我的東西"}, headers=KAI).json()
+    assert api.delete(f"/api/comments/{comment['id']}", headers=REVIEWER).status_code == 204
+    [entry] = db.scalars(select(AdminAction).where(AdminAction.target_type == "comment")).all()
+    assert entry.action == "delete" and entry.target_id == comment["id"]
+
+
+def test_comment_counts_leave_out_blocked_comments(api):
+    commented = publish_new(api, headers=LIN)["id"]
+    blocked_post = publish_new(api)["id"]
+    url = f"/api/experiences/{commented}/comments"
+    api.post(url, json={"body": "匿名留言"}, headers=MEI)
+    api.post(url, json={"body": "另一則"}, headers=JO)
+    api.post("/api/blocks", json={"experience_id": blocked_post}, headers=KAI)
+
+    def count_for(headers) -> int:
+        items = api.get("/api/experiences", headers=headers).json()["items"]
+        return next(e["comment_count"] for e in items if e["id"] == commented)
+
+    assert count_for(KAI) == 1 == len(api.get(url, headers=KAI).json())
+    assert count_for(LIN) == 2

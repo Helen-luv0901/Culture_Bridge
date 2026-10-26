@@ -116,6 +116,7 @@ class Assistant:
 
         # The extra iteration lets the model answer after its last allowed round of tool calls.
         for round_number in range(self._max_tool_rounds + 1):
+            source.release()
             try:
                 turn = self._llm.generate(system, history, specs)
             except LLMError as exc:

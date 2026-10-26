@@ -15,6 +15,7 @@ from typing import Protocol
 from google import genai
 from google.genai import types
 
+from app.ai.calls import call_gemini
 from app.ai.experience_ai import _LANGUAGE, AIUnavailable, Locale
 from app.core.config import get_settings
 
@@ -132,17 +133,18 @@ class GeminiFeedbackAI:
             temperature=0.2, response_mime_type="application/json", response_json_schema=_SCHEMA
         )
         known = {item.id for item in items}
-        last: Exception | None = None
-        for _ in range(self._attempts):
-            try:
-                response = self._client.models.generate_content(
-                    model=self._model, contents=prompt, config=config
-                )
-                return _parse(json.loads(response.text or ""), known, self._model)
-            except Exception as exc:  # network, quota, safety block, bad JSON
-                last = exc
-        logger.warning("Gemini feedback summary failed: %s", last)
-        raise AIUnavailable(str(last))
+
+        def request() -> FeedbackSummaryDraft:
+            response = self._client.models.generate_content(
+                model=self._model, contents=prompt, config=config
+            )
+            return _parse(json.loads(response.text or ""), known, self._model)
+
+        try:
+            return call_gemini(request, self._attempts)
+        except Exception as exc:  # network, quota, safety block, bad JSON, daily budget
+            logger.warning("Gemini feedback summary failed: %s", exc)
+            raise AIUnavailable(str(exc)) from exc
 
 
 class UnavailableFeedbackAI:

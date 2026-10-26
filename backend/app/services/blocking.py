@@ -69,6 +69,21 @@ def hides_comment(viewer_id: str, post: Experience) -> ColumnElement[bool]:
     )
 
 
+def hides_comment_on_its_post(viewer_id: str) -> ColumnElement[bool]:
+    """hides_comment for a query that joins each comment to its post (Experience)."""
+    post_persona = _experience_persona_sql()
+    persona = case(
+        (ExperienceComment.author_id == Experience.author_id, post_persona),
+        (ExperienceComment.author_display == "nickname", "named"),
+        else_="anonymous",
+    )
+    return exists().where(
+        UserBlock.blocker_id == viewer_id,
+        UserBlock.blocked_id == ExperienceComment.author_id,
+        _covers(persona),
+    )
+
+
 def blocks_post(db: Session, viewer_id: str, post: Experience) -> bool:
     persona = experience_persona(post.author_display)
     return find_block(db, viewer_id, post.author_id, persona) is not None

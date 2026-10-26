@@ -37,7 +37,7 @@ Google Cloud 主控台 → API 和服務 → 憑證 → 點這把金鑰：
 
 - Google Cloud 主控台 → API 和服務 → Generative Language API → **配額**：把每日請求數調低到夠開發用就好
 - 帳單 → **預算與快訊**：設一個 Gemini 專用預算，達到 50%、90%、100% 時寄信
-- 後端另有自己的上限：`ASSISTANT_DAILY_LLM_CALLS`（全體每日呼叫數）、`ASSISTANT_PER_DAY`（每人每日訊息數），
+- 後端另有自己的上限（存在資料庫，重啟不會歸零）：`GEMINI_DAILY_CALLS`（所有 Gemini 呼叫每日總數，含翻譯與 embedding）、`ASSISTANT_DAILY_LLM_CALLS`（助理每日呼叫數）、`ASSISTANT_PER_DAY`（每人每日訊息數），
   見 [backend/README.md](../../backend/README.md)
 
 ## 4. 測試金鑰

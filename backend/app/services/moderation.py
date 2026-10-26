@@ -34,7 +34,7 @@ from app.models import (
 )
 from app.rag.index import remove_content
 from app.services.blocking import Persona, experience_persona, find_block
-from app.services.common import DailyAllowance, log_admin, now, start_of_today
+from app.services.common import DailyAllowance, log_admin, now
 from app.services.experiences import delete_experiences
 from app.services.metrics import forget_activity
 
@@ -43,8 +43,10 @@ ReportReason = Literal[
 ]
 AUTO_HIDE_REPORTS = 3  # distinct reporters before a post or comment is hidden pending review
 DELETED_STAFF = "deleted-staff"
+MAX_REPORTS_PER_DAY = 20  # per reporter: three accounts can hide a post, not a whole feed
+_new_reports = DailyAllowance("reports")
 MAX_BLOCKS_PER_DAY = 20  # per blocker; plenty for real use, too few to map who wrote what
-_new_blocks = DailyAllowance()
+_new_blocks = DailyAllowance("blocks")
 
 
 class ReportIn(BaseModel):
@@ -110,6 +112,12 @@ def report_content(db: Session, user: CurrentUser, body: ReportIn) -> ReportAck:
     return report_experience(db, user, body)
 
 
+def _count_report(user: CurrentUser) -> None:
+    """Called once a report is valid, so a mistaken one doesn't use up the day's allowance."""
+    if not _new_reports.take(user.id, MAX_REPORTS_PER_DAY):
+        raise ApiError(429, "daily_limit_reached")
+
+
 def _add_report(db: Session, report: Report) -> int:
     """Save the report; returns how many reports on the target are pending."""
     db.add(report)
@@ -136,6 +144,7 @@ def _report_comment(db: Session, user: CurrentUser, comment_id: str, body: Repor
         raise not_found("comment_not_found")
     if comment.author_id == user.id:
         raise ApiError(422, "cannot_report_own")
+    _count_report(user)
     report = Report(
         reporter_id=user.id,
         target_type="comment",
@@ -155,6 +164,7 @@ def report_experience(db: Session, user: CurrentUser, body: ReportIn) -> ReportA
         raise not_found("experience_not_found")
     if experience.author_id == user.id:
         raise ApiError(422, "cannot_report_own")
+    _count_report(user)
     report = Report(
         reporter_id=user.id,
         target_type="experience",
@@ -294,11 +304,8 @@ def block_author(db: Session, user: CurrentUser, experience_id: str) -> BlockOut
     block = find_block(db, user.id, experience.author_id, persona)
     if block is not None:
         return _block_out(block)
-    # Counted in the database (survives restarts and spans instances) and in this process
-    # (unblocking and blocking again still counts).
-    if _blocks_today(db, user) >= MAX_BLOCKS_PER_DAY or not _new_blocks.take(
-        user.id, MAX_BLOCKS_PER_DAY
-    ):
+    # Counts every new block, so unblocking and blocking again still uses the allowance.
+    if not _new_blocks.take(user.id, MAX_BLOCKS_PER_DAY):
         raise ApiError(429, "daily_limit_reached")
     block = UserBlock(blocker_id=user.id, blocked_id=experience.author_id, persona=persona)
     db.add(block)
@@ -310,17 +317,6 @@ def block_author(db: Session, user: CurrentUser, experience_id: str) -> BlockOut
         if block is None:
             raise
     return _block_out(block)
-
-
-def _blocks_today(db: Session, user: CurrentUser) -> int:
-    return (
-        db.scalar(
-            select(func.count())
-            .select_from(UserBlock)
-            .where(UserBlock.blocker_id == user.id, UserBlock.created_at >= start_of_today())
-        )
-        or 0
-    )
 
 
 def my_blocks(db: Session, user: CurrentUser) -> list[BlockOut]:

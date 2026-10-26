@@ -36,6 +36,7 @@ from app.assistant.limits import UsageLimiter
 from app.assistant.llm import LLMError, ModelTurn, ToolCall, ToolSpec, Turn
 from app.assistant.memory import ConversationStore
 from app.assistant.operations import DemoExecutionWriter, OperationService
+from app.assistant.pg_data import forget_cached_actions
 from app.assistant.tools import ToolContext, default_registry
 from app.core.auth import CurrentUser
 from app.core.config import get_settings
@@ -66,6 +67,7 @@ def database() -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def clean_tables(database) -> Iterator[None]:
     yield
+    forget_cached_actions()
     with get_engine().begin() as conn:
         tables = conn.execute(
             text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")

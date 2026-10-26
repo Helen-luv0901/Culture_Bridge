@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -24,13 +24,36 @@ from app.web import mount_web_app
 
 logger = logging.getLogger(__name__)
 
+_dev = get_settings().is_development
 app = FastAPI(
     title="Culture Bridge API",
     version="0.2.0",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    # The interactive docs list every route, admin ones included: development only.
+    docs_url="/api/docs" if _dev else None,
+    openapi_url="/api/openapi.json" if _dev else None,
+    redoc_url=None,
 )
 register_error_handlers(app)
+
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    # No other site may show the app in a frame (clickjacking).
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    if not _dev:  # production is HTTPS only (Cloud Run)
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return response
+
 
 if get_settings().is_development:
     # `flutter run -d chrome` serves the app from its own localhost port. Production serves the

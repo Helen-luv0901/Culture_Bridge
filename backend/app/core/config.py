@@ -32,6 +32,8 @@ class Settings:
     assistant_per_minute: int
     assistant_per_day: int
     assistant_daily_llm_calls: int
+    # Every Gemini request (assistant, summaries, translations, tags, embeddings) counts here.
+    gemini_daily_calls: int
     demo_content_path: Path
 
     @property
@@ -58,7 +60,10 @@ def _firebase_web() -> dict[str, str] | None:
 
 @lru_cache
 def get_settings() -> Settings:
-    env = os.getenv("APP_ENV", "development")
+    # Cloud Run sets K_SERVICE (services) or CLOUD_RUN_JOB (jobs): a deployment that lost its
+    # APP_ENV must not fall back to development, which accepts dev:<name> logins.
+    on_cloud_run = bool(os.getenv("K_SERVICE") or os.getenv("CLOUD_RUN_JOB"))
+    env = os.getenv("APP_ENV") or ("production" if on_cloud_run else "development")
     return Settings(
         env=env,
         database_url=os.getenv(
@@ -85,6 +90,7 @@ def get_settings() -> Settings:
         assistant_per_minute=int(os.getenv("ASSISTANT_PER_MINUTE", "10")),
         assistant_per_day=int(os.getenv("ASSISTANT_PER_DAY", "100")),
         assistant_daily_llm_calls=int(os.getenv("ASSISTANT_DAILY_LLM_CALLS", "3000")),
+        gemini_daily_calls=int(os.getenv("GEMINI_DAILY_CALLS", "6000")),
         demo_content_path=Path(
             os.getenv(
                 "DEMO_CONTENT_PATH",

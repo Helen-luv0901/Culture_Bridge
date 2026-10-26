@@ -89,7 +89,7 @@ def keyword_tags(text: str) -> list[str]:
 
 
 # How many model calls each author has made today.
-_allowance = DailyAllowance()
+_allowance = DailyAllowance("tags")
 
 
 def _locale(text: str) -> str:
