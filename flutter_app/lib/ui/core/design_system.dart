@@ -36,6 +36,11 @@ abstract final class Palette {
       onMoss = Color(0xFFFFFFFF);
 }
 
+/// Corner radii: soft, so cards and posts don't feel sharp.
+abstract final class Radii {
+  static const card = 14.0, control = 12.0, pill = 999.0;
+}
+
 class BridgeScope extends InheritedNotifier<BridgeViewModel> {
   const BridgeScope({
     super.key,
@@ -82,7 +87,9 @@ ThemeData bridgeTheme() => ThemeData(
         fontFamily: 'Spectral',
         fontFamilyFallback: _serifFallback,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
     ),
   ),
   // Icon buttons (back, bookmark, report) are 40px by default; 44 is the floor.
@@ -107,7 +114,9 @@ ThemeData bridgeTheme() => ThemeData(
         fontFamily: 'Spectral',
         fontFamilyFallback: _serifFallback,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
       side: const BorderSide(color: Palette.control),
     ),
   ),
@@ -134,7 +143,9 @@ ThemeData bridgeTheme() => ThemeData(
     checkmarkColor: Palette.onMoss,
     side: const BorderSide(color: Palette.control),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(Radii.pill),
+    ),
   ),
   inputDecorationTheme: const InputDecorationTheme(
     filled: false,
@@ -152,7 +163,7 @@ ThemeData bridgeTheme() => ThemeData(
   ),
   dialogTheme: DialogThemeData(
     backgroundColor: Palette.high,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
   ),
 );
 
@@ -379,7 +390,7 @@ class _GridPainter extends CustomPainter {
   bool shouldRepaint(_GridPainter old) => false;
 }
 
-/// A sheet of paper: hairline border and a flat offset shadow. [read] dims it.
+/// A sheet of paper: rounded, a hairline border and a soft shadow. [read] dims it.
 class NoteCard extends StatelessWidget {
   const NoteCard({
     super.key,
@@ -399,29 +410,32 @@ class NoteCard extends StatelessWidget {
   /// Makes the whole card one tap target; buttons inside keep their own actions.
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 4, bottom: 5),
+  Widget build(BuildContext context) => DecoratedBox(
     // The shadow sits behind; the sheet itself is a Material so list rows and
     // ink splashes inside it paint correctly.
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(2),
-        boxShadow: const [BoxShadow(color: Palette.oat, offset: Offset(4, 5))],
-      ),
-      child: Material(
-        color: color ?? (read ? Palette.readCard : Palette.high),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(2),
-          side: BorderSide(color: borderColor ?? Palette.oat),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(Radii.card),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x1439362E), // ink, faint
+          blurRadius: 18,
+          offset: Offset(0, 4),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: onTap == null
-            ? Padding(padding: padding, child: child)
-            : InkWell(
-                onTap: onTap,
-                child: Padding(padding: padding, child: child),
-              ),
+      ],
+    ),
+    child: Material(
+      color: color ?? (read ? Palette.readCard : Palette.high),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.card),
+        side: BorderSide(color: borderColor ?? Palette.oat),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? Padding(padding: padding, child: child)
+          : InkWell(
+              onTap: onTap,
+              child: Padding(padding: padding, child: child),
+            ),
     ),
   );
 }
@@ -493,15 +507,14 @@ class PaperTag extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(Radii.pill),
     ),
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
     child: Text(
       text,
       style: const TextStyle(
         fontSize: 12,
         height: 1.3,
-        fontStyle: FontStyle.italic,
         color: Palette.ochreInk,
       ),
     ),
@@ -523,7 +536,7 @@ class TagLink extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(Radii.control),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
@@ -567,7 +580,7 @@ class NoteChip extends StatelessWidget {
     child: Material(
       color: selected ? Palette.paleMoss : Palette.high,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(Radii.pill),
         side: BorderSide(
           color: selected ? Palette.moss : Palette.control,
           width: selected ? 1.5 : 1,
@@ -575,11 +588,11 @@ class NoteChip extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(Radii.pill),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: dense ? 12 : 14),
+            padding: EdgeInsets.symmetric(horizontal: dense ? 14 : 16),
             child: Center(
               widthFactor: 1,
               child: Text(

@@ -33,7 +33,7 @@ class AssistantPage extends StatelessWidget {
               shape: layout == AppLayout.phone
                   ? const RoundedRectangleBorder()
                   : RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(Radii.card),
                       side: const BorderSide(color: Palette.edge),
                     ),
               child: AssistantPanel(

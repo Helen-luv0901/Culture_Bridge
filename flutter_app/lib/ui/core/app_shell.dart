@@ -515,9 +515,9 @@ class _SidebarItem extends StatelessWidget {
       label: label,
       child: Material(
         color: selected ? Palette.paleMoss : Colors.transparent,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(Radii.control),
         child: InkWell(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(Radii.control),
           onTap: onTap,
           child: ExcludeSemantics(
             child: compact

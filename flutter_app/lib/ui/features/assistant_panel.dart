@@ -102,7 +102,7 @@ class AssistantOverlay extends StatelessWidget {
             decoration: BoxDecoration(
               color: Palette.high,
               border: Border.all(color: Palette.edge),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(Radii.card),
               boxShadow: [
                 BoxShadow(
                   color: Palette.ink.withValues(alpha: .12),
@@ -653,7 +653,7 @@ class _PostCard extends StatelessWidget {
       child: Material(
         color: Palette.high,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.control),
           side: const BorderSide(color: Palette.edge),
         ),
         clipBehavior: Clip.antiAlias,

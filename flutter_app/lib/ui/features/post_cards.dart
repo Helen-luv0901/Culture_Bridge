@@ -246,7 +246,13 @@ class PostList extends StatelessWidget {
       children: [
         for (final (i, item) in items.indexed) ...[
           if (i > 0)
-            const DashedRule(padding: EdgeInsets.symmetric(horizontal: 16)),
+            const Divider(
+              height: 1,
+              thickness: 1,
+              indent: 64,
+              endIndent: 16,
+              color: Palette.oat,
+            ),
           StudentPostCard(item: item),
         ],
       ],
@@ -254,8 +260,9 @@ class PostList extends StatelessWidget {
   );
 }
 
-/// One student post in a list: category and who, the title, two lines of what they wrote,
-/// then responses and the bookmark. The whole row opens the post.
+/// One student post in a list, like a forum row: the author's avatar, who and when, the
+/// category, the title, two lines of what they wrote, then responses and the bookmark.
+/// The whole row opens the post.
 class StudentPostCard extends StatelessWidget {
   const StudentPostCard({super.key, required this.item});
   final ExperienceItem item;
@@ -282,72 +289,77 @@ class StudentPostCard extends StatelessWidget {
       key: Key('post-${item.id}'),
       onTap: () => openPost(context, item.id),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 6, 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.fromLTRB(16, 16, 6, 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: Row(
+            Avatar(
+              initial: authorInitial(vm, item.authorName),
+              imageUrl: vm.imageUrl(item.authorAvatarUrl),
+              size: 36,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  PaperTag(categoryName(vm, item.categoryKey)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      authorLine(vm, item),
-                      style: mutedStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            authorLine(vm, item),
+                            style: mutedStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        PaperTag(categoryName(vm, item.categoryKey)),
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: postTitleStyle(read: read),
+                    ),
+                  ),
+                  if (excerpt.isNotEmpty && excerpt != title) ...[
+                    const SizedBox(height: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Text(
+                        excerpt,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: postExcerptStyle,
+                      ),
+                    ),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(parts.join(' · '), style: mutedStyle),
+                      ),
+                      BookmarkButton(
+                        saved: item.saved,
+                        label: item.saved
+                            ? vm.pair('取消收藏「$title」', 'Unsave "$title"')
+                            : vm.pair('收藏「$title」', 'Save "$title"'),
+                        onPressed: () {
+                          if (ensureSignedIn(context)) vm.toggleSaved(item);
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: Semantics(
-                button: true,
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: displayStyle(
-                    17,
-                    color: read ? Palette.muted : Palette.ink,
-                  ).copyWith(height: 1.45),
-                ),
-              ),
-            ),
-            if (excerpt.isNotEmpty && excerpt != title) ...[
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: Text(
-                  excerpt,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: read ? Palette.muted : Palette.ink,
-                  ),
-                ),
-              ),
-            ],
-            Row(
-              children: [
-                Expanded(child: Text(parts.join(' · '), style: mutedStyle)),
-                BookmarkButton(
-                  saved: item.saved,
-                  label: item.saved
-                      ? vm.pair('取消收藏「$title」', 'Unsave "$title"')
-                      : vm.pair('收藏「$title」', 'Save "$title"'),
-                  onPressed: () {
-                    if (ensureSignedIn(context)) vm.toggleSaved(item);
-                  },
-                ),
-              ],
             ),
           ],
         ),
@@ -355,6 +367,19 @@ class StudentPostCard extends StatelessWidget {
     );
   }
 }
+
+/// A post's title in lists: a little lighter than page titles, so a list of them
+/// reads calmly.
+TextStyle postTitleStyle({bool read = false}) => displayStyle(
+  16.5,
+  color: read ? Palette.muted : Palette.ink,
+).copyWith(height: 1.45, fontVariations: const [FontVariation('wght', 560)]);
+
+const postExcerptStyle = TextStyle(
+  fontSize: 14,
+  height: 1.6,
+  color: Palette.muted,
+);
 
 /// A 1px dashed hairline, as under the card titles in the trial.
 class DashedRule extends StatelessWidget {
