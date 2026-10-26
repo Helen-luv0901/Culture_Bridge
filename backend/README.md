@@ -93,7 +93,7 @@ POST /api/assistant/message
 | `FIREBASE_PROJECT_ID` | — | 驗證 ID token 的 audience |
 | `FIREBASE_WEB_API_KEY`、`FIREBASE_WEB_APP_ID`、`FIREBASE_AUTH_DOMAIN`、`FIREBASE_MESSAGING_SENDER_ID` | — | 經 `/api/config` 給網頁版 |
 | `GEMINI_API_KEY`、`GEMINI_MODEL`、`EMBEDDING_MODEL` | —、gemini-3.8-flash、gemini-embedding-001 | 沒有金鑰時 AI 功能回「暫時無法使用」 |
-| `GEMINI_FALLBACK_MODELS` | gemini-3.1-flash-lite | `GEMINI_MODEL` 回 429（免費額度暫時用完）時依序改用的模型，逗號分隔；那個模型休息 1 分鐘再試。embedding 不換（向量會對不上） |
+| `GEMINI_FALLBACK_MODELS` | gemini-3.1-flash-lite,gemini-2.5-flash-lite | `GEMINI_MODEL` 額度用完（429）或忙碌（503 重試 2 次仍不行）時依序改用的模型，逗號分隔；用完額度的模型休息 1 分鐘。一個請求最多等 45 秒。embedding 不換（向量會對不上） |
 | `AI_SUMMARIES_PER_DAY` | 10 | 每人每日 AI 摘要次數 |
 | `ASSISTANT_ALLOW_GUESTS` | development 時 true | 訪客能否使用助理（待團隊決定） |
 | `ASSISTANT_PER_MINUTE`、`ASSISTANT_PER_DAY`、`ASSISTANT_DAILY_LLM_CALLS` | 5、20、700 | 助理頻率與用量上限（每日數字存在資料庫 `usage_counters`，重啟或多台執行個體都不會重算） |

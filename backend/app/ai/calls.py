@@ -1,13 +1,15 @@
 """How every Gemini request is paid for, retried, and moved to a backup model.
 
 Each attempt counts against the daily budget shared by all AI features (app.core.usage), so a
-loop or an abuser can't run up the bill. Only failures that may pass on a second try are
-retried (server errors, timeouts, an answer that couldn't be read), after a short pause that
-grows; a refused or invalid request fails at once.
+loop or an abuser can't run up the bill. A refused or invalid request fails at once.
 
-On the free tier every model has its own per-minute and per-day quota, so a model that answers
-429 (quota used up) is rested for a minute and the request goes to the next model in the list
-(GEMINI_MODEL, then GEMINI_FALLBACK_MODELS).
+The free tier is often busy: a model answers 503 ("high demand") within a second or so, and
+answers again a few seconds later (2026-10-27, gemini-3.1-flash-lite: 6 of 10 requests got
+through within four tries). So a busy model is asked again twice, a second or two apart, before
+the request moves on. Every model also has its own per-minute and per-day quota: one that
+answers 429 is rested for a minute and the request goes straight to the next model in the list
+(GEMINI_MODEL, then GEMINI_FALLBACK_MODELS). Timeouts and unreadable answers are retried
+`attempts` times. One request never keeps the reader waiting past BUDGET_SECONDS.
 """
 
 import logging
@@ -21,8 +23,10 @@ from google.genai import errors as genai_errors
 from app.core.usage import spend_gemini_call
 
 logger = logging.getLogger(__name__)
-_RETRY_STATUS = {500, 502, 503, 504}
+_BUSY_STATUS = {500, 502, 503, 504}
 _QUOTA_STATUS = 429
+BUSY_RETRIES = 2  # per model, after a 5xx; these answers come back fast
+BUDGET_SECONDS = 45.0  # one request: every model and retry together
 REST_SECONDS = 60.0  # long enough for a per-minute quota; a used-up day is tried again then
 
 _resting_until: dict[str, float] = {}
@@ -37,14 +41,17 @@ def _out_of_quota(exc: Exception) -> bool:
     return isinstance(exc, genai_errors.APIError) and exc.code == _QUOTA_STATUS
 
 
+def _busy(exc: Exception) -> bool:
+    return isinstance(exc, genai_errors.APIError) and exc.code in _BUSY_STATUS
+
+
 def _worth_retrying(exc: Exception) -> bool:
-    if isinstance(exc, genai_errors.APIError):
-        return exc.code in _RETRY_STATUS
-    return True  # timeouts, dropped connections, unreadable JSON
+    # Timeouts, dropped connections, unreadable JSON; any other API error is the request's fault.
+    return not isinstance(exc, genai_errors.APIError)
 
 
-def _pause(attempt: int) -> float:
-    return min(8.0, 1.5 * 2 ** (attempt - 1)) * random.uniform(0.5, 1.0)
+def _pause(retry: int) -> float:
+    return min(8.0, 1.5 * 2 ** (retry - 1)) * random.uniform(0.5, 1.0)
 
 
 def _rest(model: str, now: Callable[[], float]) -> None:
@@ -65,15 +72,17 @@ def call_gemini[T](
     attempts: int = 1,
     sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], float] = time.monotonic,
+    budget: float = BUDGET_SECONDS,
 ) -> tuple[T, str]:
-    """Run `request(model)` on the first model that answers, trying each up to `attempts`
-    times. Returns the result and the model that gave it; raises the last error, or
-    GeminiBudgetReached."""
+    """Run `request(model)` on the first model that answers. Returns the result and the model
+    that gave it; raises the last error, or GeminiBudgetReached."""
+    start = now()
     last: Exception | None = None
     for model in _awake(models, now):
-        for attempt in range(attempts):
-            if attempt:
-                sleep(_pause(attempt))
+        failures = busy = 0
+        while True:
+            if last is not None and now() - start > budget:
+                raise last
             if not spend_gemini_call():
                 raise GeminiBudgetReached("daily Gemini budget reached")
             try:
@@ -86,10 +95,21 @@ def call_gemini[T](
                         logger.warning("Gemini %s is over its quota; trying the next model", model)
                         break
                     # No model left to try (embeddings have only one): wait and try again.
-                    logger.warning("Gemini %s is over its quota", model)
-                    continue
-                if not _worth_retrying(exc):
+                    failures += 1
+                    retry = failures < attempts
+                elif _busy(exc):
+                    busy += 1
+                    retry = busy <= BUSY_RETRIES
+                elif _worth_retrying(exc):
+                    failures += 1
+                    retry = failures < attempts
+                else:
                     raise
+                pause = _pause(failures + busy)
+                if not retry or now() - start + pause > budget:
+                    logger.warning("Gemini %s failed (%s); trying the next model", model, exc)
+                    break
+                sleep(pause)
                 continue
             if model != models[0]:
                 logger.info("Gemini %s answered instead of %s", model, models[0])

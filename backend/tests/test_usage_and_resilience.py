@@ -113,6 +113,52 @@ def test_when_every_model_is_out_of_quota_the_error_comes_back(monkeypatch):
         call_gemini(busy, MODELS)
 
 
+def test_a_busy_model_is_asked_again_before_moving_on(monkeypatch):
+    monkeypatch.setattr(calls, "spend_gemini_call", lambda: True)
+    monkeypatch.setattr(calls, "_resting_until", {})
+    asked: list[str] = []
+
+    def busy_twice(model: str) -> str:
+        asked.append(model)
+        if asked.count("main-model") <= 2 and model == "main-model":
+            raise _api_error(503)
+        return model
+
+    assert call_gemini(busy_twice, MODELS, sleep=lambda _: None) == ("main-model", "main-model")
+    assert asked == ["main-model"] * 3
+
+    asked.clear()
+
+    def always_busy_main(model: str) -> str:
+        asked.append(model)
+        if model == "main-model":
+            raise _api_error(503)
+        return model
+
+    assert call_gemini(always_busy_main, MODELS, sleep=lambda _: None)[1] == "backup-model"
+    assert asked == ["main-model"] * 3 + ["backup-model"]
+
+
+def test_one_request_never_waits_past_the_budget(monkeypatch):
+    monkeypatch.setattr(calls, "spend_gemini_call", lambda: True)
+    monkeypatch.setattr(calls, "_resting_until", {})
+    clock = [0.0]
+
+    def busy(model: str) -> str:
+        clock[0] += 9  # a slow 503
+        raise _api_error(503)
+
+    with pytest.raises(genai_errors.APIError):
+        call_gemini(
+            busy,
+            ("a", "b", "c"),
+            sleep=lambda s: clock.__setitem__(0, clock[0] + s),
+            now=lambda: clock[0],
+            budget=20,
+        )
+    assert clock[0] <= 20 + 9 + 8  # stops after the attempt that crossed the budget
+
+
 def test_a_lone_model_out_of_quota_is_tried_again(monkeypatch):
     # Embeddings have no backup model: a 429 waits and retries instead of failing at once.
     monkeypatch.setattr(calls, "spend_gemini_call", lambda: True)
@@ -151,6 +197,12 @@ def test_free_tier_limits_and_backup_model_by_default(monkeypatch):
     try:
         settings = get_settings()
         assert settings.gemini_fallback_models == ("gemini-3.1-flash-lite", "other")
+        monkeypatch.delenv("GEMINI_FALLBACK_MODELS")
+        get_settings.cache_clear()
+        assert get_settings().gemini_fallback_models == (
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash-lite",
+        )
         # One person's day (20 messages, at most 6 model calls each) fits many times over.
         assert settings.assistant_per_day * 6 < settings.assistant_daily_llm_calls <= 1000
     finally:

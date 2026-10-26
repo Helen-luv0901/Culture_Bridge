@@ -85,7 +85,9 @@ def get_settings() -> Settings:
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
         gemini_fallback_models=tuple(
             m.strip()
-            for m in os.getenv("GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-lite").split(",")
+            for m in os.getenv(
+                "GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-lite,gemini-2.5-flash-lite"
+            ).split(",")
             if m.strip()
         ),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),

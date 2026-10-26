@@ -23,7 +23,7 @@
 
 免費方案的代價：
 
-- 每分鐘、每天的次數有限制（每個模型分開算，見 AI Studio → Usage → Rate limit）。`GEMINI_MODEL` 用完時後端自動改用 `GEMINI_FALLBACK_MODELS`（預設 `gemini-3.1-flash-lite`，額度和 3.5 Flash Lite 一樣），兩個都用完才會暫時無法使用（`429`），隔天恢復。`bash scripts/check-ai.sh` 第 4b 步會一起測備用模型
+- 每分鐘、每天的次數有限制（每個模型分開算，見 AI Studio → Usage → Rate limit）。`GEMINI_MODEL` 用完時後端自動改用 `GEMINI_FALLBACK_MODELS`（預設 `gemini-3.1-flash-lite`，額度和 3.5 Flash Lite 一樣；再來是 `gemini-2.5-flash-lite`，每天 20 次），全部用完才會暫時無法使用（`429`），隔天恢復。免費方案常遇到 `503`（Google 端忙碌，2026-10-27 實測 3.1 Flash Lite 10 次只有 6 次在 4 次內成功）：後端會在同一個模型再試 2 次、再換下一個，一個請求最多等 45 秒。`bash scripts/check-ai.sh` 第 4b 步會一起測備用模型
 - Google 可能用送出的內容改善產品：上架前要在隱私權政策寫清楚，Play「資料安全性」也要重新評估（D-11、D-12）
 
 ## 2. 限制金鑰
