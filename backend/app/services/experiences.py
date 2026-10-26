@@ -487,26 +487,29 @@ def search(
         .order_by(Experience.published_at.desc(), Experience.id)
         .limit(SEARCH_CANDIDATES)
     ).all()
-    translated: dict[str, list[str]] = {}
+    # A translated title is still a title: 「在學證明」 should rank an English post about it.
+    titles: dict[str, list[str]] = {}
+    bodies: dict[str, list[str]] = {}
     for t in db.scalars(
         select(ExperienceTranslation).where(
             ExperienceTranslation.experience_id.in_([e.id for e, _ in rows])
         )
     ):
-        translated.setdefault(t.experience_id, []).extend(
-            [t.title or "", t.original_voice, t.situation, t.reminder]
-        )
+        titles.setdefault(t.experience_id, []).append(t.title or "")
+        bodies.setdefault(t.experience_id, []).extend([t.original_voice, t.situation, t.reminder])
     items = [
         (
             (experience, summary),
-            " ".join([experience.title or "", *(experience.tags or [])]).lower(),
+            " ".join(
+                [experience.title or "", *(experience.tags or []), *titles.get(experience.id, [])]
+            ).lower(),
             " ".join(
                 [
                     experience.original_voice,
                     summary.situation,
                     summary.feeling_or_attempt,
                     summary.reminder,
-                    *translated.get(experience.id, []),
+                    *bodies.get(experience.id, []),
                 ]
             ).lower(),
         )
