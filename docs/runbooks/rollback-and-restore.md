@@ -91,5 +91,10 @@ gcloud sql backups restore <BACKUP_ID> --restore-instance=$INSTANCE
 
 ## 6. 監控
 
-- 監控的 uptime check（`gcp-setup.sh` 步驟 6）每 5 分鐘打 `/health`，資料庫連不上也會回 503 並觸發通知
+- 監控的 uptime check（`gcp-setup.sh` 步驟 6）每 5 分鐘打 `/health`，資料庫連不上也會回 503 並觸發通知。
+  早期建立的 `culture-bridge-uptime` 打的是 `/api/config`（不碰資料庫），改成 `/health`：
+
+  ```sh
+  gcloud monitoring uptime update culture-bridge-uptime --path=/health --project=$PROJECT
+  ```
 - App 在使用者裝置上發生的錯誤會寫進 Cloud Logging：記錄檢視器搜尋 `App error on`

@@ -107,7 +107,7 @@ FIREBASE_WEB_API_KEY=<apiKey>,FIREBASE_WEB_APP_ID=<appId>,\
 FIREBASE_AUTH_DOMAIN=<authDomain>,FIREBASE_MESSAGING_SENDER_ID=<messagingSenderId>
 ```
 
-- `max-instances=2`：助理的頻率限制與對話記憶在記憶體裡，執行個體少比較準，也控制費用
+- `max-instances=2`：每日上限都存在資料庫（`usage_counters`），但助理的每分鐘頻率限制與對話記憶仍在記憶體裡，執行個體少比較準；也受 db-f1-micro 連線數限制（見 `backend/app/core/db.py`），並控制費用
 - `ASSISTANT_ALLOW_GUESTS` 預設不讓訪客使用助理；團隊決定開放時加 `ASSISTANT_ALLOW_GUESTS=true`
 - 部署完把服務網址加到 Firebase **Authorized domains**（第 1 步）
 

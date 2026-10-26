@@ -39,6 +39,7 @@ def _engine() -> Engine:
         pool_size=1,
         max_overflow=1,
         pool_timeout=5,
+        pool_recycle=300,
         connect_args={"connect_timeout": 10},
     )
 
@@ -109,5 +110,6 @@ def spend_gemini_call() -> bool:
     summaries, translations, tags, embeddings). False: today's budget is used up."""
     allowed = DatabaseCounter().take("gemini", get_settings().gemini_daily_calls)
     if not allowed:
-        logger.warning("Daily Gemini budget reached; AI features fall back until midnight")
+        # Also when the count itself failed (logged just before as "Usage counter ... unavailable").
+        logger.warning("No Gemini call: daily budget reached or usage counter unavailable")
     return allowed

@@ -45,7 +45,7 @@ class ApiClient {
   /// The app waits for this before its first frame. Sign-in needs it, so it tries a few
   /// times (a cold start can take a while or drop the first request) before going on without.
   Future<Map<String, dynamic>?> clientConfig({
-    Duration wait = const Duration(seconds: 15),
+    Duration wait = const Duration(seconds: 10),
     int attempts = 3,
   }) async {
     for (var attempt = 0; attempt < attempts; attempt++) {

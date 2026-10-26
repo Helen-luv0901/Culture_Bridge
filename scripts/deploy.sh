@@ -101,6 +101,10 @@ if ! live_image="$(gc run services describe "${SERVICE}" --region="${REGION}" \
   fi
   die "讀不到 ${SERVICE} 服務（上面是 Google Cloud 的錯誤訊息）。在 GitHub Actions 出現時，通常是 gcp-setup.sh 步驟 8 沒有完整跑完：重跑 bash scripts/gcp-setup.sh 8。"
 fi
+# The commit actually serving: a deploy that failed its health check leaves its image in the
+# service template without ever getting traffic, so the template can't say what is live.
+live_image="$(gc run revisions describe "$(serving_revision)" --region="${REGION}" \
+  --format='value(spec.containers[0].image)')"
 live_tag="${live_image##*:}"
 
 bold "2/5 映像檔"
