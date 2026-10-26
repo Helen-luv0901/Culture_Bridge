@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.ai.experience_ai import AIUnavailable, ExperienceAI, TranslatedExperience
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, conflict, not_found
+from app.core.text_search import relevant, search_units
 from app.models import (
     Action,
     ActionExperienceLink,
@@ -439,31 +440,79 @@ def _public_items(
     return items
 
 
+def _word_matches(word: str):
+    """The word appears in the title, tags, original, summary or a translation."""
+    pattern = f"%{word.replace('%', '').replace('_', '')}%"
+    translated = exists().where(
+        ExperienceTranslation.experience_id == Experience.id,
+        or_(
+            ExperienceTranslation.title.ilike(pattern),
+            ExperienceTranslation.original_voice.ilike(pattern),
+            ExperienceTranslation.situation.ilike(pattern),
+            ExperienceTranslation.reminder.ilike(pattern),
+        ),
+    )
+    return or_(
+        Experience.title.ilike(pattern),
+        func.array_to_string(Experience.tags, " ").ilike(pattern),
+        Experience.original_voice.ilike(pattern),
+        ExperienceSummary.situation.ilike(pattern),
+        ExperienceSummary.feeling_or_attempt.ilike(pattern),
+        ExperienceSummary.reminder.ilike(pattern),
+        translated,
+    )
+
+
 def _keyword_filter(query: Select, q: str) -> Select:
-    """Match every word of q in the title, tags, original, summary or translation (B-16)."""
+    """Match every word of q (B-16)."""
     for word in q.split()[:8]:
-        pattern = f"%{word.replace('%', '').replace('_', '')}%"
-        translated = exists().where(
-            ExperienceTranslation.experience_id == Experience.id,
-            or_(
-                ExperienceTranslation.title.ilike(pattern),
-                ExperienceTranslation.original_voice.ilike(pattern),
-                ExperienceTranslation.situation.ilike(pattern),
-                ExperienceTranslation.reminder.ilike(pattern),
-            ),
-        )
-        query = query.where(
-            or_(
-                Experience.title.ilike(pattern),
-                func.array_to_string(Experience.tags, " ").ilike(pattern),
-                Experience.original_voice.ilike(pattern),
-                ExperienceSummary.situation.ilike(pattern),
-                ExperienceSummary.feeling_or_attempt.ilike(pattern),
-                ExperienceSummary.reminder.ilike(pattern),
-                translated,
-            )
-        )
+        query = query.where(_word_matches(word))
     return query
+
+
+# Newest posts sharing any word with the query that get ranked; the rest are too weak to show.
+SEARCH_CANDIDATES = 200
+
+
+def search(
+    db: Session, viewer: CurrentUser | None, q: str, locale: Locale | None, limit: int
+) -> list[PublicExperience]:
+    """The Explore search: posts about the query first, whole questions allowed."""
+    units = search_units(q)
+    if not units:
+        return []
+    rows = db.execute(
+        _public_query(viewer)
+        .where(or_(*(_word_matches(unit) for unit in units)))
+        .order_by(Experience.published_at.desc(), Experience.id)
+        .limit(SEARCH_CANDIDATES)
+    ).all()
+    translated: dict[str, list[str]] = {}
+    for t in db.scalars(
+        select(ExperienceTranslation).where(
+            ExperienceTranslation.experience_id.in_([e.id for e, _ in rows])
+        )
+    ):
+        translated.setdefault(t.experience_id, []).extend(
+            [t.title or "", t.original_voice, t.situation, t.reminder]
+        )
+    items = [
+        (
+            (experience, summary),
+            " ".join([experience.title or "", *(experience.tags or [])]).lower(),
+            " ".join(
+                [
+                    experience.original_voice,
+                    summary.situation,
+                    summary.feeling_or_attempt,
+                    summary.reminder,
+                    *translated.get(experience.id, []),
+                ]
+            ).lower(),
+        )
+        for experience, summary in rows
+    ]
+    return _public_items(db, relevant(items, q, limit), viewer, locale)
 
 
 # ---------- public reads ----------

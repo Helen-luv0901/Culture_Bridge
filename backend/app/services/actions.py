@@ -4,11 +4,12 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, exists, func, or_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, conflict, not_found
+from app.core.text_search import relevant
 from app.models import (
     Action,
     ActionStep,
@@ -216,25 +217,32 @@ def list_actions(db: Session) -> list[ActionSummary]:
 
 
 def search_actions(db: Session, q: str, limit: int) -> list[ActionSummary]:
-    """Keyword search over the latest published versions, both languages and step titles."""
-    query = _latest_published(db)
-    for word in q.split()[:8]:
-        pattern = f"%{word.replace('%', '').replace('_', '')}%"
-        in_steps = exists().where(
-            ActionStep.action_version_id == ActionVersion.id,
-            or_(ActionStep.title_zh.ilike(pattern), ActionStep.title_en.ilike(pattern)),
+    """Keyword search over the latest published versions, both languages: guides whose title
+    matches come first, and ones that only mention the words in a step are left out."""
+    published = db.execute(_latest_published(db)).all()
+    steps: dict[str, list[str]] = {}
+    for version_id, title_zh, title_en in db.execute(
+        select(ActionStep.action_version_id, ActionStep.title_zh, ActionStep.title_en).where(
+            ActionStep.action_version_id.in_([v.id for _, v in published])
         )
-        query = query.where(
-            or_(
-                ActionVersion.title_zh.ilike(pattern),
-                ActionVersion.title_en.ilike(pattern),
-                ActionVersion.description_zh.ilike(pattern),
-                ActionVersion.description_en.ilike(pattern),
-                Action.slug.ilike(pattern),
-                in_steps,
-            )
+    ):
+        steps.setdefault(version_id, []).extend([title_zh or "", title_en or ""])
+    items = [
+        (
+            (action, version),
+            f"{version.title_zh} {version.title_en or ''}".lower(),
+            " ".join(
+                [
+                    version.description_zh or "",
+                    version.description_en or "",
+                    action.slug,
+                    *steps.get(version.id, []),
+                ]
+            ).lower(),
         )
-    rows = db.execute(query.order_by(ActionVersion.title_zh).limit(limit)).all()
+        for action, version in published
+    ]
+    rows = relevant(items, q, limit)
     successes = _recent_successes(db, [a.id for a, _ in rows])
     verified = _last_verified(db, [v.id for _, v in rows])
     return [_summary(a, v, successes, verified) for a, v in rows]
