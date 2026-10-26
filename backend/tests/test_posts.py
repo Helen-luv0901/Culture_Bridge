@@ -206,7 +206,7 @@ def test_anonymous_post_authors_cannot_sign_their_comments(api):
 
 def test_posts_and_comments_have_daily_caps(api, monkeypatch):
     from app.services import comments as comment_svc
-    from app.services import experiences as exp_svc
+    from app.services.experiences import posts as exp_svc
 
     monkeypatch.setattr(exp_svc, "MAX_POSTS_PER_DAY", 2)
     monkeypatch.setattr(comment_svc, "MAX_COMMENTS_PER_DAY", 1)
