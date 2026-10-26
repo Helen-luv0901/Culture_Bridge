@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -16,9 +17,17 @@ class ApiException implements Exception {
 typedef TokenProvider = Future<String?> Function();
 
 /// JSON over HTTP to /api. On the web the API is served from the same origin as the app.
+///
+/// Every failure reaches callers as an [ApiException]: no answer within [timeout] or no
+/// connection is `network_error`, and a body that isn't JSON (a proxy or cold-start error
+/// page) is `http_<status>`, or `bad_response` on a success status.
 class ApiClient {
-  ApiClient({required this.baseUrl, required this.token, http.Client? client})
-    : _http = client ?? http.Client();
+  ApiClient({
+    required this.baseUrl,
+    required this.token,
+    http.Client? client,
+    this.timeout = const Duration(seconds: 30),
+  }) : _http = client ?? http.Client();
 
   /// `--dart-define=API_BASE_URL=https://…` overrides the default (the page's own origin).
   factory ApiClient.fromEnvironment({required TokenProvider token}) {
@@ -29,23 +38,35 @@ class ApiClient {
 
   final String baseUrl;
   final TokenProvider token;
+  final Duration timeout;
   final http.Client _http;
 
   /// Public startup settings (`GET /api/config`); null when the server can't be reached.
-  Future<Map<String, dynamic>?> clientConfig() async {
-    try {
-      return await get('/config') as Map<String, dynamic>;
-    } on ApiException {
-      return null;
+  /// The app waits for this before its first frame. Sign-in needs it, so it tries a few
+  /// times (a cold start can take a while or drop the first request) before going on without.
+  Future<Map<String, dynamic>?> clientConfig({
+    Duration wait = const Duration(seconds: 15),
+    int attempts = 3,
+  }) async {
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      try {
+        return await _send('GET', '/config', timeout: wait)
+            as Map<String, dynamic>;
+      } on ApiException {
+        continue;
+      }
     }
+    return null;
   }
 
   Future<dynamic> get(String path, [Map<String, String>? query]) =>
       _send('GET', path, query: query);
-  Future<dynamic> post(String path, [Object? body]) =>
-      _send('POST', path, body: body ?? const {});
-  Future<dynamic> put(String path, [Object? body]) =>
-      _send('PUT', path, body: body ?? const {});
+
+  /// [timeout] overrides the default for calls that wait on the AI.
+  Future<dynamic> post(String path, [Object? body, Duration? timeout]) =>
+      _send('POST', path, body: body ?? const {}, timeout: timeout);
+  Future<dynamic> put(String path, [Object? body, Duration? timeout]) =>
+      _send('PUT', path, body: body ?? const {}, timeout: timeout);
   Future<dynamic> patch(String path, Object body) =>
       _send('PATCH', path, body: body);
   Future<dynamic> delete(String path) => _send('DELETE', path);
@@ -55,25 +76,41 @@ class ApiClient {
     String path, {
     Map<String, String>? query,
     Object? body,
+    Duration? timeout,
   }) async {
     final uri = Uri.parse(
       '$baseUrl/api$path',
     ).replace(queryParameters: query == null || query.isEmpty ? null : query);
     final request = http.Request(method, uri);
-    final bearer = await token();
-    if (bearer != null) request.headers['Authorization'] = 'Bearer $bearer';
     if (body != null) {
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode(body);
     }
+    final wait = timeout ?? this.timeout;
     final http.Response response;
     try {
-      response = await http.Response.fromStream(await _http.send(request));
-    } catch (_) {
+      // Refreshing an expired sign-in token needs the network too.
+      final bearer = await token().timeout(wait);
+      if (bearer != null) request.headers['Authorization'] = 'Bearer $bearer';
+      response = await _http
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(wait);
+    } on Exception {
+      // No connection, no answer in time (TimeoutException), or no fresh token.
       throw const ApiException(0, 'network_error');
     }
-    final text = utf8.decode(response.bodyBytes);
-    final decoded = text.isEmpty ? null : jsonDecode(text);
+    final Object? decoded;
+    try {
+      final text = utf8.decode(response.bodyBytes);
+      decoded = text.isEmpty ? null : jsonDecode(text);
+    } on FormatException {
+      final status = response.statusCode;
+      throw ApiException(
+        status,
+        status >= 400 ? 'http_$status' : 'bad_response',
+      );
+    }
     if (response.statusCode >= 400) {
       final detail = decoded is Map ? decoded['detail'] : null;
       if (detail is Map && detail['code'] is String) {

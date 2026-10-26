@@ -72,9 +72,12 @@ class AdminRepository {
     String actionId, {
     required bool english,
   }) async => FeedbackSummary.fromJson(
-    await api.post('/admin/actions/$actionId/feedback-summary', {
-      'locale': english ? 'en' : 'zh-Hant',
-    }),
+    await api.post(
+      '/admin/actions/$actionId/feedback-summary',
+      {'locale': english ? 'en' : 'zh-Hant'},
+      // The server tries Gemini up to twice, 30 s each.
+      const Duration(seconds: 75),
+    ),
   );
   Future<void> reviewFeedback(String id, String state) =>
       api.post('/admin/feedback/$id', {'review_state': state});

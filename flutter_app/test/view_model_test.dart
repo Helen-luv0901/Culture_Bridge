@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:culture_bridge/domain/keys.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_helpers.dart';
@@ -71,6 +74,7 @@ void main() {
   test('Categories filter posts and translation follows the reader', () async {
     final app = TestApp();
     addTearDown(app.vm.dispose);
+    await pumpEventQueue(); // let the test sign-in finish first
     await app.vm.loadPosts('life');
     final item = app.vm.posts('life').data!.items.single;
     expect(item.id, 'first-rental');
@@ -96,6 +100,7 @@ void main() {
   test('Reactions update every cached copy', () async {
     final app = TestApp();
     addTearDown(app.vm.dispose);
+    await pumpEventQueue(); // let the test sign-in finish first
     await app.vm.loadPosts();
     await app.vm.loadSearch('教授');
     await app.vm.loadExperience('professor-see');
@@ -121,6 +126,7 @@ void main() {
   test('Comments: add, reply, like and delete with replies', () async {
     final app = TestApp();
     addTearDown(app.vm.dispose);
+    await pumpEventQueue(); // let the test sign-in finish first
     await app.vm.loadExperience('professor-see');
     expect(await app.vm.addComment('professor-see', '   '), isNotNull);
     expect(await app.vm.addComment('professor-see', '我也是'), isNull);
@@ -190,5 +196,45 @@ void main() {
       'culture',
       'difference',
     ]);
+  });
+
+  test(
+    'A response the app cannot read shows an error, not a spinner',
+    () async {
+      final app = TestApp();
+      addTearDown(app.vm.dispose);
+      final reported = <Object>[];
+      final previous = FlutterError.onError;
+      FlutterError.onError = (details) => reported.add(details.exception);
+      addTearDown(() => FlutterError.onError = previous);
+      app.repository.popularTagsError = const FormatException('not a list');
+
+      await app.vm.loadPopularTags();
+      expect(app.vm.popularTags.loading, isFalse);
+      expect(app.vm.popularTags.error?.code, 'bad_response');
+      expect(reported, hasLength(1));
+
+      app.repository.popularTagsError = null;
+      await app.vm.loadPopularTags(); // the retry button works
+      expect(app.vm.popularTags.data, isNotEmpty);
+    },
+  );
+
+  test('My posts arriving after sign-out are not shown', () async {
+    final app = TestApp();
+    addTearDown(app.vm.dispose);
+    await pumpEventQueue();
+    app.vm.updateDraft(title: '標題', voice: '內容', category: 'life');
+    await app.vm.publishDraft();
+    final hold = Completer<void>();
+    app.repository.holdMine = hold;
+
+    final loading = app.vm.loadMine();
+    await pumpEventQueue();
+    await app.vm.signOut();
+    await pumpEventQueue();
+    hold.complete();
+    await loading;
+    expect(app.vm.mine.data, isNull);
   });
 }

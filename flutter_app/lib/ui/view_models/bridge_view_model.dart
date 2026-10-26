@@ -232,13 +232,29 @@ class BridgeViewModel extends ChangeNotifier {
     void Function(Resource<T>) store,
     Future<T> Function() fetch,
   ) async {
-    store(Resource(data: current().data, loading: true));
+    final pending = Resource<T>(data: current().data, loading: true);
+    store(pending);
     notifyListeners();
+    Resource<T> result;
     try {
-      store(Resource(data: await fetch()));
+      result = Resource(data: await fetch());
     } on ApiException catch (e) {
-      store(Resource(data: current().data, error: e));
+      result = Resource(data: current().data, error: e);
+    } on Object catch (error, stack) {
+      // A response the app couldn't read: show the retry message instead of loading forever,
+      // and report it, since it means the app and the server disagree.
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stack, library: 'api'),
+      );
+      result = Resource(
+        data: current().data,
+        error: const ApiException(0, 'bad_response'),
+      );
     }
+    // Dropped meanwhile (sign-out, language switch, a newer load): an answer to the old
+    // request must not put old data back.
+    if (!identical(current(), pending)) return;
+    store(result);
     notifyListeners();
   }
 
@@ -482,6 +498,8 @@ class BridgeViewModel extends ChangeNotifier {
   ) {
     final key = _listKey(category, sort, actionId);
     final current = _explore[key]?.data;
+    // A second "more" while one is loading would ask for the same page twice.
+    if (more && (_explore[key]?.loading ?? false)) return Future.value();
     return _load(
       () => _explore[key] ?? const Resource<ExperiencePage>(),
       (r) => _explore[key] = r,
