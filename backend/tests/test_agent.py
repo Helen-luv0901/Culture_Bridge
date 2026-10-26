@@ -1,5 +1,6 @@
 from app.assistant.llm import LLMError, ModelTurn, ToolCall, ToolResultsTurn, UserTurn
 from app.assistant.memory import ConversationStore
+from app.assistant.prompts import build_user_message
 from app.assistant.schemas import AssistantMessageRequest, ScreenContext
 from app.core.auth import CurrentUser
 from tests.conftest import ScriptedLLM, answer, call
@@ -9,6 +10,11 @@ USER = CurrentUser(id="u1")
 
 def ask(message: str, **kwargs) -> AssistantMessageRequest:
     return AssistantMessageRequest(message=message, **kwargs)
+
+
+def as_sent(message: str) -> UserTurn:
+    """The question as the model gets it when nothing was found: only the reply language added."""
+    return UserTurn(build_user_message(message, None, "zh-Hant"))
 
 
 def test_search_then_detail_then_answer(make_assistant):
@@ -35,9 +41,9 @@ def test_system_prompt_answers_in_the_users_language(make_assistant):
     llm = ScriptedLLM(answer("Hi"))
     make_assistant(llm).reply(ask("hi", locale="en"), None)
     system = llm.calls[0]["system"]
-    assert "Reply in the language of the user's latest message" in system
-    # The app's language is only the fallback when the message gives no clue.
-    assert "reply in English, the language of their app" in system
+    # The reply language comes from the question itself, named on its own line in the turn.
+    assert "Reply language" in system
+    assert "never decides the language" in system
     assert "Today is" in llm.calls[0]["system"]
     assert {t.name for t in llm.calls[0]["tools"]} >= {"search_actions", "open_screen"}
 
@@ -121,11 +127,11 @@ def test_memory_carries_follow_ups_and_is_per_account(make_assistant):
     follow_up_history = llm.calls[2]["history"]
     assert isinstance(follow_up_history[0], UserTurn)
     assert any(isinstance(t, ToolResultsTurn) for t in follow_up_history)
-    assert follow_up_history[-1] == UserTurn("第二個要多久？")
+    assert follow_up_history[-1] == as_sent("第二個要多久？")
 
     # Another account reusing the id gets a fresh conversation, not u1's history.
     assistant.reply(ask("第二個？", conversation_id=first.conversation_id), CurrentUser(id="u2"))
-    assert llm.calls[3]["history"] == [UserTurn("第二個？")]
+    assert llm.calls[3]["history"] == [as_sent("第二個？")]
 
 
 def test_clear_conversation(make_assistant):
@@ -133,7 +139,7 @@ def test_clear_conversation(make_assistant):
     first = assistant.reply(ask("hi"), USER)
     assistant.clear(first.conversation_id, USER)
     assistant.reply(ask("again", conversation_id=first.conversation_id), USER)
-    assert assistant._llm.calls[1]["history"] == [UserTurn("again")]
+    assert assistant._llm.calls[1]["history"] == [as_sent("again")]
 
 
 def test_screen_context_is_passed_as_data(make_assistant):
@@ -143,10 +149,12 @@ def test_screen_context_is_passed_as_data(make_assistant):
         USER,
     )
     text = llm.calls[0]["history"][-1].text
-    # Search results (if any) come first; the screen context sits right above the question.
-    assert text.endswith(
-        '[screen context: {"route": "/actions/arc", "action_id": "arc"}]\n這個流程要帶什麼？'
-    )
+    # Search results (if any) come first, then the screen context, the reply language and
+    # the question, last.
+    context, language, question = text.splitlines()[-3:]
+    assert context == '[screen context: {"route": "/actions/arc", "action_id": "arc"}]'
+    assert language.startswith("[Reply language:")
+    assert question == "這個流程要帶什麼？"
 
 
 def test_memory_trims_at_user_turns():
@@ -182,7 +190,7 @@ def test_prefetched_procedures_not_named_get_no_card(make_assistant):
 def test_nothing_found_leaves_the_message_as_written(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("zzzz qqqq"), USER)
-    assert llm.calls[0]["history"] == [UserTurn("zzzz qqqq")]
+    assert llm.calls[0]["history"] == [as_sent("zzzz qqqq")]
 
 
 def test_thinking_level_maps_to_gemini_config():
@@ -206,6 +214,32 @@ def test_message_language_decides_cards_and_fallback():
     assert message_locale("Tôi cần gì để làm thẻ cư trú?", "zh-Hant") == "en"
     assert message_locale("123 👍", "zh-Hant") == "zh-Hant"
     assert message_locale("ARC?", "zh-Hant") == "zh-Hant"  # an abbreviation alone
+    # An English question that names a Chinese term is still English, and the other way round.
+    assert message_locale("How do I apply for 居留證?", "zh-Hant") == "en"
+    assert message_locale("居留證 renew 要多久", "en") == "zh-Hant"
+
+
+def test_an_english_question_is_told_to_get_an_english_answer(make_assistant):
+    llm = ScriptedLLM(answer("You need your passport."))
+    # A Chinese app, a Chinese conversation before, and Chinese guides found for the question.
+    make_assistant(llm).reply(ask("What do I need to apply for my ARC?", locale="zh-Hant"), USER)
+    turn = llm.calls[0]["history"][-1].text
+    note, question = turn.splitlines()[-2:]
+    assert question == "What do I need to apply for my ARC?"
+    assert "not written in Chinese" in note and "Do not reply in Chinese" in note
+
+
+def test_a_chinese_question_is_told_to_get_a_chinese_answer(make_assistant):
+    llm = ScriptedLLM(answer("要準備護照。"))
+    make_assistant(llm).reply(ask("ARC 要準備什麼？", locale="en"), USER)
+    note = llm.calls[0]["history"][-1].text.splitlines()[-2]
+    assert "Traditional Chinese" in note
+
+
+def test_no_clue_in_the_question_uses_the_apps_language(make_assistant):
+    llm = ScriptedLLM(answer("👍"))
+    make_assistant(llm).reply(ask("👍", locale="en"), USER)
+    assert "English" in llm.calls[0]["history"][-1].text.splitlines()[-2]
 
 
 def test_english_question_in_chinese_app_gets_english_cards(make_assistant):

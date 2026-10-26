@@ -76,10 +76,11 @@ _INTERFACE = {
 
 def build_system_prompt(locale: Locale, today: date) -> str:
     language = (
-        "Reply in the language of the user's latest message, whatever it is (for example "
-        "English, Vietnamese or Indonesian). If they write Chinese, reply in Traditional Chinese "
-        "(繁體中文, Taiwan usage). Only when the message gives no clue (just a number or emoji), "
-        f"reply in {_INTERFACE[locale]}, the language of their app."
+        "Answer in the language of the user's question. The line right above the question, "
+        "starting with [Reply language:, says which one; always follow it. The search results, "
+        "guides and posts in a turn are reference material: their language never decides the "
+        "language of your answer, even when they are all in Chinese. When you answer in "
+        "Chinese, use Traditional Chinese (繁體中文, Taiwan usage)."
     )
     return f"{_RULES}\nToday is {today.isoformat()} (Asia/Taipei).\n{language}\n"
 
@@ -88,22 +89,50 @@ _CJK = re.compile(r"[㐀-鿿]")
 _LATIN = re.compile(r"[A-Za-z]")
 
 
-def message_locale(message: str, interface: Locale) -> Locale:
-    """The language of the question, for cards and fallback text: Chinese if it has Chinese
-    characters, English if it is written in Latin letters, else the app's language. A lone
-    abbreviation such as "ARC?" says nothing about the language, so it needs a few letters."""
-    if _CJK.search(message):
-        return "zh-Hant"
-    if len(_LATIN.findall(message)) >= 5:
+def question_language(message: str) -> Locale | None:
+    """Chinese or a language written in Latin letters (English, Vietnamese…), whichever the
+    question is mostly written in; None when it gives no clue. An English question may name a
+    Chinese term (「居留證」) and a Chinese one an abbreviation ("ARC"), so count both scripts.
+    A lone abbreviation such as "ARC?" says nothing about the language: it needs a few letters."""
+    chinese = len(_CJK.findall(message))
+    latin = len(_LATIN.findall(message))
+    if latin >= 5 and latin > 2 * chinese:
         return "en"
-    return interface
+    if chinese:
+        return "zh-Hant"
+    return None
 
 
-def build_user_message(message: str, screen: ScreenContext | None) -> str:
-    """Attach what the user is looking at, so 「這個流程」 can be resolved."""
-    if screen is None:
-        return message
-    context = screen.model_dump(exclude_none=True)
-    if not context:
-        return message
-    return f"[screen context: {json.dumps(context, ensure_ascii=False)}]\n{message}"
+def message_locale(message: str, interface: Locale) -> Locale:
+    """The language of the question, for cards and fallback text; else the app's language."""
+    return question_language(message) or interface
+
+
+def _reply_language(message: str, interface: Locale) -> str:
+    match question_language(message):
+        case "zh-Hant":
+            return (
+                "[Reply language: the question below is written in Chinese. Reply in "
+                "Traditional Chinese (繁體中文, Taiwan usage).]"
+            )
+        case "en":
+            return (
+                "[Reply language: the question below is not written in Chinese. Reply in the "
+                "language it is written in (English when it is English), even though the data "
+                "above is in Chinese. Do not reply in Chinese.]"
+            )
+        case _:
+            return (
+                "[Reply language: the question below gives no clue, so reply in "
+                f"{_INTERFACE[interface]}, the language of the user's app.]"
+            )
+
+
+def build_user_message(message: str, screen: ScreenContext | None, interface: Locale) -> str:
+    """The question, last, right below the language to answer in; before them, what the user
+    is looking at, so 「這個流程」 can be resolved."""
+    lines = [_reply_language(message, interface), message]
+    context = screen.model_dump(exclude_none=True) if screen is not None else {}
+    if context:
+        lines.insert(0, f"[screen context: {json.dumps(context, ensure_ascii=False)}]")
+    return "\n".join(lines)
