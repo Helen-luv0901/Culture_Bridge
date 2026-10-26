@@ -1,10 +1,11 @@
 """Reports, blocks, moderation and account deletion (B-17..B-19, Google Play UGC policy).
 
 Authors are anonymous, so people block "the author of this experience" and see opaque block ids;
-nothing here lets anyone link experiences to an account.
+nothing here lets anyone link experiences to an account. A block hides only the persona it was
+made from (see app.services.blocking), and new blocks are capped per day so nobody can sort
+posts by author through blocking.
 """
 
-import hashlib
 from datetime import datetime
 from typing import Literal
 
@@ -32,7 +33,8 @@ from app.models import (
     VerificationRecord,
 )
 from app.rag.index import remove_content
-from app.services.common import log_admin, now
+from app.services.blocking import Persona, experience_persona, find_block
+from app.services.common import DailyAllowance, log_admin, now, start_of_today
 from app.services.experiences import delete_experiences
 from app.services.metrics import forget_activity
 
@@ -41,6 +43,8 @@ ReportReason = Literal[
 ]
 AUTO_HIDE_REPORTS = 3  # distinct reporters before a post or comment is hidden pending review
 DELETED_STAFF = "deleted-staff"
+MAX_BLOCKS_PER_DAY = 20  # per blocker; plenty for real use, too few to map who wrote what
+_new_blocks = DailyAllowance()
 
 
 class ReportIn(BaseModel):
@@ -65,6 +69,7 @@ class ReportAck(BaseModel):
 
 class BlockOut(BaseModel):
     id: str
+    persona: Persona | None  # None: an older block that hides both personas
     created_at: datetime
 
 
@@ -275,8 +280,8 @@ def set_experience_visibility(
 # ---------- blocks ----------
 
 
-def _block_id(blocker_id: str, blocked_id: str) -> str:
-    return hashlib.sha256(f"{blocker_id}:{blocked_id}".encode()).hexdigest()[:20]
+def _block_out(block: UserBlock) -> BlockOut:
+    return BlockOut(id=block.id, persona=block.persona, created_at=block.created_at)  # type: ignore[arg-type]
 
 
 def block_author(db: Session, user: CurrentUser, experience_id: str) -> BlockOut:
@@ -285,32 +290,58 @@ def block_author(db: Session, user: CurrentUser, experience_id: str) -> BlockOut
         raise not_found("experience_not_found")
     if experience.author_id == user.id:
         raise ApiError(422, "cannot_block_self")
-    block = db.get(UserBlock, (user.id, experience.author_id))
-    if block is None:
-        block = UserBlock(blocker_id=user.id, blocked_id=experience.author_id)
-        db.add(block)
+    persona = experience_persona(experience.author_display)
+    block = find_block(db, user.id, experience.author_id, persona)
+    if block is not None:
+        return _block_out(block)
+    # Counted in the database (survives restarts and spans instances) and in this process
+    # (unblocking and blocking again still counts).
+    if _blocks_today(db, user) >= MAX_BLOCKS_PER_DAY or not _new_blocks.take(
+        user.id, MAX_BLOCKS_PER_DAY
+    ):
+        raise ApiError(429, "daily_limit_reached")
+    block = UserBlock(blocker_id=user.id, blocked_id=experience.author_id, persona=persona)
+    db.add(block)
+    try:
         db.commit()
-    return BlockOut(id=_block_id(user.id, experience.author_id), created_at=block.created_at)
+    except IntegrityError:  # the same block sent twice at once
+        db.rollback()
+        block = find_block(db, user.id, experience.author_id, persona)
+        if block is None:
+            raise
+    return _block_out(block)
+
+
+def _blocks_today(db: Session, user: CurrentUser) -> int:
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(UserBlock)
+            .where(UserBlock.blocker_id == user.id, UserBlock.created_at >= start_of_today())
+        )
+        or 0
+    )
 
 
 def my_blocks(db: Session, user: CurrentUser) -> list[BlockOut]:
     return [
-        BlockOut(id=_block_id(b.blocker_id, b.blocked_id), created_at=b.created_at)
+        _block_out(b)
         for b in db.scalars(
             select(UserBlock)
             .where(UserBlock.blocker_id == user.id)
-            .order_by(UserBlock.created_at.desc())
+            .order_by(UserBlock.created_at.desc(), UserBlock.id)
         )
     ]
 
 
 def unblock(db: Session, user: CurrentUser, block_id: str) -> None:
-    for b in db.scalars(select(UserBlock).where(UserBlock.blocker_id == user.id)):
-        if _block_id(b.blocker_id, b.blocked_id) == block_id:
-            db.delete(b)
-            db.commit()
-            return
-    raise not_found("block_not_found")
+    block = db.scalar(
+        select(UserBlock).where(UserBlock.id == block_id, UserBlock.blocker_id == user.id)
+    )
+    if block is None:
+        raise not_found("block_not_found")
+    db.delete(block)
+    db.commit()
 
 
 # ---------- roles ----------

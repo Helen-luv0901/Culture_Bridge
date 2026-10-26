@@ -43,6 +43,12 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
+def start_of_today() -> datetime:
+    """Midnight today in Taiwan, as UTC (daily limits reset then)."""
+    midnight = datetime.combine(now().astimezone(_TAIPEI).date(), datetime.min.time(), _TAIPEI)
+    return midnight.astimezone(UTC)
+
+
 def text2(zh: str | None, en: str | None) -> Text2:
     zh = zh or ""
     return Text2(zh=zh, en=en or zh)

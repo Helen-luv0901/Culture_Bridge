@@ -35,10 +35,10 @@ from app.models import (
     ExperienceTranslation,
     SavedExperience,
     User,
-    UserBlock,
 )
 from app.rag.index import remove_content
 from app.services import avatars
+from app.services.blocking import hides_experience
 from app.services.common import now
 
 logger = logging.getLogger(__name__)
@@ -289,11 +289,7 @@ def _public_query(viewer: CurrentUser | None) -> Select:
         .where(Experience.status == "published")
     )
     if viewer is not None:
-        query = query.where(
-            ~exists().where(
-                UserBlock.blocker_id == viewer.id, UserBlock.blocked_id == Experience.author_id
-            )
-        )
+        query = query.where(~hides_experience(viewer.id))
     return query
 
 

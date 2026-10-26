@@ -27,9 +27,9 @@ from app.models import (
     ExperienceTranslation,
     KbChunk,
     KbDocument,
-    UserBlock,
 )
 from app.rag.embedder import Embedder, EmbeddingUnavailable
+from app.services.blocking import hides_experience
 
 logger = logging.getLogger(__name__)
 
@@ -233,11 +233,7 @@ def semantic_search(
         Experience.id == ContentEmbedding.content_id, Experience.status == "published"
     )
     if viewer is not None:
-        visible_experience = visible_experience.where(
-            ~exists().where(
-                UserBlock.blocker_id == viewer.id, UserBlock.blocked_id == Experience.author_id
-            )
-        )
+        visible_experience = visible_experience.where(~hides_experience(viewer.id))
     visible_feedback = exists().where(
         ExecutionFeedback.id == ContentEmbedding.content_id,
         ExecutionFeedback.review_state == "reviewed",

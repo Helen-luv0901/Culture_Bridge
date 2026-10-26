@@ -451,7 +451,12 @@ class _AccountPanel extends StatelessWidget {
               for (final block in vm.blocks.data ?? const <BlockInfo>[])
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(
+                  title: Text(switch (block.persona) {
+                    'named' => vm.pair('具名作者', 'Named author'),
+                    'anonymous' => vm.pair('匿名作者', 'Anonymous author'),
+                    _ => vm.pair('作者', 'Author'),
+                  }),
+                  subtitle: Text(
                     '${vm.pair('封鎖於', 'Blocked on')} ${formatDate(block.createdAt)}',
                   ),
                   trailing: TextButton(

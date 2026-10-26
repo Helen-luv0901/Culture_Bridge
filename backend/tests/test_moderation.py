@@ -11,8 +11,12 @@ from app.models import (
     ExperienceReaction,
     Report,
     User,
+    UserBlock,
     VerificationRecord,
 )
+from app.services import moderation
+from app.services.common import DailyAllowance
+from tests.test_author_names import publish_as
 from tests.test_experiences import DRAFT, FakeAI, publish_new
 
 MEI = {"Authorization": "Bearer dev:mei"}
@@ -96,6 +100,62 @@ def test_blocking_hides_author_for_blocker_only(api):
     assert api.delete(f"/api/me/blocks/{block['id']}", headers=LIN).status_code == 404
     assert api.delete(f"/api/me/blocks/{block['id']}", headers=KAI).status_code == 204
     assert api.get(f"/api/experiences/{second}", headers=KAI).status_code == 200
+
+
+def test_a_block_hides_only_the_persona_it_was_made_from(api):
+    api.patch("/api/me", json={"nickname": "小美"}, headers=MEI)
+    anonymous = publish_new(api)["id"]
+    named = publish_as(api, "nickname").json()["id"]
+    comments = f"/api/experiences/{publish_new(api, headers=LIN)['id']}/comments"
+    api.post(comments, json={"body": "匿名留言"}, headers=MEI)
+    api.post(comments, json={"body": "具名留言", "author_display": "nickname"}, headers=MEI)
+
+    def posts_for_kai() -> set[str]:
+        return {e["id"] for e in api.get("/api/experiences", headers=KAI).json()["items"]}
+
+    def comments_for_kai() -> set[str]:
+        return {c["body"] for c in api.get(comments, headers=KAI).json()}
+
+    by_anonymous = api.post("/api/blocks", json={"experience_id": anonymous}, headers=KAI).json()
+    assert by_anonymous["persona"] == "anonymous"
+    # The named post and the signed comment stay, so the block can't tie "小美" to the post.
+    assert anonymous not in posts_for_kai() and named in posts_for_kai()
+    assert comments_for_kai() == {"具名留言"}
+
+    api.delete(f"/api/me/blocks/{by_anonymous['id']}", headers=KAI)
+    by_name = api.post("/api/blocks", json={"experience_id": named}, headers=KAI).json()
+    assert by_name["persona"] == "named" and by_name["id"] != by_anonymous["id"]
+    assert named not in posts_for_kai() and anonymous in posts_for_kai()
+    assert comments_for_kai() == {"匿名留言"}
+
+
+def test_blocks_from_before_personas_still_hide_both(api, db):
+    api.patch("/api/me", json={"nickname": "小美"}, headers=MEI)
+    anonymous = publish_new(api)["id"]
+    named = publish_as(api, "nickname").json()["id"]
+    api.get("/api/me", headers=KAI)  # creates the account
+    db.add(UserBlock(blocker_id="dev-kai", blocked_id="dev-mei", persona=None))
+    db.commit()
+
+    posts = {e["id"] for e in api.get("/api/experiences", headers=KAI).json()["items"]}
+    assert anonymous not in posts and named not in posts
+    [listed] = api.get("/api/me/blocks", headers=KAI).json()
+    assert listed["persona"] is None
+    # Blocking again finds the older block instead of adding one.
+    again = api.post("/api/blocks", json={"experience_id": named}, headers=KAI).json()
+    assert again["id"] == listed["id"]
+
+
+def test_new_blocks_are_capped_per_day(api, monkeypatch):
+    monkeypatch.setattr(moderation, "MAX_BLOCKS_PER_DAY", 1)
+    monkeypatch.setattr(moderation, "_new_blocks", DailyAllowance())
+    first = publish_new(api)["id"]
+    second = publish_new(api, headers=LIN)["id"]
+    assert api.post("/api/blocks", json={"experience_id": first}, headers=KAI).status_code == 201
+    # Blocking the same author again is not a new block.
+    assert api.post("/api/blocks", json={"experience_id": first}, headers=KAI).status_code == 201
+    over = api.post("/api/blocks", json={"experience_id": second}, headers=KAI)
+    assert over.status_code == 429 and over.json()["detail"]["code"] == "daily_limit_reached"
 
 
 def test_roles_are_admin_only(api, db):

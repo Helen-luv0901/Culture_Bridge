@@ -583,11 +583,18 @@ class MyExperience {
 }
 
 class BlockInfo {
-  const BlockInfo(this.id, this.createdAt);
-  factory BlockInfo.fromJson(Json json) =>
-      BlockInfo(json['id'] as String, _date(json['created_at'])!);
+  const BlockInfo(this.id, this.createdAt, {this.persona});
+  factory BlockInfo.fromJson(Json json) => BlockInfo(
+    json['id'] as String,
+    _date(json['created_at'])!,
+    persona: json['persona'] as String?,
+  );
   final String id;
   final DateTime createdAt;
+
+  /// 'anonymous' or 'named': a block hides only the identity it was made from, so it never
+  /// shows which anonymous posts belong to a named author. Null on older blocks (both).
+  final String? persona;
 }
 
 // ---------- assistant ----------
