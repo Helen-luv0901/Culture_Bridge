@@ -85,6 +85,10 @@ ThemeData bridgeTheme() => ThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
     ),
   ),
+  // Icon buttons (back, bookmark, report) are 40px by default; 44 is the floor.
+  iconButtonTheme: IconButtonThemeData(
+    style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
+  ),
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       minimumSize: const Size(44, 44),
@@ -152,11 +156,15 @@ ThemeData bridgeTheme() => ThemeData(
   ),
 );
 
-/// Young Serif headings (brand, page and card titles).
+/// Young Serif headings (brand, page and card titles). Young Serif has one weight and
+/// no Chinese, so Chinese titles fall back to Noto Serif TC; asking that variable font
+/// for a heavier wght keeps them clearly above body text, while the Latin face (which
+/// has no wght axis) stays as drawn instead of getting a synthetic bold.
 TextStyle displayStyle(double size, {Color color = Palette.ink}) => TextStyle(
   fontFamily: 'YoungSerif',
   fontFamilyFallback: _serifFallback,
   fontSize: size,
+  fontVariations: const [FontVariation('wght', 640)],
   height: 1.4,
   color: color,
 );
@@ -190,6 +198,7 @@ const _iconPaths = {
   'spark': '<path d="M12 3.5v4M12 15.5v4M4.5 12h4M15.5 12h4M6.6 6.6l2.6 2.6M14.8 14.8l2.6 2.6M17.4 6.6l-2.6 2.6M9.2 14.8l-2.6 2.6"/>',
   'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   'more': '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="2.6"/>',
+  'guide': '<path d="M7 4.5h10.5c.6 0 1 .4 1 1v13c0 .6-.4 1-1 1H7c-.8 0-1.5-.7-1.5-1.5v-12c0-.8.7-1.5 1.5-1.5z"/><path d="M9 9.2l1.2 1.2 2.3-2.4M9 14.2l1.2 1.2 2.3-2.4M14.6 9.5h1.6M14.6 14.5h1.6"/>',
 };
 
 String _hex(Color c) =>
@@ -537,7 +546,8 @@ class TagLink extends StatelessWidget {
   }
 }
 
-/// A choice chip: moss when chosen, paper with a control border when not.
+/// A choice chip: pale moss with a moss border and bold text when chosen, paper with a
+/// control border when not. Solid moss is kept for buttons that do something.
 class NoteChip extends StatelessWidget {
   const NoteChip({
     super.key,
@@ -555,10 +565,13 @@ class NoteChip extends StatelessWidget {
     button: true,
     selected: selected,
     child: Material(
-      color: selected ? Palette.moss : Palette.high,
+      color: selected ? Palette.paleMoss : Palette.high,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(4),
-        side: BorderSide(color: selected ? Palette.moss : Palette.control),
+        side: BorderSide(
+          color: selected ? Palette.moss : Palette.control,
+          width: selected ? 1.5 : 1,
+        ),
       ),
       child: InkWell(
         onTap: onTap,
@@ -573,7 +586,8 @@ class NoteChip extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: dense ? 13 : 14,
-                  color: selected ? Palette.onMoss : Palette.ink,
+                  color: selected ? Palette.moss : Palette.ink,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                 ),
               ),
             ),
@@ -584,9 +598,68 @@ class NoteChip extends StatelessWidget {
   );
 }
 
+/// Long text cut to [maxLines] with 看更多 / 收起, so a page can be scanned first and
+/// read in full only where the reader wants to.
+class ExpandableText extends StatefulWidget {
+  const ExpandableText(this.text, {super.key, this.maxLines = 3, this.style});
+  final String text;
+  final int maxLines;
+  final TextStyle? style;
+  @override
+  State<ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<ExpandableText> {
+  bool _open = false;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: widget.text,
+            style: DefaultTextStyle.of(context).style.merge(widget.style),
+          ),
+          maxLines: widget.maxLines,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: box.maxWidth);
+        final long = painter.didExceedMaxLines;
+        painter.dispose();
+        final cut = long && !_open;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.text,
+              style: widget.style,
+              maxLines: cut ? widget.maxLines : null,
+              overflow: cut ? TextOverflow.ellipsis : null,
+            ),
+            if (long)
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => setState(() => _open = !_open),
+                child: Text(
+                  _open
+                      ? vm.pair('收起', 'Show less')
+                      : vm.pair('看更多', 'Show more'),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// The page's own heading (Young Serif).
 class PageTitle extends StatelessWidget {
-  const PageTitle(this.text, {super.key, this.size = 22});
+  const PageTitle(this.text, {super.key, this.size = 26});
   final String text;
   final double size;
   @override

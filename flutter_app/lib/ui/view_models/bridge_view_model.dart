@@ -60,6 +60,7 @@ class BridgeViewModel extends _BridgeCore
     _draft = preferences.draft;
     _read = preferences.readIds;
     _savedGuides = preferences.savedGuides;
+    _settled = preferences.settled;
     _wasSignedIn = auth.signedIn;
     auth.addListener(_onAuthChanged);
   }

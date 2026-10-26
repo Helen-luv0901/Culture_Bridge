@@ -7,7 +7,7 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 
-/// The pinned card for students who just arrived; it opens the official account.
+/// The old pinned welcome post; saved copies of it now open the official guides.
 const welcomeGuideId = 'welcome';
 
 /// Opens a student post and remembers it was read.
@@ -19,13 +19,24 @@ void openPost(BuildContext context, String id) {
 /// Opens an official guide and remembers it was read.
 void openGuide(BuildContext context, String id) {
   BridgeScope.of(context).markRead('guide:$id');
-  context.push(id == welcomeGuideId ? '/official' : '/actions/$id');
+  if (id == welcomeGuideId) {
+    context.go('/guides');
+  } else {
+    context.push('/actions/$id');
+  }
 }
 
-/// The official account's page (the official avatar links there).
+/// Every official guide (the official avatar links there).
 void showOfficial(BuildContext context) {
-  if (GoRouterState.of(context).uri.path != '/official') {
-    context.push('/official');
+  if (GoRouterState.of(context).uri.path != '/guides') context.go('/guides');
+}
+
+/// Writing a post; guests are asked to sign in first.
+void startSharing(BuildContext context) {
+  if (BridgeScope.of(context).signedIn) {
+    context.go('/share');
+  } else {
+    askToSignIn(context, signInForSharing, next: '/share');
   }
 }
 
@@ -49,7 +60,7 @@ class OfficialByline extends StatelessWidget {
     return Row(
       children: [
         Tooltip(
-          message: vm.pair('看官方帳號', 'See the official account'),
+          message: vm.pair('看全部官方指南', 'See all official guides'),
           child: InkResponse(
             onTap: () => showOfficial(context),
             radius: 24,
@@ -223,7 +234,28 @@ class BookmarkButton extends StatelessWidget {
   );
 }
 
-/// A student post in a list: who, category, title, responses and the bookmark.
+/// Student posts as one sheet of rows, like a forum's thread list: no card per post.
+class PostList extends StatelessWidget {
+  const PostList({super.key, required this.items});
+  final List<ExperienceItem> items;
+  @override
+  Widget build(BuildContext context) => NoteCard(
+    padding: EdgeInsets.zero,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, item) in items.indexed) ...[
+          if (i > 0)
+            const DashedRule(padding: EdgeInsets.symmetric(horizontal: 16)),
+          StudentPostCard(item: item),
+        ],
+      ],
+    ),
+  );
+}
+
+/// One student post in a list: category and who, the title, two lines of what they wrote,
+/// then responses and the bookmark. The whole row opens the post.
 class StudentPostCard extends StatelessWidget {
   const StudentPostCard({super.key, required this.item});
   final ExperienceItem item;
@@ -231,80 +263,94 @@ class StudentPostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final read = vm.isRead(item.id);
-    final title = item.heading(vm.translated(item));
+    final translated = vm.translated(item);
+    final title = item.heading(translated);
+    final excerpt = item
+        .voice(translated)
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
     final parts = [
       if (item.mine) vm.pair('你的分享', 'Your post'),
-      if (item.experiencedTooCount > 0)
-        vm.pair(
-          '我也遇過 ${item.experiencedTooCount}',
-          'Me too ${item.experiencedTooCount}',
-        ),
-      if (item.commentCount > 0)
-        vm.pair('${item.commentCount} 則留言', '${item.commentCount} comments'),
+      vm.pair(
+        '我也遇過 ${item.experiencedTooCount}',
+        'Me too ${item.experiencedTooCount}',
+      ),
+      vm.pair('留言 ${item.commentCount}', '${item.commentCount} comments'),
       if (read) vm.pair('已看過', 'Read'),
     ];
-    return NoteCard(
+    return InkWell(
       key: Key('post-${item.id}'),
-      read: read,
       onTap: () => openPost(context, item.id),
-      padding: const EdgeInsets.fromLTRB(16, 14, 6, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Row(
-              children: [
-                Avatar(
-                  initial: authorInitial(vm, item.authorName),
-                  imageUrl: vm.imageUrl(item.authorAvatarUrl),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 6, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Row(
+                children: [
+                  PaperTag(categoryName(vm, item.categoryKey)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      authorLine(vm, item),
+                      style: mutedStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Semantics(
+                button: true,
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: displayStyle(
+                    17,
+                    color: read ? Palette.muted : Palette.ink,
+                  ).copyWith(height: 1.45),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    authorLine(vm, item),
-                    style: mutedStyle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (excerpt.isNotEmpty && excerpt != title) ...[
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: Text(
+                  excerpt,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: read ? Palette.muted : Palette.ink,
                   ),
                 ),
-                const SizedBox(width: 8),
-                PaperTag(categoryName(vm, item.categoryKey)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: CardTitle(
-              title,
-              read: read,
-              onTap: () => openPost(context, item.id),
-            ),
-          ),
-          const DashedRule(padding: EdgeInsets.only(top: 4, right: 10)),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  parts.isEmpty
-                      ? vm.pair('還沒有回應', 'No responses yet')
-                      : parts.join(' · '),
-                  style: mutedStyle,
-                ),
-              ),
-              BookmarkButton(
-                saved: item.saved,
-                label: item.saved
-                    ? vm.pair('取消收藏「$title」', 'Unsave "$title"')
-                    : vm.pair('收藏「$title」', 'Save "$title"'),
-                onPressed: () {
-                  if (ensureSignedIn(context)) vm.toggleSaved(item);
-                },
               ),
             ],
-          ),
-        ],
+            Row(
+              children: [
+                Expanded(child: Text(parts.join(' · '), style: mutedStyle)),
+                BookmarkButton(
+                  saved: item.saved,
+                  label: item.saved
+                      ? vm.pair('取消收藏「$title」', 'Unsave "$title"')
+                      : vm.pair('收藏「$title」', 'Save "$title"'),
+                  onPressed: () {
+                    if (ensureSignedIn(context)) vm.toggleSaved(item);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

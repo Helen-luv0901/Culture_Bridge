@@ -6,6 +6,8 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 import 'browse_pages.dart';
+import 'guide_stages.dart';
+import 'home_page.dart' show GuideList;
 import 'post_cards.dart';
 
 /// A student post: the author's own words, reactions and comments.
@@ -34,6 +36,7 @@ class _Post extends StatelessWidget {
       gap: 16,
       children: [
         _PostCard(detail: detail),
+        _RelatedGuides(item: item),
         if (item.mine)
           OutlinedButton(
             key: const Key('delete-post'),
@@ -66,11 +69,7 @@ class _Post extends StatelessWidget {
               '${detail.different.length}',
             ),
           ),
-          CardList(
-            children: [
-              for (final e in detail.different) StudentPostCard(item: e),
-            ],
-          ),
+          PostList(items: detail.different),
         ],
         _Comments(post: item),
       ],
@@ -141,11 +140,6 @@ class _PostCard extends StatelessWidget {
               text: vm.pair('回應另一篇分享的不同經驗 ›', 'Answers another post ›'),
               onTap: () => openPost(context, respondsTo),
             ),
-          if (item.actionId != null)
-            _LinkLine(
-              text: vm.pair('相關官方指南 ›', 'Related official guide ›'),
-              onTap: () => openGuide(context, item.actionId!),
-            ),
           if (item.tags.isNotEmpty)
             Wrap(
               children: [
@@ -155,6 +149,63 @@ class _PostCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The official guide the post was written under, or ones it talks about, so a question
+/// in the community leads to the authoritative answer.
+class _RelatedGuides extends StatefulWidget {
+  const _RelatedGuides({required this.item});
+  final ExperienceItem item;
+  @override
+  State<_RelatedGuides> createState() => _RelatedGuidesState();
+}
+
+class _RelatedGuidesState extends State<_RelatedGuides> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final vm = BridgeScope.of(context);
+      if (vm.actions.needsLoad) vm.loadActions();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final actions = vm.actions.data;
+    final item = widget.item;
+    if (actions == null) {
+      // The guide list is not here (yet, or it failed): still link the post's own guide.
+      final id = item.actionId;
+      return id == null
+          ? const SizedBox.shrink()
+          : _LinkLine(
+              text: vm.pair('相關官方指南 ›', 'Related official guide ›'),
+              onTap: () => openGuide(context, id),
+            );
+    }
+    final text = [
+      item.heading(false),
+      item.voice(false),
+      if (item.translation != null) ...[item.heading(true), item.voice(true)],
+    ].join(' ');
+    final guides = {
+      ...actions.where((a) => a.id == item.actionId),
+      ...guidesMentionedIn(text, actions),
+    }.take(2).toList();
+    if (guides.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const Key('related-guides'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionLabel(vm.pair('相關官方指南', 'Related official guides')),
+        const SizedBox(height: 8),
+        GuideList(actions: guides),
+      ],
     );
   }
 }

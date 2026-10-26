@@ -10,6 +10,7 @@ import 'package:culture_bridge/ui/features/post_cards.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'test_helpers.dart';
 
@@ -101,44 +102,82 @@ void main() {
     );
   });
 
-  testWidgets('Home: the official account pinned, then only student posts', (
+  testWidgets('Home: a pinned first-month row, then posts as a forum list', (
     tester,
   ) async {
     await mount(tester, '/', const Size(1280, 2400));
-    final pinned = tester.getTopLeft(find.byKey(const Key('guide-welcome')));
-    final post = tester.getTopLeft(find.byKey(const Key('post-first-rental')));
-    expect(pinned.dy, lessThan(post.dy));
-    expect(find.text('初次來台灣？可以來這邊看看'), findsOneWidget);
-    // Official guides live on the official account's page, not in the feed.
-    expect(find.byKey(const Key('guide-arc')), findsNothing);
-    // Official posts are marked only by the name and avatar: no seal, badge or check mark.
+    double top(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
+    expect(top('pinned-checklist'), lessThan(top('post-first-rental')));
+    expect(find.text('來台第一個月要辦的事'), findsOneWidget);
+    // Guides are not in the feed, and there is no big checklist on Home.
+    expect(find.byKey(const Key('next-guide')), findsNothing);
+    expect(find.byKey(const Key('guide-row-arc')), findsNothing);
+    // Official guides are marked only by the name and avatar: no seal, badge or check mark.
     expect(find.byType(OfficialSeal), findsNothing);
-    expect(find.text('官方'), findsNothing);
     expect(find.byIcon(Icons.verified), findsNothing);
   });
 
-  testWidgets('The pinned card opens the official account and its posts', (
+  testWidgets('Home sorts posts by newest or popular', (tester) async {
+    final app = await mount(tester, '/', const Size(375, 1600));
+    await tap(tester, find.byKey(const Key('home-sort-hot')));
+    expect(app.vm.posts(null, 'hot').data, isNotNull);
+    expect(find.byKey(const Key('post-first-rental')), findsOneWidget);
+  });
+
+  testWidgets('Settled students close the pinned row, and can pin it again', (
     tester,
   ) async {
-    await mount(tester, '/', const Size(375, 812));
-    await tap(tester, find.text('初次來台灣？可以來這邊看看'));
+    final app = await mount(tester, '/', const Size(375, 1600));
+    await tap(tester, find.byKey(const Key('i-am-settled')));
+    expect(app.vm.settled, isTrue);
+    expect(app.preferences.settled, isTrue);
+    expect(find.byKey(const Key('pinned-checklist')), findsNothing);
+    expect(find.byKey(const Key('post-first-rental')), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('nav-1')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('i-am-new')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tap(tester, find.byKey(const Key('i-am-new')));
+    expect(app.vm.settled, isFalse);
+    await tap(tester, find.byKey(const Key('nav-0')));
+    expect(find.byKey(const Key('pinned-checklist')), findsOneWidget);
+  });
+
+  testWidgets('The guides page lists every guide by stage', (tester) async {
+    await mount(tester, '/guides?stage=papers', const Size(375, 812));
     expect(find.byKey(const Key('official-account')), findsOneWidget);
-    expect(find.text('官方帳號'), findsWidgets);
-    expect(find.byKey(const Key('guide-arc')), findsOneWidget);
+    expect(find.byKey(const Key('guide-row-arc')), findsOneWidget);
+    // Guides with no stage are still listed, under 其他指南.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('guide-row-transport')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('其他指南'), findsOneWidget);
     expect(find.byKey(const Key('post-first-rental')), findsNothing);
+  });
+
+  testWidgets('Old official account links open the guides page', (
+    tester,
+  ) async {
+    for (final route in [
+      '/official',
+      '/guide/welcome',
+      '/explore?cat=official',
+    ]) {
+      await mount(tester, route, const Size(375, 812));
+      expect(find.byKey(const Key('official-account')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    }
   });
 
   testWidgets('A whole card opens its post, not just the title', (
     tester,
   ) async {
     await mount(tester, '/', const Size(1280, 2400));
-    final pinned = find.byKey(const Key('guide-welcome'));
-    // Tap the empty right side of the card, far from the title.
-    await tester.tapAt(tester.getTopRight(pinned) + const Offset(-40, 60));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('official-account')), findsOneWidget);
-
-    await tap(tester, find.byKey(const Key('back')));
     final post = find.byKey(const Key('post-first-rental'));
     await tester.tapAt(tester.getTopRight(post) + const Offset(-200, 70));
     await tester.pumpAndSettle();
@@ -146,7 +185,7 @@ void main() {
   });
 
   testWidgets('Opened posts are dimmed and marked read', (tester) async {
-    final app = await mount(tester, '/official', const Size(1280, 2400));
+    final app = await mount(tester, '/guides', const Size(1280, 2400));
     await tap(tester, find.text('申請或更新 ARC').first);
     expect(app.vm.isRead('guide:arc'), isTrue);
     await tap(tester, find.byKey(const Key('back')));
@@ -212,11 +251,7 @@ void main() {
     }
   });
 
-  for (final (route, name) in [
-    ('/explore', '探索'),
-    ('/share', '分享'),
-    ('/profile', '我的'),
-  ]) {
+  for (final (route, name) in [('/explore', '探索'), ('/profile', '我的')]) {
     testWidgets('$route shows its name in the header on phones only', (
       tester,
     ) async {
@@ -290,22 +325,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Book online first.'), findsOneWidget);
     expect(find.text('先線上預約。'), findsNothing);
-    // Sources show English names, without the Chinese reviewer notes.
-    expect(find.textContaining('Sources: Example Agency'), findsOneWidget);
+    // Sources are folded under one line; open, they show English names.
+    expect(find.textContaining('Sources ('), findsOneWidget);
+    await tap(tester, find.byKey(const Key('guide-sources')));
+    expect(find.textContaining('Example Agency'), findsWidgets);
   });
 
-  testWidgets('Official posts and the account use the team logo', (
-    tester,
-  ) async {
-    await mount(tester, '/official', const Size(1280, 1600));
+  testWidgets('Official guides use the team logo', (tester) async {
+    await mount(tester, '/actions/certificate', const Size(1280, 1600));
     Iterable<String> logos() => tester
         .widgetList<Image>(find.byType(Image))
         .map((i) => i.image)
         .whereType<AssetImage>()
         .map((a) => a.assetName)
         .where((name) => name == 'assets/images/logo-mark.png');
-    // The account header plus every official post byline.
-    expect(logos().length, greaterThan(2));
+    expect(logos(), isNotEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await mount(tester, '/actions/arc', const Size(1280, 1600));
+    expect(logos(), isNotEmpty);
   });
 
   testWidgets('New posts appear on Home without a reload', (tester) async {
@@ -506,7 +543,20 @@ void main() {
 
   testWidgets('Mobile tabs, My page and the language setting', (tester) async {
     await mount(tester, '/', const Size(375, 812));
-    await tap(tester, find.byKey(const Key('nav-4')));
+    // Four destinations; the assistant is the bubble and writing is a button.
+    for (final (i, label) in ['首頁', '指南', '探索', '我的'].indexed) {
+      expect(
+        find.descendant(
+          of: find.byKey(Key('nav-$i')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+      );
+    }
+    expect(find.byKey(const Key('nav-4')), findsNothing);
+    await tap(tester, find.byKey(const Key('nav-1')));
+    expect(find.byKey(const Key('official-account')), findsOneWidget);
+    await tap(tester, find.byKey(const Key('nav-3')));
     expect(find.text('我的分享'), findsOneWidget);
     expect(find.text('收藏'), findsOneWidget);
     await tap(tester, find.byKey(const Key('open-settings')));
@@ -706,30 +756,43 @@ void main() {
     tester,
   ) async {
     final app = await mount(tester, '/', const Size(375, 812), signedIn: false);
+    // Guests see the panel: the greeting and suggestions, and sign-in instead of the input.
     await tap(tester, find.byKey(const Key('assistant-button')));
-    expect(find.text('請先登入'), findsOneWidget);
-    expect(find.text('AI 助理僅提供給已登入的使用者，請先登入後再使用。'), findsOneWidget);
-    expect(app.vm.assistantOpen, isFalse);
+    expect(app.vm.assistantOpen, isTrue);
+    expect(find.text('居留證要準備什麼？'), findsOneWidget);
+    expect(find.byKey(const Key('assistant-input')), findsNothing);
+    expect(find.byKey(const Key('assistant-sign-in')), findsOneWidget);
 
-    await tap(tester, find.text('取消'));
-    expect(find.byKey(const Key('sign-in-prompt')), findsNothing);
+    // A suggestion searches the guides and posts instead of asking.
+    await tap(tester, find.text('居留證要準備什麼？'));
     expect(app.vm.assistantOpen, isFalse);
+    expect(find.byKey(const Key('ask-assistant')), findsOneWidget);
+    expect(app.repository.assistantMessages, isEmpty);
 
     await tap(tester, find.byKey(const Key('assistant-button')));
-    await tap(tester, find.byKey(const Key('sign-in-prompt-go')));
+    await tap(
+      tester,
+      find.descendant(
+        of: find.byKey(const Key('assistant-sign-in')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    // The panel closes, so the sign-in page is not hidden under it.
+    expect(app.vm.assistantOpen, isFalse);
+    expect(find.byKey(const Key('assistant-sign-in')), findsNothing);
     expect(find.byKey(const Key('dev-name')), findsOneWidget);
     expect(app.repository.assistantMessages, isEmpty);
   });
 
   testWidgets('Guests are asked to sign in before sharing', (tester) async {
     await mount(tester, '/', const Size(375, 812), signedIn: false);
-    await tap(tester, find.byKey(const Key('nav-2')));
+    await tap(tester, find.byKey(const Key('home-share')));
     expect(find.text('請先登入'), findsOneWidget);
     expect(find.text('分享經驗需要登入帳號，請先登入後再分享。'), findsOneWidget);
     await tap(tester, find.text('取消'));
     expect(find.byKey(const Key('share-title')), findsNothing);
 
-    await tap(tester, find.byKey(const Key('nav-2')));
+    await tap(tester, find.byKey(const Key('home-share')));
     await tap(tester, find.byKey(const Key('sign-in-prompt-go')));
     expect(find.byKey(const Key('dev-name')), findsOneWidget);
   });
@@ -838,7 +901,8 @@ void main() {
       pendingOperations: [],
       fallback: false,
     );
-    await tap(tester, find.byKey(const Key('nav-3')));
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/assistant');
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('assistant-page')), findsOneWidget);
     expect(find.text('居留證要準備什麼？'), findsOneWidget);
     // The page is the chat: no bubble, no close button, nothing over it.
@@ -865,7 +929,8 @@ void main() {
     await tap(tester, find.text('怎麼加入健保？'));
     expect(app.repository.assistantMessages, ['怎麼加入健保？']);
 
-    await tap(tester, find.byKey(const Key('nav-3')));
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/assistant');
+    await tester.pumpAndSettle();
     // The floating window closes; the same conversation fills the page.
     expect(app.vm.assistantOpen, isFalse);
     expect(find.byKey(const Key('assistant-button')), findsNothing);
@@ -875,16 +940,6 @@ void main() {
     await tap(tester, find.byKey(const Key('nav-0')));
     expect(find.byKey(const Key('assistant-button')), findsOneWidget);
     expect(app.vm.assistantOpen, isFalse);
-  });
-
-  testWidgets('Guests are asked to sign in before the assistant tab', (
-    tester,
-  ) async {
-    await mount(tester, '/', const Size(375, 812), signedIn: false);
-    await tap(tester, find.byKey(const Key('nav-3')));
-    expect(find.text('AI 助理僅提供給已登入的使用者，請先登入後再使用。'), findsOneWidget);
-    await tap(tester, find.text('取消'));
-    expect(find.byKey(const Key('assistant-page')), findsNothing);
   });
 
   testWidgets('A guest opening the assistant page directly sees sign in', (

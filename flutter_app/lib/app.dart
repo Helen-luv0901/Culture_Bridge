@@ -33,7 +33,14 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
   late final GoRouter router = GoRouter(
     initialLocation: widget.initialLocation,
     // The old "review the AI summary" step is gone: posts publish as written.
-    redirect: (context, state) => state.uri.path == '/review' ? '/share' : null,
+    redirect: (context, state) => switch (state.uri.path) {
+      '/review' => '/share',
+      // The official account page became the guides page.
+      '/official' || '/guide/welcome' => '/guides',
+      '/explore' when state.uri.queryParameters['cat'] == 'official' =>
+        '/guides',
+      _ => null,
+    },
     routes: [
       ShellRoute(
         builder: (context, state, child) =>
@@ -63,9 +70,10 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             ),
             routes: [_page('settings', (state) => const SettingsPage())],
           ),
-          _page('/official', (state) => const OfficialAccountPage()),
-          // Older links and saved bookmarks to the welcome guide.
-          _page('/guide/welcome', (state) => const OfficialAccountPage()),
+          _page(
+            '/guides',
+            (state) => GuidesPage(stage: state.uri.queryParameters['stage']),
+          ),
           _page(
             '/admin',
             (state) =>

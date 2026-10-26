@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../core/app_shell.dart';
 import '../core/design_system.dart';
 import '../core/layout.dart';
-import '../core/loading.dart';
 import 'assistant_panel.dart';
-import 'post_cards.dart';
 
 /// The assistant tab: the same chat as the bubble's window, filling the page. The
 /// conversation is shared, so a chat started in the window continues here.
@@ -15,8 +13,6 @@ class AssistantPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    if (!vm.signedIn) return const PageFrame(child: _SignInToAsk());
     final layout = AppLayout.of(context);
     final padding = switch (layout) {
       AppLayout.phone => EdgeInsets.zero,
@@ -49,27 +45,6 @@ class AssistantPage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// What a guest sees on the assistant page (from a link): sign in first.
-class _SignInToAsk extends StatelessWidget {
-  const _SignInToAsk();
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    return FlowBody(
-      maxWidth: 760,
-      children: [
-        EmptyNote(
-          key: const Key('assistant-sign-in'),
-          title: vm.pair('請先登入', 'Please sign in'),
-          body: vm.pair(signInForAssistant.$1, signInForAssistant.$2),
-          action: vm.t('signIn'),
-          onAction: () => ensureSignedIn(context),
-        ),
-      ],
     );
   }
 }

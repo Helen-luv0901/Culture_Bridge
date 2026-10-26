@@ -3,20 +3,21 @@ import 'package:go_router/go_router.dart';
 
 import '../features/assistant_panel.dart';
 import '../features/explore_page.dart';
+import '../features/post_cards.dart' show startSharing;
 import 'design_system.dart';
 import 'layout.dart';
-import 'loading.dart';
 
 /// The frame around every screen. Phone: header and bottom tabs. Tablet portrait: a 76px
 /// icon sidebar. Tablet landscape and web: a 232px sidebar and search in the header.
-/// The centre column is at most 880px wide; there is no right rail.
+/// The centre column is at most 880px wide; there is no right rail. Four destinations;
+/// the assistant is the chat bubble and writing a post is a button, not tabs.
 class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.child, required this.uri});
   final Widget child;
   final Uri uri;
 
-  static const tabs = ['/', '/explore', '/share', '/assistant', '/profile'];
-  static const icons = ['home', 'explore', 'share', 'chat', 'me'];
+  static const tabs = ['/', '/guides', '/explore', '/profile'];
+  static const icons = ['home', 'guide', 'explore', 'me'];
   static const maxContentWidth = 880.0;
 
   @override
@@ -30,16 +31,17 @@ class _AppShellState extends State<AppShell> {
   int? get _tabOfPath {
     final path = widget.uri.path;
     if (path == '/') return 0;
-    if (path.startsWith('/explore')) return 1;
-    if (path == '/share') return 2;
-    if (path == '/assistant') return 3;
-    if (path.startsWith('/profile')) return 4;
+    if (path == '/guides') return 1;
+    // Writing a post belongs with the posts.
+    if (path.startsWith('/explore') || path == '/share') return 2;
+    if (path.startsWith('/profile')) return 3;
     return null;
   }
 
   int get _index => _tabOfPath ?? _lastTab;
 
-  bool get _isTabRoot => AppShell.tabs.contains(widget.uri.path);
+  bool get _isTabRoot =>
+      AppShell.tabs.contains(widget.uri.path) || widget.uri.path == '/share';
 
   @override
   void initState() {
@@ -60,9 +62,10 @@ class _AppShellState extends State<AppShell> {
     if (path == '/') return phone ? 'Culture Bridge' : '';
     // On wider screens the brand and sidebar are already there, so the tabs
     // need no page name beside the brand; phones keep it.
+    if (path == '/guides') return phone ? vm.pair('官方指南', 'Guides') : '';
     if (path == '/explore') return phone ? vm.pair('探索', 'Explore') : '';
     if (path == '/share') return phone ? vm.pair('分享', 'Share') : '';
-    if (path == '/profile') return phone ? vm.pair('我的', 'My') : '';
+    if (path == '/profile') return phone ? vm.pair('我的', 'Me') : '';
     if (path == '/assistant') return phone ? vm.pair('助理', 'Assistant') : '';
     if (path == '/profile/settings') return vm.pair('設定', 'Settings');
     if (path.startsWith('/experiences')) {
@@ -72,9 +75,6 @@ class _AppShellState extends State<AppShell> {
       if (path.endsWith('/progress')) return vm.t('myActionProgress');
       if (path.endsWith('/complete')) return vm.t('actionCompletion');
       return vm.pair('官方指南', 'Official guide');
-    }
-    if (path == '/official' || path.startsWith('/guide')) {
-      return vm.pair('官方帳號', 'Official account');
     }
     if (path == '/signin') return vm.t('signIn');
     if (path == '/welcome') return vm.t('profileNames');
@@ -99,21 +99,7 @@ class _AppShellState extends State<AppShell> {
     context.go(AppShell.tabs[_index]);
   }
 
-  void _goTab(BuildContext context, int i) {
-    final tab = AppShell.tabs[i];
-    // Sharing and the assistant need an account: guests are asked to sign in instead.
-    if (!BridgeScope.of(context).signedIn) {
-      if (tab == '/share') {
-        askToSignIn(context, signInForSharing, next: tab);
-        return;
-      }
-      if (tab == '/assistant') {
-        askToSignIn(context, signInForAssistant, next: tab);
-        return;
-      }
-    }
-    context.go(tab);
-  }
+  void _goTab(BuildContext context, int i) => context.go(AppShell.tabs[i]);
 
   void _showNotice(BuildContext context) {
     final vm = BridgeScope.of(context);
@@ -129,10 +115,20 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  /// Home, the guides list and a guide's page all show what is in progress.
+  void _loadExecutions(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    if (!vm.signedIn || !vm.executions.needsLoad) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (vm.signedIn && vm.executions.needsLoad) vm.loadExecutions();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     _showNotice(context);
+    _loadExecutions(context);
     final layout = AppLayout.of(context);
     final phone = layout == AppLayout.phone;
     // The assistant tab is the chat itself: no bubble or window over it, and a
@@ -419,10 +415,9 @@ List<String> _navLabels(BuildContext context) {
   final vm = BridgeScope.of(context);
   return [
     vm.pair('首頁', 'Home'),
+    vm.pair('指南', 'Guides'),
     vm.pair('探索', 'Explore'),
-    vm.pair('分享', 'Share'),
-    vm.pair('助理', 'Assistant'),
-    vm.pair('我的', 'My'),
+    vm.pair('我的', 'Me'),
   ];
 }
 
@@ -467,6 +462,28 @@ class _Sidebar extends StatelessWidget {
                   onTap: () => onTap(i),
                 ),
               ),
+            const SizedBox(height: 14),
+            if (compact)
+              _SidebarItem(
+                key: const Key('nav-share'),
+                icon: 'share',
+                label: BridgeScope.of(context).pair('分享', 'Share'),
+                selected: false,
+                compact: true,
+                onTap: () => startSharing(context),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: const Key('nav-share'),
+                  onPressed: () => startSharing(context),
+                  icon: const AppIcon('share', size: 20, color: Palette.onMoss),
+                  label: Text(
+                    BridgeScope.of(context).pair('寫一篇分享', 'Write a post'),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -495,62 +512,65 @@ class _SidebarItem extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
+      label: label,
       child: Material(
         color: selected ? Palette.paleMoss : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
         child: InkWell(
           borderRadius: BorderRadius.circular(4),
           onTap: onTap,
-          child: compact
-              ? ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: 56,
-                    maxWidth: 56,
-                    minHeight: 56,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AppIcon(icon, color: color),
-                      Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          height: 1.3,
-                          color: color,
-                          fontWeight: weight,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
+          child: ExcludeSemantics(
+            child: compact
+                ? ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 56,
+                      maxWidth: 56,
+                      minHeight: 56,
                     ),
-                    child: Row(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         AppIcon(icon, color: color),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: selected ? Palette.moss : Palette.ink,
-                              fontWeight: weight,
-                            ),
+                        Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1.3,
+                            color: color,
+                            fontWeight: weight,
                           ),
                         ),
                       ],
                     ),
+                  )
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        children: [
+                          AppIcon(icon, color: color),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: selected ? Palette.moss : Palette.ink,
+                                fontWeight: weight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+          ),
         ),
       ),
     );
@@ -559,6 +579,9 @@ class _SidebarItem extends StatelessWidget {
 
 class _BottomTabs extends StatelessWidget {
   const _BottomTabs({required this.index, required this.onTap});
+
+  /// Low like other phone apps' tab bars; each tab is still well over 44px to tap.
+  static const height = 56.0;
   final int index;
   final ValueChanged<int> onTap;
   @override
@@ -570,7 +593,7 @@ class _BottomTabs extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 66),
+          constraints: const BoxConstraints(minHeight: _BottomTabs.height),
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Palette.edge)),
           ),
@@ -581,37 +604,42 @@ class _BottomTabs extends StatelessWidget {
                   child: Semantics(
                     selected: index == i,
                     button: true,
+                    label: labels[i],
                     child: InkWell(
                       key: Key('nav-$i'),
                       onTap: () => onTap(i),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 66),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _RingedIcon(
-                                name: AppShell.icons[i],
-                                selected: index == i,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                labels[i],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.3,
-                                  color: index == i
-                                      ? Palette.moss
-                                      : Palette.muted,
-                                  fontWeight: index == i
-                                      ? FontWeight.w700
-                                      : FontWeight.w400,
+                      child: ExcludeSemantics(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minHeight: _BottomTabs.height,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _RingedIcon(
+                                  name: AppShell.icons[i],
+                                  selected: index == i,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 1),
+                                Text(
+                                  labels[i],
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    height: 1.2,
+                                    color: index == i
+                                        ? Palette.moss
+                                        : Palette.muted,
+                                    fontWeight: index == i
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -633,8 +661,8 @@ class _RingedIcon extends StatelessWidget {
   final bool selected;
   @override
   Widget build(BuildContext context) => Container(
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     alignment: Alignment.center,
     decoration: selected
         ? BoxDecoration(

@@ -12,8 +12,8 @@ import 'assistant_panel.dart';
 import 'home_page.dart';
 import 'post_cards.dart';
 
-/// Explore: category tabs, search across guides and posts, student posts by
-/// newest or most popular, and hot tags. Official posts live on /official.
+/// Explore: search across guides and posts, category tabs, student posts by
+/// newest or most popular, and hot tags. Official guides live on /guides.
 class ExplorePage extends StatelessWidget {
   const ExplorePage({
     super.key,
@@ -49,12 +49,6 @@ class ExplorePage extends StatelessWidget {
     return FlowBody(
       gap: 16,
       children: [
-        _CategoryTabs(
-          category: category,
-          query: query,
-          sort: sort,
-          wrap: sidebar,
-        ),
         // Wide layouts search from the header instead.
         if (!sidebar)
           SearchField(
@@ -62,9 +56,13 @@ class ExplorePage extends StatelessWidget {
             initial: query,
             category: category,
           ),
-        if (q.isEmpty && category == 'official') const _OfficialFeed(),
-        if (q.isEmpty && category != 'official')
-          _PostFeed(category: category, sort: sort),
+        _CategoryTabs(
+          category: category,
+          query: query,
+          sort: sort,
+          wrap: sidebar,
+        ),
+        if (q.isEmpty) _PostFeed(category: category, sort: sort),
         if (q.isNotEmpty) ...[
           _AskAssistantRow(query: q),
           _SearchResults(query: q, category: category),
@@ -205,55 +203,6 @@ class _SearchFieldState extends State<SearchField> {
   }
 }
 
-class _OfficialFeed extends StatelessWidget {
-  const _OfficialFeed();
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    return ResourceView<List<ActionSummary>>(
-      resource: (vm) => vm.actions,
-      load: (vm) => vm.loadActions(),
-      builder: (context, actions) {
-        final sorted = [...actions]
-          ..sort(
-            (a, b) => (b.publishedAt ?? DateTime(2000)).compareTo(
-              a.publishedAt ?? DateTime(2000),
-            ),
-          );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionLabel(
-              vm.pair('官方', 'Official'),
-              note: vm.pair(
-                '${sorted.length + 1} 篇 · 新的在上面',
-                '${sorted.length + 1} · newest first',
-              ),
-            ),
-            const SizedBox(height: 12),
-            CardList(
-              gap: 16,
-              children: [
-                OfficialPostCard(
-                  id: welcomeGuideId,
-                  title: vm.pair(welcomeTitle.$1, welcomeTitle.$2),
-                  pinned: true,
-                ),
-                for (final a in sorted)
-                  OfficialPostCard(
-                    id: a.id,
-                    title: a.title.of(vm.english),
-                    publishedAt: a.publishedAt,
-                  ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 /// Student posts in a category (or all of them), newest or most popular first.
 class _PostFeed extends StatelessWidget {
   const _PostFeed({required this.category, required this.sort});
@@ -286,7 +235,7 @@ class _PostFeed extends StatelessWidget {
                 : vm.pair('分享到「$name」', 'Share in $name'),
             onAction: () {
               if (!all) vm.updateDraft(category: category);
-              context.go('/share');
+              startSharing(context);
             },
           );
         }
@@ -307,13 +256,26 @@ class _PostFeed extends StatelessWidget {
                     '${page.items.length}$more',
                   ),
                 ),
-                _SortChips(category: category, sort: sort),
+                _SortToggle(category: category, sort: sort),
               ],
             ),
-            const SizedBox(height: 12),
-            CardList(
-              children: [for (final e in page.items) StudentPostCard(item: e)],
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton(
+                key: const Key('explore-share'),
+                onPressed: () {
+                  if (!all) vm.updateDraft(category: category);
+                  startSharing(context);
+                },
+                child: Text(
+                  all
+                      ? vm.pair('寫一篇分享 ›', 'Write a post ›')
+                      : vm.pair('分享到「$name」 ›', 'Write in $name ›'),
+                ),
+              ),
             ),
+            const SizedBox(height: 12),
+            PostList(items: page.items),
             if (page.nextOffset != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
@@ -332,8 +294,8 @@ class _PostFeed extends StatelessWidget {
 }
 
 /// 最新 / 熱門: newest first, or by "me too" taps and comments.
-class _SortChips extends StatelessWidget {
-  const _SortChips({required this.category, required this.sort});
+class _SortToggle extends StatelessWidget {
+  const _SortToggle({required this.category, required this.sort});
   final String category;
   final String sort;
   @override
@@ -343,19 +305,37 @@ class _SortChips extends StatelessWidget {
       label: vm.pair('排序', 'Sort'),
       container: true,
       child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
         children: [
           for (final (value, zh, en) in [
             ('new', '最新', 'Newest'),
             ('hot', '熱門', 'Popular'),
           ])
-            NoteChip(
-              key: Key('sort-$value'),
-              label: vm.pair(zh, en),
-              selected: sort == value,
-              onTap: () =>
-                  context.go(ExplorePage.location(category, '', value)),
+            MergeSemantics(
+              child: Semantics(
+                selected: sort == value,
+                child: TextButton(
+                  key: Key('sort-$value'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: sort == value
+                        ? Palette.ink
+                        : Palette.muted,
+                    textStyle: TextStyle(
+                      fontSize: 14,
+                      fontWeight: sort == value
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      decoration: sort == value
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                      decorationColor: Palette.brick,
+                      decorationThickness: 2,
+                    ),
+                  ),
+                  onPressed: () =>
+                      context.go(ExplorePage.location(category, '', value)),
+                  child: Text(vm.pair(zh, en)),
+                ),
+              ),
             ),
         ],
       ),
@@ -373,7 +353,9 @@ class _AskAssistantRow extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: InkWell(
         key: const Key('ask-assistant'),
-        onTap: () => openAssistantFor(context, question: query),
+        onTap: vm.signedIn
+            ? () => openAssistantFor(context, question: query)
+            : () => ensureSignedIn(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
@@ -395,7 +377,12 @@ class _AskAssistantRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vm.pair('問 AI 助理', 'Ask the AI assistant'),
+                      vm.signedIn
+                          ? vm.pair('問 AI 助理', 'Ask the AI assistant')
+                          : vm.pair(
+                              '登入後問 AI 助理',
+                              'Sign in to ask the AI assistant',
+                            ),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text('「$query」', style: mutedStyle),
@@ -471,9 +458,7 @@ class _SearchResults extends StatelessWidget {
                 note: vm.pair('${posts.length} 篇', '${posts.length}'),
               ),
               const SizedBox(height: 10),
-              CardList(
-                children: [for (final e in posts) StudentPostCard(item: e)],
-              ),
+              PostList(items: posts),
             ],
           ],
         );

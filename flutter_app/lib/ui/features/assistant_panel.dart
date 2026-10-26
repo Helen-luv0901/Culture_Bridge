@@ -13,11 +13,9 @@ import 'post_cards.dart';
 /// Opens the assistant. Only signed-in users may use it; guests are asked to sign in first.
 Future<void> openAssistantFor(BuildContext context, {String? question}) async {
   final vm = BridgeScope.of(context);
-  if (vm.signedIn) {
-    vm.openAssistant(question: question);
-    return;
-  }
-  await askToSignIn(context, signInForAssistant);
+  // Guests see the panel too: suggestions that search the guides, and a sign-in line
+  // where the input would be, instead of a sign-in dialog in front of everything.
+  vm.openAssistant(question: vm.signedIn ? question : null);
 }
 
 /// The round chat bubble at the bottom right; it opens and closes the assistant.
@@ -160,10 +158,11 @@ class AssistantOverlay extends StatelessWidget {
   }
 }
 
+/// Suggested questions, and what a guest searches for instead of asking.
 const _suggested = [
-  ('居留證要準備什麼？', 'What do I need for an ARC?'),
-  ('怎麼加入健保？', 'How do I join NHI?'),
-  ('租屋要注意什麼？', 'What should I check when renting?'),
+  ('居留證要準備什麼？', 'What do I need for an ARC?', '居留證'),
+  ('怎麼加入健保？', 'How do I join NHI?', '健保'),
+  ('租屋要注意什麼？', 'What should I check when renting?', '租屋'),
 ];
 
 class AssistantPanel extends StatefulWidget {
@@ -297,7 +296,16 @@ class _AssistantPanelState extends State<AssistantPanel> {
                               NoteChip(
                                 label: vm.pair(q.$1, q.$2),
                                 selected: false,
-                                onTap: () => _ask(vm.pair(q.$1, q.$2)),
+                                onTap: vm.signedIn
+                                    ? () => _ask(vm.pair(q.$1, q.$2))
+                                    : () {
+                                        if (widget.closable) {
+                                          vm.closeAssistant();
+                                        }
+                                        widget.onNavigate(
+                                          '/explore?q=${Uri.encodeQueryComponent(q.$3)}',
+                                        );
+                                      },
                               ),
                           ],
                         ),
@@ -319,36 +327,61 @@ class _AssistantPanelState extends State<AssistantPanel> {
           const DashedRule(color: Palette.edge),
           const SizedBox(height: 6),
           if (!urgentInLog) ...[const _UrgentLine(), const SizedBox(height: 4)],
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('assistant-input'),
-                  controller: _input,
-                  minLines: 1,
-                  maxLines: 3,
-                  maxLength: 1000,
-                  textInputAction: TextInputAction.send,
-                  decoration: InputDecoration(
-                    hintText: vm.pair('輸入你的問題…', 'Type your question…'),
-                    counterText: '',
+          if (!vm.signedIn)
+            Row(
+              key: const Key('assistant-sign-in'),
+              children: [
+                Expanded(
+                  child: Text(
+                    vm.pair(
+                      '登入後就能直接問助理；沒登入也可以點上面的問題，看相關的指南和分享。',
+                      'Sign in to ask the assistant. You can still tap a question above '
+                          'to see related guides and posts.',
+                    ),
+                    style: mutedStyle,
                   ),
-                  onSubmitted: _ask,
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                key: const Key('assistant-send'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(44, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () {
+                    vm.closeAssistant();
+                    ensureSignedIn(context);
+                  },
+                  child: Text(vm.t('signIn')),
                 ),
-                onPressed: vm.asking ? null : () => _ask(_input.text),
-                child: Text(vm.pair('送出', 'Send')),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('assistant-input'),
+                    controller: _input,
+                    minLines: 1,
+                    maxLines: 3,
+                    maxLength: 1000,
+                    textInputAction: TextInputAction.send,
+                    decoration: InputDecoration(
+                      hintText: vm.pair('輸入你的問題…', 'Type your question…'),
+                      counterText: '',
+                    ),
+                    onSubmitted: _ask,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const Key('assistant-send'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onPressed: vm.asking ? null : () => _ask(_input.text),
+                  child: Text(vm.pair('送出', 'Send')),
+                ),
+              ],
+            ),
         ],
       ),
     );
