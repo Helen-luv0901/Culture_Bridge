@@ -13,7 +13,13 @@ from app.core.config import get_settings
 
 @lru_cache
 def get_engine() -> Engine:
-    return create_engine(get_settings().database_url, pool_pre_ping=True, pool_size=5)
+    # A database that stops answering fails within seconds (and /health says so) instead of hanging.
+    return create_engine(
+        get_settings().database_url,
+        pool_pre_ping=True,
+        pool_size=5,
+        connect_args={"connect_timeout": 10},
+    )
 
 
 @lru_cache

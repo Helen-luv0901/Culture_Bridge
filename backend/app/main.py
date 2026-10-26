@@ -1,10 +1,28 @@
+import logging
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.api import actions, admin, assistant, avatars, comments, experiences, me, moderation
+from app.api import (
+    actions,
+    admin,
+    assistant,
+    avatars,
+    client_errors,
+    comments,
+    experiences,
+    me,
+    moderation,
+)
 from app.core.config import get_settings
+from app.core.db import get_engine
 from app.core.errors import register_error_handlers
 from app.web import mount_web_app
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Culture Bridge API",
@@ -34,6 +52,7 @@ api.include_router(comments.router)
 api.include_router(moderation.router)
 api.include_router(assistant.router)
 api.include_router(admin.router)
+api.include_router(client_errors.router)
 
 
 @api.get("/config", tags=["config"])
@@ -49,8 +68,16 @@ app.include_router(api)
 # Cloud Run reserves /healthz (its own 404 page answers it), so deployed checks use /health.
 @app.get("/health", include_in_schema=False)
 @app.get("/healthz", include_in_schema=False)
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> JSONResponse:
+    """Up and able to reach the database. scripts/deploy.sh only sends traffic to a new
+    revision that answers 200 here, and the uptime check alerts on anything else."""
+    try:
+        with get_engine().connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.exception("Health check: database unreachable")
+        return JSONResponse({"status": "error", "database": "unreachable"}, status_code=503)
+    return JSONResponse({"status": "ok", "database": "ok"})
 
 
 # Last: the web app catches every remaining path.

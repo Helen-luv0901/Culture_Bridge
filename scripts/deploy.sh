@@ -4,8 +4,12 @@
 #   bash scripts/deploy.sh
 #
 # It pulls main, builds the image (skipped when this commit was built before), upgrades the
-# database (Alembic), deploys the new revision, re-imports the official procedure drafts only
-# when backend/app/content/official_procedures.json changed, and checks /health.
+# database (Alembic), deploys the new revision without traffic, and moves traffic to it only
+# when its /health (which reaches the database) answers. If the check fails after the switch,
+# traffic goes back to the previous revision. Then it re-imports the official procedure drafts
+# only when backend/app/content/official_procedures.json changed.
+# Migrations run first, so they must keep the previous release working (add, don't rename or
+# drop). Rolling back by hand and restoring the database: docs/runbooks/rollback-and-restore.md.
 #
 # Only for an existing setup: the first deployment, secrets and permissions are
 # scripts/gcp-setup.sh step 5. NO_PULL=1 deploys the checked-out commit as is; BUILD_WITH=docker
@@ -41,6 +45,36 @@ require_login() {
   [[ -n "$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null)" ]] \
     && return 0
   die "目前沒有登入的 Google 帳號。執行 gcloud config set account <你的 Google 帳號>（或重新整理 Cloud Shell 頁面並按「授權」），再重新執行 bash scripts/deploy.sh。"
+}
+
+service_json() { gc run services describe "${SERVICE}" --region="${REGION}" --format=json; }
+
+# The revision getting the traffic now: the one to go back to.
+serving_revision() {
+  service_json | python3 -c '
+import json, sys
+traffic = json.load(sys.stdin)["status"].get("traffic", [])
+print(max(traffic, key=lambda t: t.get("percent", 0))["revisionName"])'
+}
+
+# The URL of a tagged revision (it answers there even without traffic).
+tag_url() {
+  service_json | python3 -c '
+import json, sys
+print(next(t["url"] for t in json.load(sys.stdin)["status"]["traffic"] if t.get("tag") == sys.argv[1]))' "$1"
+}
+
+# /health answers 200 only when the app is up and reaches the database. A new revision starts
+# cold, so a few tries.
+check_health() {
+  local answer
+  if answer="$(curl -fsS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
+    "$1/health" 2>&1)"; then
+    note "健康檢查：${answer}"
+  else
+    note "健康檢查失敗：${answer}"
+    return 1
+  fi
 }
 
 command -v gcloud >/dev/null || die "找不到 gcloud；請在 Google Cloud Shell 執行。"
@@ -86,9 +120,25 @@ bold "3/5 資料表（Alembic）"
 gc run jobs update culture-bridge-migrate --image="${image}" --region="${REGION}" --quiet
 gc run jobs execute culture-bridge-migrate --region="${REGION}" --wait
 
-bold "4/5 部署"
+bold "4/5 部署（新版本先不給流量，健康檢查通過才切換）"
+old_rev="$(serving_revision)"
 # Only the image changes; secrets, Cloud SQL, environment and access stay as step 5 set them.
-gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" --quiet
+gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" \
+  --no-traffic --tag=candidate --quiet
+new_rev="$(gc run services describe "${SERVICE}" --region="${REGION}" \
+  --format='value(status.latestCreatedRevisionName)')"
+candidate_url="$(tag_url candidate)"   || die "找不到新版本 ${new_rev} 的 candidate 網址，流量仍在 ${old_rev}。"
+if ! check_health "${candidate_url}"; then
+  die "新版本 ${new_rev} 沒通過健康檢查，流量仍在 ${old_rev}，使用者不受影響。到 Cloud Run → 修訂版本 → ${new_rev} → 記錄查原因。"
+fi
+gc run services update-traffic "${SERVICE}" --region="${REGION}" --to-latest --quiet
+url="$(gc run services describe "${SERVICE}" --region="${REGION}" --format='value(status.url)')"
+if ! check_health "${url}"; then
+  gc run services update-traffic "${SERVICE}" --region="${REGION}" \
+    --to-revisions="${old_rev}=100" --quiet
+  die "切換到 ${new_rev} 後健康檢查失敗，已把流量退回 ${old_rev}。"
+fi
+note "流量已切到 ${new_rev}（上一版 ${old_rev}，要退回見 docs/runbooks/rollback-and-restore.md）。"
 
 bold "5/5 官方流程卡"
 if [[ "${live_tag}" == "${tag}" ]] || git diff --quiet "${live_tag}" HEAD -- "${CARDS}" 2>/dev/null; then
@@ -99,7 +149,5 @@ else
   gc run jobs execute culture-bridge-import --region="${REGION}" --wait
 fi
 
-url="$(gc run services describe "${SERVICE}" --region="${REGION}" --format='value(status.url)')"
-health="$(curl -fsS --retry 3 --retry-delay 5 "${url}/health" 2>/dev/null || echo '尚未回應')"
 bold "完成：${url}"
-note "版本 ${tag}，健康檢查：${health}"
+note "版本 ${tag}（${new_rev}）"

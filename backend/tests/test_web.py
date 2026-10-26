@@ -81,7 +81,35 @@ def test_health_routes():
     client = TestClient(main_app)
     for path in ("/health", "/healthz"):
         response = client.get(path)
-        assert response.status_code == 200 and response.json() == {"status": "ok"}
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok", "database": "ok"}
+
+
+def test_health_fails_without_the_database(monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    class Down:
+        def connect(self):
+            raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    monkeypatch.setattr("app.main.get_engine", lambda: Down())
+    response = TestClient(main_app).get("/health")
+    assert response.status_code == 503
+    assert response.json() == {"status": "error", "database": "unreachable"}
+
+
+def test_client_errors_are_logged_on_one_line(caplog):
+    client = TestClient(main_app)
+    with caplog.at_level("ERROR", logger="app.client"):
+        response = client.post(
+            "/api/client-errors",
+            json={"message": "FormatException", "stack": "a\nb", "route": "/explore"},
+        )
+    assert response.status_code == 204
+    [record] = caplog.records
+    assert record.getMessage() == "App error on /explore (?): FormatException :: a | b"
+    too_long = client.post("/api/client-errors", json={"message": "x" * 1001})
+    assert too_long.status_code == 422
 
 
 def test_firebase_web_config_from_env(monkeypatch):

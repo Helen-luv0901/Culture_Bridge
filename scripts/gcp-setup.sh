@@ -217,7 +217,7 @@ step_database() {
     run gcloud sql instances create "${INSTANCE}" --project="${PROJECT}" \
       --database-version="${DB_VERSION}" --edition=ENTERPRISE --tier=db-f1-micro \
       --region="${REGION}" --availability-type=zonal --storage-size=10 \
-      --backup-start-time=18:00
+      --backup-start-time=18:00 --enable-point-in-time-recovery --retained-transaction-log-days=7
     run gcloud sql databases create "${DB}" --instance="${INSTANCE}" --project="${PROJECT}"
   fi
 
@@ -537,6 +537,22 @@ step_autodeploy() {
     || note "注意：專案編號是 ${number}，請把 .github/workflows/deploy.yml 裡的 689086323045 改成這個。"
 }
 
+# ---------- 10. backups and point-in-time recovery ----------
+
+step_backups() {
+  bold "10. 備份與時間點還原（PITR）"
+  note "每日備份只能回到備份當下；時間點還原可以回到過去 7 天內的任一秒（例如誤刪資料前一刻）。"
+  ask INSTANCE "執行個體名稱" "${INSTANCE:-culturebridge-db}"
+  save_state
+  gcloud sql instances describe "${INSTANCE}" --project="${PROJECT}" \
+    --format='table(settings.backupConfiguration.enabled:label=每日備份,settings.backupConfiguration.pointInTimeRecoveryEnabled:label=時間點還原,settings.backupConfiguration.transactionLogRetentionDays:label=保留天數)'
+  confirm_yes "會開啟每日備份與時間點還原（保留 7 天交易紀錄，依紀錄大小多一點儲存費用；執行個體可能短暫重新啟動，請選離峰時間）。" \
+    || { note "已取消"; return 0; }
+  run gcloud sql instances patch "${INSTANCE}" --project="${PROJECT}" \
+    --backup-start-time=18:00 --enable-point-in-time-recovery --retained-transaction-log-days=7
+  note "怎麼還原：docs/runbooks/rollback-and-restore.md"
+}
+
 menu() {
   cat <<EOF
 
@@ -551,6 +567,7 @@ Culture Bridge — Google Cloud 設定（專案 ${PROJECT}，區域 ${REGION}）
   7) 匯入官方流程卡草稿（D-8，部署後）
   8) 合併到 main 後自動部署（設定一次）
   9) 刪除舊的試用執行個體（確認新資料庫正常後）
+  10) 備份與時間點還原（PITR）
   q) 離開
 EOF
 }
@@ -599,6 +616,7 @@ dispatch() {
     7) step_import ;;
     8) step_autodeploy ;;
     9) step_cleanup_old ;;
+    10) step_backups ;;
     *) note "沒有這個選項：$1" ;;
   esac
 }
