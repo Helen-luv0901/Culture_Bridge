@@ -111,9 +111,14 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
         const Scaffold(body: Center(child: MissingContent())),
     refreshListenable: widget.viewModel.auth,
   );
+
+  // The app root only depends on the language; pages listen to the view model themselves.
+  late final _LanguageChanges language = _LanguageChanges(widget.viewModel);
+
   @override
   void dispose() {
     router.dispose();
+    language.dispose();
     super.dispose();
   }
 
@@ -121,7 +126,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
   Widget build(BuildContext context) => BridgeScope(
     viewModel: widget.viewModel,
     child: ListenableBuilder(
-      listenable: widget.viewModel,
+      listenable: language,
       builder: (context, _) => MaterialApp.router(
         title: 'Culture Bridge',
         debugShowCheckedModeBanner: false,
@@ -138,6 +143,29 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
       ),
     ),
   );
+}
+
+/// Notifies only when the app language changes, so typing a post or a list refreshing doesn't
+/// rebuild the whole MaterialApp.
+class _LanguageChanges extends ChangeNotifier {
+  _LanguageChanges(this.viewModel) : _english = viewModel.english {
+    viewModel.addListener(_check);
+  }
+
+  final BridgeViewModel viewModel;
+  bool _english;
+
+  void _check() {
+    if (viewModel.english == _english) return;
+    _english = viewModel.english;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    viewModel.removeListener(_check);
+    super.dispose();
+  }
 }
 
 /// A screen inside the shell: each page scrolls on its own sheet of notebook paper, so pages
