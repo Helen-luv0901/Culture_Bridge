@@ -467,12 +467,15 @@ class _CommentsState extends State<_Comments> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          vm.pair(
-            '請友善討論，不要留下電話、帳號等個人資料。',
-            'Be kind. Do not post phone numbers, accounts or other personal details.',
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            vm.pair(
+              '請友善討論，不要留下電話、帳號等個人資料。',
+              'Be kind. Do not post phone numbers, accounts or other personal details.',
+            ),
+            style: mutedStyle.copyWith(fontSize: 12),
           ),
-          style: mutedStyle.copyWith(fontSize: 12),
         ),
       ],
     );

@@ -62,7 +62,11 @@ class ProfilePage extends StatelessWidget {
                   padding: EdgeInsets.zero,
                 ),
                 onPressed: () => context.push('/profile/settings'),
-                child: const AppIcon('settings', size: 20),
+                // The tooltip isn't read out as the button's name; this is.
+                child: Semantics(
+                  label: vm.pair('設定', 'Settings'),
+                  child: const AppIcon('settings', size: 20),
+                ),
               ),
             ),
           ],
@@ -451,7 +455,12 @@ class _AccountPanel extends StatelessWidget {
               for (final block in vm.blocks.data ?? const <BlockInfo>[])
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(
+                  title: Text(switch (block.persona) {
+                    'named' => vm.pair('具名作者', 'Named author'),
+                    'anonymous' => vm.pair('匿名作者', 'Anonymous author'),
+                    _ => vm.pair('作者', 'Author'),
+                  }),
+                  subtitle: Text(
                     '${vm.pair('封鎖於', 'Blocked on')} ${formatDate(block.createdAt)}',
                   ),
                   trailing: TextButton(

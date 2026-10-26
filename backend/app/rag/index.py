@@ -14,6 +14,7 @@ from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import delete, exists, select
+from sqlalchemy import text as sql
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -27,9 +28,9 @@ from app.models import (
     ExperienceTranslation,
     KbChunk,
     KbDocument,
-    UserBlock,
 )
 from app.rag.embedder import Embedder, EmbeddingUnavailable
+from app.services.blocking import hides_experience
 
 logger = logging.getLogger(__name__)
 
@@ -132,10 +133,43 @@ def sync_experience(db: Session, embedder: Embedder, experience_id: str) -> bool
         db.commit()
         return False
     text = experience_text(db, experience)
+    db.commit()  # hand the connection back while Gemini embeds the text
     [vector] = embedder.embed_documents([text])
+    status = db.scalar(select(Experience.status).where(Experience.id == experience_id))
+    if status != "published":  # hidden or deleted meanwhile
+        return False
     _upsert(db, "experience", experience.id, text, vector, experience.published_at)
     db.commit()
     return True
+
+
+BACKFILL_BATCH = 10
+
+
+def index_missing(db: Session, embedder: Embedder, limit: int = BACKFILL_BATCH) -> int:
+    """Index published experiences that have no entry yet (an earlier attempt failed)."""
+    missing = db.scalars(
+        select(Experience.id)
+        .where(
+            Experience.status == "published",
+            ~exists().where(
+                ContentEmbedding.content_type == "experience",
+                ContentEmbedding.content_id == Experience.id,
+            ),
+        )
+        .order_by(Experience.published_at.desc())
+        .limit(limit)
+    ).all()
+    indexed = 0
+    for experience_id in missing:
+        try:
+            indexed += sync_experience(db, embedder, experience_id)
+        except EmbeddingUnavailable:
+            raise  # Gemini is down: the rest would fail too
+        except Exception:
+            db.rollback()
+            logger.exception("Backfill of experience %s failed", experience_id)
+    return indexed
 
 
 def sync_feedback(db: Session, embedder: Embedder, feedback_id: str) -> bool:
@@ -162,9 +196,15 @@ def sync_in_background(
                 sync_experience(db, embedder, content_id)
             else:
                 sync_feedback(db, embedder, content_id)
+            # Each new item also picks up a few that failed before, so nothing stays unindexed.
+            if healed := index_missing(db, embedder):
+                logger.info("Indexed %s experiences that were missing", healed)
         except EmbeddingUnavailable as exc:
-            # Removal never needs embeddings, so this only delays new content being searchable.
+            # Removal never needs embeddings, so this only delays new content being searchable;
+            # the next item's backfill retries it.
             logger.warning("Indexing %s %s failed: %s", content_type, content_id, exc)
+        except Exception:
+            logger.exception("Indexing %s %s failed", content_type, content_id)
 
 
 # ---------- official documents (A-21) ----------
@@ -214,10 +254,13 @@ def semantic_search(
     viewer: CurrentUser | None,
     limit: int = 4,
     max_distance: float | None = None,
+    vector: list[float] | None = None,
 ) -> dict[str, Any]:
-    """Nearest official passages and student content; matches beyond max_distance are noise."""
+    """Nearest official passages and student content; matches beyond max_distance are noise.
+    `vector` is the query already embedded (the assistant starts that early)."""
     cutoff = max_distance if max_distance is not None else get_settings().semantic_max_distance
-    vector = embedder.embed_query(query)
+    if vector is None:
+        vector = embedder.embed_query(query)
     official_distance = KbChunk.embedding.cosine_distance(vector)
     official = db.execute(
         select(KbChunk, KbDocument, official_distance.label("d"))
@@ -227,17 +270,16 @@ def semantic_search(
         .limit(limit)
     ).all()
 
+    # The HNSW index returns its ef_search nearest rows before the visibility and distance
+    # filters below; the default (40) can leave too few once hidden or blocked rows drop out.
+    db.execute(sql("SET LOCAL hnsw.ef_search = 100"))
     content_distance = ContentEmbedding.embedding.cosine_distance(vector)
     # Re-check visibility here: only published experiences and reviewed feedback, never blocked.
     visible_experience = exists().where(
         Experience.id == ContentEmbedding.content_id, Experience.status == "published"
     )
     if viewer is not None:
-        visible_experience = visible_experience.where(
-            ~exists().where(
-                UserBlock.blocker_id == viewer.id, UserBlock.blocked_id == Experience.author_id
-            )
-        )
+        visible_experience = visible_experience.where(~hides_experience(viewer.id))
     visible_feedback = exists().where(
         ExecutionFeedback.id == ContentEmbedding.content_id,
         ExecutionFeedback.review_state == "reviewed",

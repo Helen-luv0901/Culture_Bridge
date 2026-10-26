@@ -9,6 +9,7 @@ from typing import Protocol
 from google import genai
 from google.genai import types
 
+from app.ai.calls import call_gemini
 from app.core.config import get_settings
 from app.models import EMBEDDING_DIMENSIONS
 
@@ -34,14 +35,19 @@ class GeminiEmbedder:
 
     def _embed(self, texts: list[str], task: str) -> list[list[float]]:
         try:
-            response = self._client.models.embed_content(
-                model=self._model,
-                contents=texts,
-                config=types.EmbedContentConfig(
-                    task_type=task, output_dimensionality=EMBEDDING_DIMENSIONS
+            # No backup model: another embedding model's vectors wouldn't match the index.
+            response, _ = call_gemini(
+                lambda model: self._client.models.embed_content(
+                    model=model,
+                    contents=texts,
+                    config=types.EmbedContentConfig(
+                        task_type=task, output_dimensionality=EMBEDDING_DIMENSIONS
+                    ),
                 ),
+                (self._model,),
+                attempts=2,
             )
-        except Exception as exc:
+        except Exception as exc:  # network, quota, daily budget
             logger.warning("Embedding failed: %s", exc)
             raise EmbeddingUnavailable(str(exc)) from exc
         vectors = [e.values or [] for e in response.embeddings or []]

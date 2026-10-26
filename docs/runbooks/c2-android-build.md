@@ -7,7 +7,9 @@
 ## 已經在程式裡做好的
 
 - `android/app/src/main/AndroidManifest.xml` 加上 `INTERNET` 權限（Flutter 範本只加在 debug/profile，正式版原本會連不到 API）
-- `android/app/build.gradle.kts`：有 `android/key.properties` 時用上傳金鑰簽署正式版，沒有時退回 debug 金鑰
+- `android/app/build.gradle.kts`：正式版用 `android/key.properties` 的上傳金鑰簽署；**沒有金鑰檔時正式版建置會直接停止**（以前會悄悄改用 debug 金鑰，上傳 Play 會被拒）。只想在手機上試正式版、不上傳時，可用 `CB_ALLOW_DEBUG_SIGNING=1 flutter run --release`
+- 正式版開啟 R8（`isMinifyEnabled`、`isShrinkResources`，規則在 `android/app/proguard-rules.pro`）：移除沒用到的程式與資源、縮短名稱；第一次實機測試若遇到 `ClassNotFoundException`，把缺的類別加進 proguard-rules.pro
+- 只允許 HTTPS：targetSdk 28 以上 Android 預設就擋明文 HTTP（測試時連本機後端 `http://10.0.2.2:8000` 要另外設定 network security config）
 - 登入：非網頁平台用 `signInWithProvider(GoogleAuthProvider())`（`lib/data/auth_service.dart`）
 - 設定：App 啟動時先讀 `--dart-define` 的 Firebase 設定，再讀後端 `/api/config`
 - 圖示（C-20 暫定版）：`flutter_app/tool/make_icons.py` 畫出橋與日出圖示，產生網頁、Android（含 Android 8+ 的自適應圖示）、iOS 各尺寸，以及 Play 商店用的 `docs/store/play-icon-512.png`。要改設計就改這支程式後重跑 `python3 tool/make_icons.py`（需要 Pillow）
@@ -58,8 +60,11 @@ DEFINES="--dart-define=API_BASE_URL=https://culture-bridge-z7gcp33vjq-de.a.run.a
   --dart-define=FIREBASE_MESSAGING_SENDER_ID=689086323045"
 
 flutter run $DEFINES                      # 接實機測試
-flutter build appbundle --release $DEFINES   # 上傳 Play 用的 .aab
+# 上傳 Play 用的 .aab；--obfuscate 讓 Dart 程式難以還原，符號檔留著才能看懂當機紀錄
+flutter build appbundle --release $DEFINES --obfuscate --split-debug-info=build/symbols
 ```
+
+> `build/symbols/` 不進 repo，但每個上傳的版本都要保存一份（例如放在團隊雲端硬碟），Play Console 的當機堆疊要用它還原。
 
 ## 4. 實機測試（C-19）
 

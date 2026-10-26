@@ -338,9 +338,23 @@ class Report(Base):
 
 class UserBlock(Base):
     __tablename__ = "user_blocks"
-    blocker_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    blocked_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    # Random, so block ids never tie two blocks to one author (migration 0012).
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
+    blocker_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    blocked_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    # anonymous | named: the persona the block was made from, and the only one it hides.
+    # NULL on blocks made before 0012, which hide both.
+    persona: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = _created()
+
+
+class UsageCounter(Base):
+    """How often something was used on one Taiwan day, for daily caps (migration 0013)."""
+
+    __tablename__ = "usage_counters"
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer)
 
 
 class AdminAction(Base):

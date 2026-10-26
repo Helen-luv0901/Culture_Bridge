@@ -219,11 +219,11 @@ class GuideList extends StatelessWidget {
   }
 }
 
-/// 「官方帳號」 in a soft, muted yellow.
+/// 「官方帳號」 in a muted gold, dark enough to read on the cards (5.4:1).
 class _OfficialBadge extends StatelessWidget {
   const _OfficialBadge(this.label);
   final String label;
-  static const _yellow = Color(0xFFC99A2E);
+  static const _yellow = Color(0xFF7F611A);
   @override
   Widget build(BuildContext context) => Text(
     label,

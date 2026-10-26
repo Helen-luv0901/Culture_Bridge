@@ -31,6 +31,9 @@ def test_spa_fallback_and_files(tmp_path):
     assert client.get("/main.dart.js").text == "js"
     assert client.get("/assets/logo.png").content == b"png"
     assert client.get("/api/unknown").status_code == 404
+    # A file that isn't there is a 404, not the page (old builds ask for old file names).
+    assert client.get("/main.dart.old.js").status_code == 404
+    assert client.get("/assets/missing.png").status_code == 404
     # No escaping the web directory.
     assert client.get("/..%2F..%2Fetc%2Fpasswd").text == "<html>app</html>"
 
@@ -81,7 +84,42 @@ def test_health_routes():
     client = TestClient(main_app)
     for path in ("/health", "/healthz"):
         response = client.get(path)
-        assert response.status_code == 200 and response.json() == {"status": "ok"}
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok", "database": "ok"}
+
+
+def test_every_response_carries_security_headers():
+    response = TestClient(main_app).get("/api/config")
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_health_fails_without_the_database(monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    class Down:
+        def connect(self):
+            raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    monkeypatch.setattr("app.main.get_engine", lambda: Down())
+    response = TestClient(main_app).get("/health")
+    assert response.status_code == 503
+    assert response.json() == {"status": "error", "database": "unreachable"}
+
+
+def test_client_errors_are_logged_on_one_line(caplog):
+    client = TestClient(main_app)
+    with caplog.at_level("ERROR", logger="app.client"):
+        response = client.post(
+            "/api/client-errors",
+            json={"message": "FormatException", "stack": "a\nb", "route": "/explore"},
+        )
+    assert response.status_code == 204
+    [record] = caplog.records
+    assert record.getMessage() == "App error on /explore (?): FormatException :: a | b"
+    too_long = client.post("/api/client-errors", json={"message": "x" * 1001})
+    assert too_long.status_code == 422
 
 
 def test_firebase_web_config_from_env(monkeypatch):
@@ -115,3 +153,13 @@ def test_cors_only_for_local_development():
         headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "GET"},
     )
     assert "access-control-allow-origin" not in other.headers
+
+
+def test_every_error_has_the_same_shape():
+    client = TestClient(main_app, raise_server_exceptions=False)
+    invalid = client.post("/api/client-errors", json={"message": ""})
+    assert invalid.status_code == 422
+    assert invalid.json()["detail"]["code"] == "invalid_request"
+    assert "message" in invalid.json()["detail"]["message"]
+    missing = client.get("/api/no-such-route")
+    assert missing.status_code == 404 and missing.json() == {"detail": {"code": "not_found"}}

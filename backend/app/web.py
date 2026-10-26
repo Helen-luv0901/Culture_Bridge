@@ -12,7 +12,7 @@ The app is large (main.dart.js, CanvasKit, fonts), so two things keep it quick t
 
 import mimetypes
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
@@ -39,6 +39,10 @@ def mount_web_app(app: FastAPI, web_dir: Path | None) -> None:
         candidate = (root / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(root):
             return _send(candidate, request)
+        # A missing file (main.dart.js from an older build, an image) must not get the page:
+        # the browser would try to run HTML as JavaScript. App routes have no file extension.
+        if PurePosixPath(path).suffix:
+            return Response(status_code=404)
         return _send(root / "index.html", request)
 
 

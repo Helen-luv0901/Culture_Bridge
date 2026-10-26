@@ -1,5 +1,8 @@
 """AssistantDataSource over the real services, as seen by one viewer (blocks apply)."""
 
+import threading
+import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
@@ -97,13 +100,11 @@ class PostgresAssistantData:
     viewer: CurrentUser | None
     embedder: Embedder = field(default_factory=get_embedder)
     _actions: dict[str, ActionRecord] | None = field(default=None, init=False)
+    _embedding: tuple[str, Future[list[float]]] | None = field(default=None, init=False)
 
     def _all_actions(self) -> dict[str, ActionRecord]:
         if self._actions is None:
-            self._actions = {
-                a.id: _action_record(actions.get_action(self.db, a.id))
-                for a in actions.list_actions(self.db)
-            }
+            self._actions = _published_actions(self.db)
         return self._actions
 
     def search_actions(self, query: str, limit: int) -> list[ActionRecord]:
@@ -143,11 +144,50 @@ class PostgresAssistantData:
             for e in actions.my_executions(self.db, CurrentUser(id=user_id), False)
         ]
 
+    def prepare_semantic(self, query: str) -> None:
+        # Only the Gemini call runs on another thread; the session never leaves this one.
+        self._embedding = (query, _embedding_pool.submit(self.embedder.embed_query, query))
+
     def semantic_search(self, query: str, limit: int) -> dict | None:
+        self.release()  # the query is embedded first, a call to Gemini
+        started = self._embedding if self._embedding and self._embedding[0] == query else None
+        self._embedding = None
         try:
-            return semantic_search(self.db, self.embedder, query, self.viewer, limit)
+            vector = started[1].result() if started else None
+            return semantic_search(self.db, self.embedder, query, self.viewer, limit, vector=vector)
         except EmbeddingUnavailable:
             return None
+
+    def release(self) -> None:
+        # Nothing is written through this session before the model answers; ending the read
+        # transaction returns the connection to the pool (loaded objects stay usable).
+        self.db.commit()
+
+
+# Every message searches the procedures, and loading them all is a few queries per card, so
+# they're kept for a minute (a newly published version reaches the assistant within that).
+_ACTIONS_TTL_SECONDS = 60.0
+_embedding_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="embed")
+_actions_cache: tuple[float, dict[str, ActionRecord]] | None = None
+_actions_lock = threading.Lock()
+
+
+def _published_actions(db: Session) -> dict[str, ActionRecord]:
+    global _actions_cache
+    with _actions_lock:
+        cached = _actions_cache
+    if cached is not None and time.monotonic() - cached[0] < _ACTIONS_TTL_SECONDS:
+        return cached[1]
+    records = {a.id: _action_record(actions.get_action(db, a.id)) for a in actions.list_actions(db)}
+    with _actions_lock:
+        _actions_cache = (time.monotonic(), records)
+    return records
+
+
+def forget_cached_actions() -> None:
+    global _actions_cache
+    with _actions_lock:
+        _actions_cache = None
 
 
 def _action_text(a: ActionRecord) -> str:

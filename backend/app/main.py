@@ -1,18 +1,68 @@
-from fastapi import APIRouter, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import logging
 
-from app.api import actions, admin, assistant, avatars, comments, experiences, me, moderation
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.api import (
+    actions,
+    admin,
+    assistant,
+    avatars,
+    client_errors,
+    comments,
+    experiences,
+    me,
+    moderation,
+)
 from app.core.config import get_settings
+from app.core.db import get_engine
 from app.core.errors import register_error_handlers
 from app.web import mount_web_app
 
+logger = logging.getLogger(__name__)
+
+# Nothing configured logging before, so INFO lines (assistant timings, model hand-overs) were
+# dropped. One handler on "app"; uvicorn keeps its own access log.
+_app_log = logging.getLogger("app")
+if not _app_log.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    _app_log.addHandler(_handler)
+    _app_log.setLevel(logging.INFO)
+
+_dev = get_settings().is_development
 app = FastAPI(
     title="Culture Bridge API",
     version="0.2.0",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    # The interactive docs list every route, admin ones included: development only.
+    docs_url="/api/docs" if _dev else None,
+    openapi_url="/api/openapi.json" if _dev else None,
+    redoc_url=None,
 )
 register_error_handlers(app)
+
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    # No other site may show the app in a frame (clickjacking).
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    if not _dev:  # production is HTTPS only (Cloud Run)
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return response
+
 
 if get_settings().is_development:
     # `flutter run -d chrome` serves the app from its own localhost port. Production serves the
@@ -34,6 +84,7 @@ api.include_router(comments.router)
 api.include_router(moderation.router)
 api.include_router(assistant.router)
 api.include_router(admin.router)
+api.include_router(client_errors.router)
 
 
 @api.get("/config", tags=["config"])
@@ -49,8 +100,16 @@ app.include_router(api)
 # Cloud Run reserves /healthz (its own 404 page answers it), so deployed checks use /health.
 @app.get("/health", include_in_schema=False)
 @app.get("/healthz", include_in_schema=False)
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> JSONResponse:
+    """Up and able to reach the database. scripts/deploy.sh only sends traffic to a new
+    revision that answers 200 here, and the uptime check alerts on anything else."""
+    try:
+        with get_engine().connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.exception("Health check: database unreachable")
+        return JSONResponse({"status": "error", "database": "unreachable"}, status_code=503)
+    return JSONResponse({"status": "ok", "database": "ok"})
 
 
 # Last: the web app catches every remaining path.

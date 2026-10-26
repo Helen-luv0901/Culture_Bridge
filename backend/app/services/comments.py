@@ -9,13 +9,15 @@ from datetime import UTC, datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import delete, exists, func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, forbidden, not_found
-from app.models import CommentLike, Experience, ExperienceComment, User, UserBlock
+from app.models import CommentLike, Experience, ExperienceComment, User
 from app.services import avatars
+from app.services.blocking import blocks_post, hides_comment
+from app.services.common import log_admin
 
 MAX_BODY = 1000
 MAX_COMMENTS = 500  # per post, newest kept visible
@@ -57,7 +59,7 @@ def _public_post(db: Session, experience_id: str, viewer: CurrentUser | None = N
     if experience is None or experience.status != "published":
         raise not_found("experience_not_found")
     # A post by an author the reader blocked is gone for them, comments included.
-    if viewer is not None and db.get(UserBlock, (viewer.id, experience.author_id)):
+    if viewer is not None and blocks_post(db, viewer.id, experience):
         raise not_found("experience_not_found")
     return experience
 
@@ -124,12 +126,7 @@ def list_comments(db: Session, viewer: CurrentUser | None, experience_id: str) -
         ExperienceComment.experience_id == post.id, ExperienceComment.status == "visible"
     )
     if viewer is not None:
-        query = query.where(
-            ~exists().where(
-                UserBlock.blocker_id == viewer.id,
-                UserBlock.blocked_id == ExperienceComment.author_id,
-            )
-        )
+        query = query.where(~hides_comment(viewer.id, post))
     newest = db.scalars(
         query.order_by(ExperienceComment.created_at.desc(), ExperienceComment.id.desc()).limit(
             MAX_COMMENTS
@@ -205,6 +202,8 @@ def delete_comment(db: Session, user: CurrentUser, comment_id: str) -> None:
         raise not_found("comment_not_found")
     if comment.author_id != user.id and not user.is_staff:
         raise forbidden("not_comment_author")
+    if comment.author_id != user.id:
+        log_admin(db, user, "delete", "comment", comment.id, experience_id=comment.experience_id)
     thread = select(ExperienceComment.id).where(
         (ExperienceComment.id == comment.id) | (ExperienceComment.reply_to_id == comment.id)
     )

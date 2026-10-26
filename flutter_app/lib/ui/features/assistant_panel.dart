@@ -372,15 +372,20 @@ class _UrgentLine extends StatelessWidget {
           uri: Uri.parse('tel:1990'),
           builder: (context, follow) => InkWell(
             onTap: follow,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                vm.pair('1990 外國人生活諮詢熱線', '1990 foreigner hotline'),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Palette.brickDeep,
-                  decoration: TextDecoration.underline,
-                  decorationColor: Palette.brick,
+            // 44 px tall to hit easily, but only as wide as its words, so the line still flows.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Align(
+                widthFactor: 1,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  vm.pair('1990 外國人生活諮詢熱線', '1990 foreigner hotline'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Palette.brickDeep,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Palette.brick,
+                  ),
                 ),
               ),
             ),

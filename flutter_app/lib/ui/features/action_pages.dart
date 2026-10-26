@@ -238,9 +238,12 @@ class _Documents extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          vm.pair('出門前逐項勾一次。', 'Tick each one before you leave.'),
-          style: mutedStyle,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            vm.pair('出門前逐項勾一次。', 'Tick each one before you leave.'),
+            style: mutedStyle,
+          ),
         ),
         const SizedBox(height: 10),
         NoteCard(

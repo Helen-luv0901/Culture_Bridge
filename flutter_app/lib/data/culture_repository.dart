@@ -98,6 +98,11 @@ class ApiCultureRepository implements CultureRepository {
   ApiCultureRepository(this.api);
   final ApiClient api;
 
+  // The server tries Gemini up to twice (30 s each) for translations and tags, and the
+  // assistant may take several rounds, so these calls wait longer than the default.
+  static const _aiWait = Duration(seconds: 75);
+  static const _assistantWait = Duration(seconds: 120);
+
   @override
   Future<Profile> me() async => Profile.fromJson(await api.get('/me'));
   @override
@@ -112,7 +117,10 @@ class ApiCultureRepository implements CultureRepository {
   Future<void> deleteAccount() => api.delete('/me');
   @override
   Future<void> uploadAvatar(String base64Image) =>
-      api.put('/me/avatar', {'image': base64Image});
+      // A photo of up to a few MB, often over a phone connection.
+      api.put('/me/avatar', {
+        'image': base64Image,
+      }, const Duration(seconds: 90));
   @override
   Future<void> deleteAvatar() => api.delete('/me/avatar');
   @override
@@ -221,7 +229,9 @@ class ApiCultureRepository implements CultureRepository {
   @override
   Future<ExperienceDetail> requestTranslation(String id, String locale) async =>
       ExperienceDetail.fromJson(
-        await api.post('/experiences/$id/translations', {'locale': locale}),
+        await api.post('/experiences/$id/translations', {
+          'locale': locale,
+        }, _aiWait),
       );
   @override
   Future<List<String>> suggestTags({
@@ -233,7 +243,7 @@ class ApiCultureRepository implements CultureRepository {
       'title': title,
       'text': text,
       'category': ?category,
-    });
+    }, _aiWait);
     return [for (final tag in (json as Json)['tags'] as List) tag as String];
   }
 
@@ -334,7 +344,7 @@ class ApiCultureRepository implements CultureRepository {
       'locale': locale,
       'conversation_id': ?conversationId,
       'screen': ?screen,
-    }),
+    }, _assistantWait),
   );
   @override
   Future<void> clearConversation(String conversationId) =>

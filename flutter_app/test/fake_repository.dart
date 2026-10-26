@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -310,7 +311,14 @@ class FakeCultureRepository implements CultureRepository {
       ], (await explore(query: query)).items);
 
   @override
-  Future<List<String>> popularTags() async => const ['#居留證', '#夜市'];
+  Future<List<String>> popularTags() async {
+    final error = popularTagsError;
+    if (error != null) throw error;
+    return const ['#居留證', '#夜市'];
+  }
+
+  /// When set, popularTags throws it (e.g. a response the app can't read).
+  Object? popularTagsError;
 
   @override
   Future<ExperienceDetail> experience(String id, {String? locale}) async =>
@@ -561,10 +569,15 @@ class FakeCultureRepository implements CultureRepository {
     _experiences.remove(id);
   }
 
+  /// When set, myExperiences answers only once this completes (a slow network).
+  Completer<void>? holdMine;
+
   @override
   Future<List<MyExperience>> myExperiences() async {
     _requireLogin();
-    return mine.values.toList();
+    final items = mine.values.toList();
+    await holdMine?.future;
+    return items;
   }
 
   @override

@@ -8,6 +8,7 @@ actually returned, never from the model's text.
 """
 
 import logging
+import time
 import uuid
 from datetime import UTC, date, datetime, timedelta, timezone
 
@@ -59,6 +60,22 @@ def operation_out(operation: PendingOperation) -> PendingOperationOut:
     )
 
 
+# One message, all its model rounds together; with one round's own limit it stays under
+# the app's 120 s wait (lib/data/culture_repository.dart).
+DEADLINE_SECONDS = 60.0
+
+
+def _log_timings(timings: dict[str, float], received: float, tools: list[str]) -> None:
+    """One line per answered message: where the seconds went (Cloud Logging, app.assistant)."""
+    parts = ", ".join(f"{name} {seconds:.2f}s" for name, seconds in timings.items())
+    logger.info(
+        "Assistant timing: %s, total %.2fs, tools %s",
+        parts,
+        time.monotonic() - received,
+        tools or "-",
+    )
+
+
 def conversation_owner(user: CurrentUser | None) -> str:
     return f"user:{user.id}" if user else "guest"
 
@@ -72,6 +89,7 @@ class Assistant:
         memory: ConversationStore,
         max_tool_rounds: int = 5,
         operations: OperationStore | None = None,
+        deadline_seconds: float = DEADLINE_SECONDS,
     ) -> None:
         self._llm = llm
         self._data = data
@@ -79,6 +97,7 @@ class Assistant:
         self._memory = memory
         self._max_tool_rounds = max_tool_rounds
         self._operations = operations
+        self._deadline_seconds = deadline_seconds
 
     def reply(
         self,
@@ -89,6 +108,7 @@ class Assistant:
     ) -> AssistantReply:
         """Answer one message. `data`/`operations` are per-request (the caller's DB session);
         the constructor's are the defaults used by unit tests."""
+        received = time.monotonic()
         owner = conversation_owner(user)
         conversation_id = request.conversation_id or uuid.uuid4().hex
         history: list[Turn] = self._memory.load(owner, conversation_id)
@@ -105,6 +125,7 @@ class Assistant:
         )
         # Run the obvious searches now, so most questions need one model call instead of several.
         found = prefetch(request.message, ctx)
+        timings = {"prefetch": time.monotonic() - received}
         history.append(
             UserTurn(
                 found.attach(build_user_message(request.message, request.screen, request.locale))
@@ -115,14 +136,23 @@ class Assistant:
         tools_used: list[str] = []
 
         # The extra iteration lets the model answer after its last allowed round of tool calls.
+        started = time.monotonic()
         for round_number in range(self._max_tool_rounds + 1):
+            if round_number and time.monotonic() - started > self._deadline_seconds:
+                # A slow or busy model: answer now rather than past the app's 120 s wait.
+                logger.warning("Assistant fallback: deadline reached after %s", tools_used)
+                return self._fallback(conversation_id, locale, tools_used)
+            source.release()
+            round_started = time.monotonic()
             try:
                 turn = self._llm.generate(system, history, specs)
+                timings[f"model{round_number + 1}"] = time.monotonic() - round_started
             except LLMError as exc:
                 logger.warning("Assistant fallback: %s", exc)
                 return self._fallback(conversation_id, locale, tools_used)
             history.append(turn)
             if not turn.tool_calls:
+                _log_timings(timings, received, tools_used)
                 return self._finish(owner, conversation_id, history, turn, ctx, tools_used, found)
             if round_number == self._max_tool_rounds:
                 break

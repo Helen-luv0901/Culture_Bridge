@@ -76,6 +76,7 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 
 之後每次更新：`bash scripts/deploy.sh`（拉最新 `main`、建置、更新資料表、部署、必要時重新匯入流程卡，不會問問題）。設定 `bash scripts/gcp-setup.sh 8` 並把 GitHub 變數 `AUTO_DEPLOY` 設成 `true` 後，合併到 `main` 且 CI 通過就會自動部署（`.github/workflows/deploy.yml`）。
 
+- [退回上一版與還原資料庫](docs/runbooks/rollback-and-restore.md)：部署會先檢查新版本的 `/health`（含資料庫）才切流量，失敗自動退回
 - [A-3 Cloud SQL 搬遷](docs/runbooks/a3-cloud-sql-migration.md)
 - [A-5 Gemini 金鑰](docs/runbooks/a5-gemini-api-key.md)
 - [A-7 部署到 Cloud Run](docs/runbooks/a7-deploy-cloud-run.md)

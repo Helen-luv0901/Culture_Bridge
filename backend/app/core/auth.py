@@ -31,6 +31,7 @@ _ROLES = ("student", "reviewer", "admin")
 _FIREBASE_CERTS_URL = (
     "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
 )
+_REFETCH_AFTER_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -65,20 +66,31 @@ class FirebaseTokenVerifier:
         self._fetched_at = 0.0
         self._lock = threading.Lock()
 
-    def _get_certs(self) -> dict[str, str]:
+    def _get_certs(self, max_age: float | None = None) -> dict[str, str]:
         with self._lock:
-            if not self._certs or time.monotonic() - self._fetched_at > self._cache_seconds:
+            age = time.monotonic() - self._fetched_at
+            if not self._certs or age > (self._cache_seconds if max_age is None else max_age):
                 response = requests.get(_FIREBASE_CERTS_URL, timeout=10)
                 response.raise_for_status()
                 self._certs = response.json()
                 self._fetched_at = time.monotonic()
             return self._certs
 
+    def _decode(self, token: str, certs: dict[str, str]) -> dict:
+        return jwt.decode(token, certs=certs, audience=self._project_id, clock_skew_in_seconds=10)
+
     def verify(self, token: str) -> Identity:
         try:
-            claims = jwt.decode(
-                token, certs=self._get_certs(), audience=self._project_id, clock_skew_in_seconds=10
-            )
+            certs = self._get_certs()
+            try:
+                claims = self._decode(token, certs)
+            except ValueError:
+                # Google rotates its signing keys; a token signed with a new key fails until
+                # the keys are fetched again (at most once a minute, so bad tokens can't force it).
+                fresh = self._get_certs(max_age=_REFETCH_AFTER_SECONDS)
+                if fresh is certs:
+                    raise
+                claims = self._decode(token, fresh)
         except (ValueError, requests.RequestException) as exc:
             raise ApiError(401, "invalid_token") from exc
         if claims.get("iss") != f"https://securetoken.google.com/{self._project_id}":

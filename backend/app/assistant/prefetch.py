@@ -9,6 +9,7 @@ anything the results lack.
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -52,6 +53,11 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     query = " ".join(message.split())[:MAX_QUERY]
     if not query:
         return Prefetched(block="")
+    started = time.monotonic()
+    try:
+        ctx.data.prepare_semantic(query)
+    except Exception:  # the search below embeds the query itself then
+        logger.exception("Assistant prefetch: could not start the semantic search early")
     try:
         matches = ctx.data.search_actions(query, PROCEDURES + OTHER_PROCEDURES)
         experiences = ctx.data.search_experiences(query, None, None, EXPERIENCES)
@@ -59,7 +65,13 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         logger.exception("Assistant prefetch failed")
         return Prefetched(block="")
     actions, others = matches[:PROCEDURES], matches[PROCEDURES:]
+    keywords_done = time.monotonic()
     passages = _semantic(query, ctx)
+    logger.info(
+        "Assistant prefetch: keywords %.2fs, then semantic %.2fs",
+        keywords_done - started,
+        time.monotonic() - keywords_done,
+    )
     if not actions and not experiences and not _has_passages(passages):
         return Prefetched(block="")  # nothing to add; follow-ups like 「第二個」 stay as written
     payload: dict[str, Any] = {

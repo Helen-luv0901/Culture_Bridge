@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from app.ai.experience_ai import get_experience_ai
 from app.main import app
 from app.models import SavedExperience
-from app.services import experiences as svc
+from app.services.experiences import reactions as svc
 from tests.test_experiences import FakeAI, publish_new
 
 MEI = {"Authorization": "Bearer dev:mei"}

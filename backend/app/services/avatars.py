@@ -29,7 +29,7 @@ MAX_PIXELS = 40_000_000  # refuse "decompression bombs" before decoding them
 UPLOADS_PER_DAY = 20
 _FORMATS = {"JPEG", "PNG", "WEBP", "GIF", "MPO"}  # MPO: JPEGs from some phone cameras
 
-_uploads = DailyAllowance()
+_uploads = DailyAllowance("avatar")
 
 
 def url(avatar_id: str) -> str:

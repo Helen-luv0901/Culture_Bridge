@@ -246,9 +246,15 @@ class _ShareFormState extends State<_ShareForm> {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(
-                vm.pair('點一下選用，不選也可以發布。', 'Tap to use one. Tags are optional.'),
-                style: mutedStyle.copyWith(fontSize: 12),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  vm.pair(
+                    '點一下選用，不選也可以發布。',
+                    'Tap to use one. Tags are optional.',
+                  ),
+                  style: mutedStyle.copyWith(fontSize: 12),
+                ),
               ),
             ],
           ),
@@ -340,7 +346,10 @@ class _Labeled extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Text(label, style: mutedStyle),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Text(label, style: mutedStyle),
+      ),
       child,
       if (error != null) _ErrorText(error!),
     ],

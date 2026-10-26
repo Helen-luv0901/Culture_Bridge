@@ -173,3 +173,19 @@ def test_evaluation_harness(db):
     # Even the crude hashing embedder finds most demo experiences; Gemini should find all.
     assert report.hits >= len(cases) // 2
     assert report.expected_distances
+
+
+def test_the_question_is_embedded_once_and_early(db):
+    calls: list[str] = []
+
+    class CountingEmbedder(HashingEmbedder):
+        def embed_query(self, text: str) -> list[float]:
+            calls.append(text)
+            return super().embed_query(text)
+
+    data = PostgresAssistantData(db, None, embedder=CountingEmbedder())
+    data.prepare_semantic("工作許可")
+    assert data.semantic_search("工作許可", 4) is not None
+    assert calls == ["工作許可"]  # the early embedding was used, not a second call
+    data.semantic_search("居留證", 4)  # a different question embeds on its own
+    assert calls == ["工作許可", "居留證"]

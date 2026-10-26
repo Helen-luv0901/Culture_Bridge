@@ -128,7 +128,7 @@ def test_posts_shared_under_a_guide(api, db):
 
 
 def test_tag_suggestions_use_ai_then_fall_back_to_keywords(api, ai, monkeypatch):
-    monkeypatch.setattr(tag_svc, "_allowance", tag_svc.DailyAllowance())
+    monkeypatch.setattr(tag_svc, "_allowance", tag_svc.DailyAllowance("tags"))
     body = {"title": "居留證", "text": "要先線上預約才能去服務站"}
     url = "/api/experiences/tag-suggestions"
     assert api.post(url, json=body).status_code == 401
@@ -206,7 +206,7 @@ def test_anonymous_post_authors_cannot_sign_their_comments(api):
 
 def test_posts_and_comments_have_daily_caps(api, monkeypatch):
     from app.services import comments as comment_svc
-    from app.services import experiences as exp_svc
+    from app.services.experiences import posts as exp_svc
 
     monkeypatch.setattr(exp_svc, "MAX_POSTS_PER_DAY", 2)
     monkeypatch.setattr(comment_svc, "MAX_COMMENTS_PER_DAY", 1)

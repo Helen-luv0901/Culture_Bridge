@@ -93,8 +93,13 @@ POST /api/assistant/message
 | `FIREBASE_PROJECT_ID` | — | 驗證 ID token 的 audience |
 | `FIREBASE_WEB_API_KEY`、`FIREBASE_WEB_APP_ID`、`FIREBASE_AUTH_DOMAIN`、`FIREBASE_MESSAGING_SENDER_ID` | — | 經 `/api/config` 給網頁版 |
 | `GEMINI_API_KEY`、`GEMINI_MODEL`、`EMBEDDING_MODEL` | —、gemini-3.8-flash、gemini-embedding-001 | 沒有金鑰時 AI 功能回「暫時無法使用」 |
-| `AI_SUMMARIES_PER_DAY` | 20 | 每人每日 AI 摘要次數 |
+| `GEMINI_FALLBACK_MODELS` | gemini-3.1-flash-lite,gemini-2.5-flash-lite | `GEMINI_MODEL` 額度用完（429）或忙碌（503 重試 2 次仍不行）時依序改用的模型，逗號分隔；用完額度的模型休息 1 分鐘。一個請求最多等 45 秒。embedding 不換（向量會對不上） |
+| `AI_SUMMARIES_PER_DAY` | 10 | 每人每日 AI 摘要次數 |
 | `ASSISTANT_ALLOW_GUESTS` | development 時 true | 訪客能否使用助理（待團隊決定） |
-| `ASSISTANT_PER_MINUTE`、`ASSISTANT_PER_DAY`、`ASSISTANT_DAILY_LLM_CALLS` | 10、100、3000 | 助理頻率與用量上限 |
+| `ASSISTANT_PER_MINUTE`、`ASSISTANT_PER_DAY`、`ASSISTANT_DAILY_LLM_CALLS` | 5、20、700 | 助理頻率與用量上限（每日數字存在資料庫 `usage_counters`，重啟或多台執行個體都不會重算） |
+| `GEMINI_DAILY_CALLS` | 2000 | 所有 Gemini 呼叫（助理、摘要、翻譯、標籤、embedding）每日總上限，超過後 AI 功能退回備用做法到隔天 |
+| `AI_TAG_SUGGESTIONS_PER_DAY` | 15 | 每位作者每日 AI 標籤建議次數，超過改用關鍵字規則 |
 | `SEMANTIC_MAX_DISTANCE` | 0.6 | 語意搜尋門檻 |
 | `WEB_DIR` | — | Flutter 網頁版建置結果，設定時由後端提供 |
+
+上面的預設值是照 Gemini **免費方案**訂的（2026-10-27 AI Studio：`gemini-3.5-flash-lite`、`gemini-3.1-flash-lite` 各每天 500 次、每分鐘 15 次，embedding 每天 1,000 次），讓一個人用不完全部人的額度；改用付費方案時再調高。
