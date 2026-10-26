@@ -18,6 +18,7 @@ from app.assistant.llm import (
 )
 
 logger = logging.getLogger(__name__)
+ROUND_BUDGET_SECONDS = 20.0
 
 
 def thinking_config(level: str) -> types.ThinkingConfig | None:
@@ -57,6 +58,8 @@ class GeminiLLM:
                     model=model, contents=to_contents(history), config=config
                 ),
                 self._models,
+                # Each answer round gets less: a message can take several rounds (agent.py).
+                budget=ROUND_BUDGET_SECONDS,
             )
         except Exception as exc:  # SDK errors or the daily budget; all mean "no answer".
             logger.warning("Gemini request failed: %s", exc)

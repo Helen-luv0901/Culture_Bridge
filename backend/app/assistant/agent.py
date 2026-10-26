@@ -8,6 +8,7 @@ actually returned, never from the model's text.
 """
 
 import logging
+import time
 import uuid
 from datetime import UTC, date, datetime, timedelta, timezone
 
@@ -59,6 +60,11 @@ def operation_out(operation: PendingOperation) -> PendingOperationOut:
     )
 
 
+# One message, all its model rounds together; with one round's own limit it stays under
+# the app's 120 s wait (lib/data/culture_repository.dart).
+DEADLINE_SECONDS = 60.0
+
+
 def conversation_owner(user: CurrentUser | None) -> str:
     return f"user:{user.id}" if user else "guest"
 
@@ -72,6 +78,7 @@ class Assistant:
         memory: ConversationStore,
         max_tool_rounds: int = 5,
         operations: OperationStore | None = None,
+        deadline_seconds: float = DEADLINE_SECONDS,
     ) -> None:
         self._llm = llm
         self._data = data
@@ -79,6 +86,7 @@ class Assistant:
         self._memory = memory
         self._max_tool_rounds = max_tool_rounds
         self._operations = operations
+        self._deadline_seconds = deadline_seconds
 
     def reply(
         self,
@@ -115,7 +123,12 @@ class Assistant:
         tools_used: list[str] = []
 
         # The extra iteration lets the model answer after its last allowed round of tool calls.
+        started = time.monotonic()
         for round_number in range(self._max_tool_rounds + 1):
+            if round_number and time.monotonic() - started > self._deadline_seconds:
+                # A slow or busy model: answer now rather than past the app's 120 s wait.
+                logger.warning("Assistant fallback: deadline reached after %s", tools_used)
+                return self._fallback(conversation_id, locale, tools_used)
             source.release()
             try:
                 turn = self._llm.generate(system, history, specs)

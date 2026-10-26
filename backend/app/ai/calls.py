@@ -9,7 +9,8 @@ through within four tries). So a busy model is asked again twice, a second or tw
 the request moves on. Every model also has its own per-minute and per-day quota: one that
 answers 429 is rested for a minute and the request goes straight to the next model in the list
 (GEMINI_MODEL, then GEMINI_FALLBACK_MODELS). Timeouts and unreadable answers are retried
-`attempts` times. One request never keeps the reader waiting past BUDGET_SECONDS.
+`attempts` times. No new attempt starts after `budget` seconds, so one request takes at most
+the budget plus one request's timeout.
 """
 
 import logging
@@ -107,7 +108,7 @@ def call_gemini[T](
                     raise
                 pause = _pause(failures + busy)
                 if not retry or now() - start + pause > budget:
-                    logger.warning("Gemini %s failed (%s); trying the next model", model, exc)
+                    logger.warning("Gemini %s failed: %s", model, exc)
                     break
                 sleep(pause)
                 continue

@@ -203,3 +203,10 @@ def test_guest_rate_limit_is_per_ip(client):
     c = client(ScriptedLLM(answer("a")), limiter=UsageLimiter(per_minute=1, per_day=50))
     assert c.post("/api/assistant/message", json={"message": "x"}).status_code == 200
     assert c.post("/api/assistant/message", json={"message": "x"}).status_code == 429
+
+
+def test_a_slow_message_gets_the_fallback_instead_of_more_rounds(make_assistant):
+    assistant = make_assistant(ScriptedLLM(call("search_procedures", query="ARC"), answer("late")))
+    assistant._deadline_seconds = -1  # every round after the first is past the deadline
+    reply = assistant.reply(AssistantMessageRequest(message="ARC?", locale="zh-Hant"), None)
+    assert reply.fallback is True
