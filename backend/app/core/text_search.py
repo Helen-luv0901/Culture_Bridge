@@ -21,6 +21,10 @@ _CJK_FILLER = set("的了嗎呢吧什麼怎哪我你他她是要")
 # score at most 1 and a full title match at least 2, so above half keeps them apart.
 RELEVANCE_SHARE = 0.6
 
+# Every result needs this much on its own, or a lone post that says 學生 once would be the
+# "best" match for 「學生證」: some of the words in the title, or most of them in the body.
+MIN_SCORE = 0.6
+
 
 def search_units(query: str) -> list[str]:
     """Query -> match units. CJK runs become bigrams so 「工作證怎麼辦」 still matches 「工作證」;
@@ -67,12 +71,12 @@ def rank[T](items: list[tuple[T, str, str]], query: str, limit: int) -> list[T]:
 
 def relevant[T](items: list[tuple[T, str, str]], query: str, limit: int) -> list[T]:
     """Like rank, for people searching: a query with nothing to match finds nothing, and
-    results far weaker than the best one are left out."""
+    weak results, or ones far weaker than the best, are left out."""
     units = search_units(query)
     if not units:
         return []
     scored = _scored(items, units)
     if not scored:
         return []
-    floor = scored[0][1] * RELEVANCE_SHARE
+    floor = max(scored[0][1] * RELEVANCE_SHARE, MIN_SCORE)
     return [item for item, value in scored if value >= floor][:limit]
