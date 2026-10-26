@@ -181,6 +181,8 @@ class _SearchFieldState extends State<SearchField> {
       onSubmitted: _go,
       decoration: InputDecoration(
         isDense: widget.compact,
+        // Easy to hit even in the compact header (44 px, like every other control).
+        constraints: const BoxConstraints(minHeight: 44),
         hintText: vm.pair('搜尋貼文、指南或 #標籤', 'Search posts, guides or #tags'),
         prefixIcon: const Padding(
           padding: EdgeInsets.only(right: 8),

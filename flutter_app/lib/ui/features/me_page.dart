@@ -62,7 +62,11 @@ class ProfilePage extends StatelessWidget {
                   padding: EdgeInsets.zero,
                 ),
                 onPressed: () => context.push('/profile/settings'),
-                child: const AppIcon('settings', size: 20),
+                // The tooltip isn't read out as the button's name; this is.
+                child: Semantics(
+                  label: vm.pair('設定', 'Settings'),
+                  child: const AppIcon('settings', size: 20),
+                ),
               ),
             ),
           ],

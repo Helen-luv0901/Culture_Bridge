@@ -19,7 +19,10 @@ abstract final class Palette {
           Color(0xFFD6C6A6), // dividers
       ink = Color(0xFF39362E),
       readInk = Color(0xFF5E4A3C),
-      muted = Color(0xFF6E6656),
+      // At least 4.5:1 (WCAG AA) on paper, cards, the grid and card borders.
+      muted = Color(
+        0xFF655D4E,
+      ),
       control =
           Color(0xFF8C8270), // borders of things you tap or type in
       moss = Color(0xFF4C5540),
@@ -330,7 +333,7 @@ class Sticker extends StatelessWidget {
   Widget build(BuildContext context) => IgnorePointer(
     child: ExcludeSemantics(
       child: Image.asset(
-        'assets/images/botanical-${index % count}.png',
+        'assets/images/botanical-${index % count}.webp',
         width: size,
         fit: BoxFit.contain,
       ),

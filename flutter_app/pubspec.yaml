@@ -45,8 +45,6 @@ flutter:
     - family: CourierPrime
       fonts:
         - asset: assets/fonts/CourierPrime-Regular.ttf
-    - family: Caveat
-      fonts:
-        - asset: assets/fonts/Caveat-Variable.ttf
     # NotoSerifTC (Chinese) is loaded in lib/main.dart after start-up, so the first screen does
-    # not wait for its 3 MB download; see tool/subset_chinese_font.py.
+    # not wait for its 3 MB download; see tool/subset_chinese_font.py. Every font listed here
+    # is downloaded before the first frame, so list only fonts the app uses.

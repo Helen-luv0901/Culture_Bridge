@@ -36,7 +36,7 @@
 | 展示／頁標題 | Young Serif | 30–44px，正常字重，行高約 1.2 |
 | 內文 | Spectral；繁中 Noto Serif TC | 16px 基準，行高 1.5–1.7 |
 | 狀態／日期／小標題 | Courier Prime | 12–14px，視場合使用斜體 |
-| 邊欄手寫語氣 | Caveat | 節制使用，不承載長篇閱讀 |
+| 邊欄手寫語氣 | Caveat | 節制使用，不承載長篇閱讀。目前畫面沒有用到，已從 App 移除（字型會拖慢首次載入）；要用時再加回 `pubspec.yaml` |
 | 經驗原話 | Spectral italic | 20–25px，保留原話與譯文切換 |
 | 個人影響數字 | Young Serif | 手機 42px、桌面 48px |
 
