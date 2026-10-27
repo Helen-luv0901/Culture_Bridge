@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,7 +19,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
   // Not awaited: the app starts at once and Chinese text switches to this font when it arrives.
-  unawaited(_loadChineseFont());
   // The token getter is wired up once we know which sign-in to use.
   AuthService? auth;
   final api = ApiClient.fromEnvironment(token: () async => auth?.idToken());
@@ -63,19 +61,4 @@ Future<void> main() async {
     onHide: () => vm.setAppVisible(false),
   );
   runApp(CultureBridgeApp(viewModel: vm));
-}
-
-/// The Chinese serif (Palette's fallback family), kept out of pubspec's fonts because the web
-/// app waits for every font listed there before showing anything.
-Future<void> _loadChineseFont() async {
-  try {
-    await (FontLoader(
-      'NotoSerifTC',
-    )..addFont(rootBundle.load('assets/fonts/NotoSerifTC-Subset.ttf'))).load();
-  } on FlutterError catch (error) {
-    // Without it Chinese text keeps the built-in fallback font; the app still works.
-    debugPrint('Chinese font not loaded: $error');
-  } on Exception catch (error) {
-    debugPrint('Chinese font not loaded: $error');
-  }
 }

@@ -292,31 +292,22 @@ void main() {
         .color!;
     expect(colorOf('流程'), Palette.onMoss);
     expect(colorOf('檢舉'), Palette.ink);
-    // The label keeps the app's font and size (the theme style replaces Material's).
+    // The label keeps the app's size (the theme style replaces Material's) and the
+    // platform's sans: no decorative family.
     final style = tester
         .renderObject<RenderParagraph>(find.text('檢舉'))
         .text
         .style!;
-    expect(style.fontFamily, 'Spectral');
+    expect(style.fontFamily, isNot('Spectral'));
     expect(style.fontSize, 14);
   });
 
-  for (final width in [1100.0, 1920.0]) {
-    testWidgets('Stickers never sit behind cards at $width', (tester) async {
-      await mount(tester, '/official', Size(width, 1200));
-      // The page's two stickers; the empty-state ones live inside cards.
-      final stickers = find.byType(Sticker);
-      expect(stickers, findsWidgets);
-      final cards = find.byType(NoteCard);
-      for (final sticker in tester.widgetList<Sticker>(stickers)) {
-        final s = tester.getRect(find.byWidget(sticker));
-        for (final card in tester.widgetList<NoteCard>(cards)) {
-          final c = tester.getRect(find.byWidget(card));
-          expect(s.overlaps(c), isFalse, reason: '$s overlaps $c');
-        }
-      }
-    });
-  }
+  testWidgets('Pages are plain: no decorative stickers in the margins', (
+    tester,
+  ) async {
+    await mount(tester, '/guides', const Size(1920, 1200));
+    expect(find.byType(Sticker), findsNothing);
+  });
 
   testWidgets('Guide steps show English notes in English', (tester) async {
     final app = await mount(tester, '/actions/arc', const Size(1280, 1600));

@@ -254,20 +254,33 @@ class _Header extends StatelessWidget {
                     child: InkWell(
                       key: const Key('brand'),
                       onTap: () => context.go('/'),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          'Culture Bridge',
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style: displayStyle(20),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const _BrandMark(),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'Culture Bridge',
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
+                                style: displayStyle(19),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
+              ],
+              if (phone && uri.path == '/') ...[
+                const _BrandMark(),
+                const SizedBox(width: 10),
               ],
               if (showBack)
                 IconButton(
@@ -303,7 +316,14 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                 ),
-              SizedBox(width: phone ? 4 : 12),
+              if (phone && !onExplore)
+                IconButton(
+                  key: const Key('header-search-button'),
+                  tooltip: vm.pair('搜尋', 'Search'),
+                  onPressed: () => context.go('/explore'),
+                  icon: const AppIcon('search', size: 21),
+                ),
+              SizedBox(width: phone ? 0 : 12),
               const _LanguageToggle(),
             ],
           ),
@@ -311,6 +331,27 @@ class _Header extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The app's mark: the bridge in a moss circle.
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 30,
+    height: 30,
+    alignment: Alignment.center,
+    decoration: const BoxDecoration(
+      color: Palette.moss,
+      shape: BoxShape.circle,
+    ),
+    child: const AppIcon(
+      'bridge',
+      size: 19,
+      color: Palette.onMoss,
+      strokeWidth: 2,
+    ),
+  );
 }
 
 /// Switches between Chinese and English from any page; it shows the other language.
@@ -336,7 +377,7 @@ class _LanguageToggle extends StatelessWidget {
   }
 }
 
-/// One page on notebook paper: it scrolls on its own, centred and at most 880px wide.
+/// One page on the gray ground: it scrolls on its own, centred and at most 880px wide.
 class PageFrame extends StatelessWidget {
   const PageFrame({super.key, required this.child});
   final Widget child;
@@ -357,57 +398,7 @@ class PageFrame extends StatelessWidget {
         ),
       ),
     );
-    return NotebookBackground(
-      child: LayoutBuilder(
-        builder: (context, box) {
-          // Decorate the empty paper with two of the team's botanical stickers,
-          // a different pair on each page, always fully visible: in the side
-          // margins when they are wide enough, otherwise below the content.
-          // Never behind the cards, and not on phones.
-          if (AppLayout.of(context) == AppLayout.phone) return page(child);
-          final seed = GoRouterState.of(context).uri.path.codeUnits
-              .fold<int>(0, (sum, c) => sum + c);
-          final margin =
-              (box.maxWidth - AppShell.maxContentWidth - padding.horizontal) /
-              2;
-          if (margin - 24 >= 100) {
-            final size = (margin - 24).clamp(100.0, 200.0);
-            return Stack(
-              children: [
-                Positioned(
-                  left: (margin - size) / 2,
-                  bottom: 48,
-                  child: Sticker(seed, size: size),
-                ),
-                Positioned(
-                  right: (margin - size * .85) / 2,
-                  top: 36,
-                  child: Sticker(seed + 2, size: size * .85),
-                ),
-                Positioned.fill(child: page(child)),
-              ],
-            );
-          }
-          return page(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                child,
-                const SizedBox(height: 28),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Sticker(seed, size: 130),
-                    Sticker(seed + 2, size: 110),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+    return NotebookBackground(child: page(child));
   }
 }
 
@@ -586,59 +577,93 @@ class _BottomTabs extends StatelessWidget {
   final ValueChanged<int> onTap;
   @override
   Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
     final labels = _navLabels(context);
+    Widget tab(int i) {
+      final on = index == i;
+      return Expanded(
+        child: Semantics(
+          selected: on,
+          button: true,
+          label: labels[i],
+          child: InkWell(
+            key: Key('nav-$i'),
+            onTap: () => onTap(i),
+            child: ExcludeSemantics(
+              // Grows with large text instead of clipping the label.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: height),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AppIcon(
+                      AppShell.icons[i],
+                      size: 22,
+                      color: on ? Palette.ink : Palette.muted,
+                      strokeWidth: on ? 2.3 : 1.7,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      labels[i],
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.2,
+                        color: on ? Palette.ink : Palette.muted,
+                        fontWeight: on ? FontWeight.w700 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Material(
       key: const Key('mobile-navigation'),
       color: Palette.nav,
       child: SafeArea(
         top: false,
         child: Container(
-          constraints: const BoxConstraints(minHeight: _BottomTabs.height),
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Palette.edge)),
           ),
           child: Row(
             children: [
-              for (int i = 0; i < AppShell.tabs.length; i++)
-                Expanded(
-                  child: Semantics(
-                    selected: index == i,
-                    button: true,
-                    label: labels[i],
-                    child: InkWell(
-                      key: Key('nav-$i'),
-                      onTap: () => onTap(i),
-                      child: ExcludeSemantics(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            minHeight: _BottomTabs.height,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _RingedIcon(
-                                  name: AppShell.icons[i],
-                                  selected: index == i,
+              tab(0),
+              tab(1),
+              // Writing a post sits in the middle, like a forum app's ＋.
+              Expanded(
+                child: SizedBox(
+                  height: height,
+                  child: Center(
+                    child: Semantics(
+                      button: true,
+                      label: vm.pair('發文', 'Write a post'),
+                      child: Material(
+                        color: Palette.moss,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: InkWell(
+                          key: const Key('nav-share'),
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => startSharing(context),
+                          child: const ExcludeSemantics(
+                            child: SizedBox(
+                              width: 52,
+                              height: 44,
+                              child: Center(
+                                child: AppIcon(
+                                  'add',
+                                  size: 22,
+                                  color: Palette.onMoss,
+                                  strokeWidth: 2.4,
                                 ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  labels[i],
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    height: 1.2,
-                                    color: index == i
-                                        ? Palette.moss
-                                        : Palette.muted,
-                                    fontWeight: index == i
-                                        ? FontWeight.w700
-                                        : FontWeight.w400,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -646,34 +671,13 @@ class _BottomTabs extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+              tab(2),
+              tab(3),
             ],
           ),
         ),
       ),
     );
   }
-}
-
-/// The current tab's icon gets a thin brick circle around it, like a pen mark.
-class _RingedIcon extends StatelessWidget {
-  const _RingedIcon({required this.name, required this.selected});
-  final String name;
-  final bool selected;
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 28,
-    height: 28,
-    alignment: Alignment.center,
-    decoration: selected
-        ? BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Palette.brick, width: 1.5),
-          )
-        : null,
-    child: AppIcon(
-      name,
-      size: 20,
-      color: selected ? Palette.moss : Palette.muted,
-    ),
-  );
 }

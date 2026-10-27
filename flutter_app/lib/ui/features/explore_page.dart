@@ -183,10 +183,10 @@ class _SearchFieldState extends State<SearchField> {
         constraints: const BoxConstraints(minHeight: 44),
         hintText: vm.pair('搜尋貼文、指南或 #標籤', 'Search posts, guides or #tags'),
         prefixIcon: const Padding(
-          padding: EdgeInsets.only(right: 8),
+          padding: EdgeInsets.only(left: 12, right: 8),
           child: AppIcon('search', size: 20, color: Palette.muted),
         ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 28),
+        prefixIconConstraints: const BoxConstraints(minWidth: 40),
         suffixIcon: _controller.text.isEmpty
             ? null
             : IconButton(

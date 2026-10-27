@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/api_models.dart';
+import '../../domain/keys.dart';
 import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 import 'guide_stages.dart';
 import 'post_cards.dart';
 
-/// Home, like a forum's front page: one pinned row for the first-month checklist (students
-/// who have lived here a while can close it), then students' posts, newest or popular.
+/// Home, like a forum's front page: the boards, one pinned row for the first-month checklist
+/// (students who have lived here a while can close it), then students' posts as cards,
+/// newest or popular.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -17,13 +19,38 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  String _category = 'all';
   String _sort = 'new';
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
+    final filter = _category == 'all' ? null : _category;
     return FlowBody(
-      gap: 14,
+      gap: 12,
       children: [
+        Semantics(
+          label: vm.pair('看板', 'Boards'),
+          container: true,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final key in categoryLabels.keys)
+                  if (key != 'official')
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: NoteChip(
+                        key: Key('home-board-$key'),
+                        dense: true,
+                        label: categoryName(vm, key),
+                        selected: _category == key,
+                        onTap: () => setState(() => _category = key),
+                      ),
+                    ),
+              ],
+            ),
+          ),
+        ),
         if (!vm.settled) const _PinnedChecklist(),
         Wrap(
           alignment: WrapAlignment.spaceBetween,
@@ -33,6 +60,7 @@ class _HomePageState extends State<HomePage> {
               label: vm.pair('排序', 'Sort'),
               container: true,
               child: Wrap(
+                spacing: 4,
                 children: [
                   for (final (value, zh, en) in [
                     ('new', '最新', 'Newest'),
@@ -44,20 +72,19 @@ class _HomePageState extends State<HomePage> {
                         child: TextButton(
                           key: Key('home-sort-$value'),
                           style: TextButton.styleFrom(
+                            backgroundColor: _sort == value
+                                ? Palette.high
+                                : Colors.transparent,
                             foregroundColor: _sort == value
                                 ? Palette.ink
                                 : Palette.muted,
                             textStyle: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: _sort == value
                                   ? FontWeight.w700
                                   : FontWeight.w400,
-                              decoration: _sort == value
-                                  ? TextDecoration.underline
-                                  : TextDecoration.none,
-                              decorationColor: Palette.brick,
-                              decorationThickness: 2,
                             ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                           ),
                           onPressed: () => setState(() => _sort = value),
                           child: Text(vm.pair(zh, en)),
@@ -70,22 +97,33 @@ class _HomePageState extends State<HomePage> {
             TextButton(
               key: const Key('home-share'),
               onPressed: () => startSharing(context),
-              child: Text(vm.pair('寫一篇分享', 'Write a post')),
+              child: Text(vm.pair('發文', 'Write a post')),
             ),
           ],
         ),
         ResourceView<ExperiencePage>(
-          key: ValueKey('home-$_sort'),
-          resource: (vm) => vm.posts(null, _sort),
-          load: (vm) => vm.loadPosts(null, false, _sort),
-          builder: (context, page) => _Feed(page: page, sort: _sort),
+          key: ValueKey('home-$_category-$_sort'),
+          resource: (vm) => vm.posts(filter, _sort),
+          load: (vm) => vm.loadPosts(filter, false, _sort),
+          builder: (context, page) => page.items.isEmpty
+              ? EmptyNote(
+                  title: vm.pair('這個看板還沒有貼文', 'No posts here yet'),
+                  body: vm.pair(
+                    '遇過相關的事嗎？寫一句話，幫下一位學生。',
+                    'Been through something like this? A sentence helps the next student.',
+                  ),
+                  action: vm.pair('發文', 'Write a post'),
+                  onAction: () => startSharing(context),
+                )
+              : _Feed(page: page, filter: filter, sort: _sort),
         ),
       ],
     );
   }
 }
 
-/// The first-month checklist as one pinned row; the × hides it for settled students.
+/// The first-month checklist as one pinned card with its progress; the × hides it for
+/// settled students.
 class _PinnedChecklist extends StatefulWidget {
   const _PinnedChecklist();
   @override
@@ -113,9 +151,11 @@ class _PinnedChecklistState extends State<_PinnedChecklist> {
           ...guides,
     ];
     final read = firstMonth.where((g) => vm.isRead('guide:${g.id}')).length;
-    return NoteCard(
+    return Material(
       key: const Key('pinned-checklist'),
-      padding: EdgeInsets.zero,
+      color: Palette.high,
+      borderRadius: BorderRadius.circular(Radii.card),
+      clipBehavior: Clip.antiAlias,
       child: Row(
         children: [
           Expanded(
@@ -123,39 +163,52 @@ class _PinnedChecklistState extends State<_PinnedChecklist> {
               key: const Key('open-checklist'),
               onTap: () => context.go('/guides'),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
                 child: Row(
                   children: [
-                    Text(
-                      vm.pair('置頂', 'Pinned'),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Palette.brickDeep,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
+                    const AppIcon('guide', size: 22, color: Palette.moss),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             vm.pair('來台第一個月要辦的事', 'Your first month in Taiwan'),
-                            style: displayStyle(16),
+                            style: displayStyle(15),
                           ),
-                          Text(
-                            firstMonth.isEmpty
-                                ? vm.pair('照順序辦最省事', 'Go in order, save trips')
-                                : vm.pair(
-                                    '照順序辦最省事 · 已看過 $read / ${firstMonth.length} 篇',
-                                    'Go in order · $read of ${firstMonth.length} read',
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                    Radii.pill,
                                   ),
-                            style: mutedStyle,
+                                  child: LinearProgressIndicator(
+                                    value: firstMonth.isEmpty
+                                        ? 0
+                                        : read / firstMonth.length,
+                                    minHeight: 6,
+                                    color: Palette.moss,
+                                    backgroundColor: Palette.chip,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  vm.pair(
+                                    '已看 $read / ${firstMonth.length}',
+                                    '$read of ${firstMonth.length} read',
+                                  ),
+                                  style: mutedStyle.copyWith(fontSize: 12),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    const AppIcon('chevron', size: 18, color: Palette.control),
                   ],
                 ),
               ),
@@ -304,8 +357,9 @@ class StepNumber extends StatelessWidget {
 }
 
 class _Feed extends StatelessWidget {
-  const _Feed({required this.page, required this.sort});
+  const _Feed({required this.page, required this.filter, required this.sort});
   final ExperiencePage page;
+  final String? filter;
   final String sort;
   @override
   Widget build(BuildContext context) {
@@ -318,9 +372,9 @@ class _Feed extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: OutlinedButton(
-              onPressed: vm.posts(null, sort).loading
+              onPressed: vm.posts(filter, sort).loading
                   ? null
-                  : () => vm.loadPosts(null, true, sort),
+                  : () => vm.loadPosts(filter, true, sort),
               child: Text(vm.t('loadMore')),
             ),
           ),

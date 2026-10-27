@@ -5,40 +5,47 @@ import '../view_models/bridge_view_model.dart';
 
 /// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
 abstract final class Palette {
-  static const paper = Color(0xFFF1EADC),
-      grid =
-          Color(0xFFEBE3D3), // faint, so text over the paper stays easy to read
-      header = Color(0xFFF3EDE1),
-      nav = Color(0xFFF4EEE0),
+  static const paper =
+          Color(0xFFEDEFF1), // the page behind the cards
+      grid = Color(0xFFEDEFF1),
+      header = Color(0xFFFFFFFF),
+      nav = Color(0xFFFFFFFF),
       high =
-          Color(0xFFFBF6EA), // cards
-      readCard = Color(0xFFF2ECDF),
+          Color(0xFFFFFFFF), // cards
+      soft =
+          Color(0xFFF8F9FA), // the vote column
+      chip =
+          Color(0xFFF2F3F5), // pills, fields
+      readCard = Color(0xFFFFFFFF),
       oat =
-          Color(0xFFE4D8BE), // card borders and their offset shadow
+          Color(0xFFE3E5E8), // card borders
       edge =
-          Color(0xFFD6C6A6), // dividers
-      ink = Color(0xFF39362E),
-      readInk = Color(0xFF5E4A3C),
-      // At least 4.5:1 (WCAG AA) on paper, cards, the grid and card borders.
+          Color(0xFFE3E5E8), // dividers
+      ink = Color(0xFF1C1C1C),
+      inkSoft =
+          Color(0xFF3E4246), // excerpts
+      readInk = Color(0xFF5C6166),
+      // At least 4.5:1 (WCAG AA) on white, the page and the pills.
       muted = Color(
-        0xFF655D4E,
+        0xFF5C6166,
       ),
       control =
-          Color(0xFF8C8270), // borders of things you tap or type in
+          Color(0xFF8B9096), // borders of things you tap or type in
       moss = Color(0xFF4C5540),
-      paleMoss = Color(0xFFDEE1CE),
-      brick = Color(0xFF9E5B4A),
-      brickDeep = Color(0xFF79392E),
-      ochre = Color(0xFFEFE1C3),
-      ochreInk = Color(0xFF6B5320),
-      bubble = Color(0xFFEFE6D2),
+      paleMoss = Color(0xFFE6E9DF),
+      brick = Color(0xFF4C5540),
+      brickDeep =
+          Color(0xFF4C5540), // links
+      ochre = Color(0xFFF2F3F5),
+      ochreInk = Color(0xFF3E4246),
+      bubble = Color(0xFFF2F3F5),
       danger = Color(0xFFB42318),
       onMoss = Color(0xFFFFFFFF);
 }
 
 /// Corner radii: soft, so cards and posts don't feel sharp.
 abstract final class Radii {
-  static const card = 14.0, control = 12.0, pill = 999.0;
+  static const card = 12.0, control = 12.0, pill = 999.0;
 }
 
 class BridgeScope extends InheritedNotifier<BridgeViewModel> {
@@ -51,16 +58,17 @@ class BridgeScope extends InheritedNotifier<BridgeViewModel> {
       context.dependOnInheritedWidgetOfExactType<BridgeScope>()!.notifier!;
 }
 
-const _serifFallback = ['NotoSerifTC'];
-const _underline = UnderlineInputBorder(
-  borderSide: BorderSide(color: Palette.control, width: 1.5),
-);
+OutlineInputBorder _field([BorderSide side = BorderSide.none]) =>
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(Radii.control),
+      borderSide: side,
+    );
 
+/// Forum look: light gray page, white cards, the platform's sans (Noto Sans TC for Chinese
+/// on the web, fetched by Flutter on demand), one moss accent.
 ThemeData bridgeTheme() => ThemeData(
   useMaterial3: true,
   scaffoldBackgroundColor: Palette.paper,
-  fontFamily: 'Spectral',
-  fontFamilyFallback: _serifFallback,
   colorScheme: ColorScheme.fromSeed(
     seedColor: Palette.moss,
     surface: Palette.high,
@@ -81,15 +89,8 @@ ThemeData bridgeTheme() => ThemeData(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       backgroundColor: Palette.moss,
       foregroundColor: Palette.onMoss,
-      textStyle: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Spectral',
-        fontFamilyFallback: _serifFallback,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Radii.control),
-      ),
+      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      shape: const StadiumBorder(),
     ),
   ),
   // Icon buttons (back, bookmark, report) are 40px by default; 44 is the floor.
@@ -99,8 +100,10 @@ ThemeData bridgeTheme() => ThemeData(
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       minimumSize: const Size(44, 44),
-      foregroundColor: Palette.brickDeep,
+      foregroundColor: Palette.moss,
+      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      shape: const StadiumBorder(),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
@@ -108,27 +111,17 @@ ThemeData bridgeTheme() => ThemeData(
       minimumSize: const Size(48, 48),
       foregroundColor: Palette.ink,
       backgroundColor: Palette.high,
-      textStyle: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Spectral',
-        fontFamilyFallback: _serifFallback,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Radii.control),
-      ),
+      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      shape: const StadiumBorder(),
       side: const BorderSide(color: Palette.control),
     ),
   ),
   chipTheme: ChipThemeData(
-    backgroundColor: Palette.high,
-    selectedColor: Palette.moss,
-    // Selected chips are dark moss, so their label and tick turn white. A theme
-    // labelStyle replaces Material's default instead of merging with it, so the
-    // font, size and line height are restated here (as labelLarge).
+    backgroundColor: Palette.chip,
+    selectedColor: Palette.ink,
+    // A theme labelStyle replaces Material's default instead of merging with it, so the
+    // size and line height are restated here (as labelLarge).
     labelStyle: TextStyle(
-      fontFamily: 'Spectral',
-      fontFamilyFallback: _serifFallback,
       fontSize: 14,
       height: 20 / 14,
       fontWeight: FontWeight.w500,
@@ -141,20 +134,22 @@ ThemeData bridgeTheme() => ThemeData(
     ),
     secondaryLabelStyle: const TextStyle(color: Palette.onMoss),
     checkmarkColor: Palette.onMoss,
-    side: const BorderSide(color: Palette.control),
+    side: BorderSide.none,
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(Radii.pill),
-    ),
+    shape: const StadiumBorder(),
   ),
-  inputDecorationTheme: const InputDecorationTheme(
-    filled: false,
-    border: _underline,
-    enabledBorder: _underline,
-    focusedBorder: UnderlineInputBorder(
-      borderSide: BorderSide(color: Palette.moss, width: 2),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: Palette.chip,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    border: _field(),
+    enabledBorder: _field(),
+    focusedBorder: _field(const BorderSide(color: Palette.moss, width: 1.5)),
+    errorBorder: _field(const BorderSide(color: Palette.danger, width: 1.5)),
+    focusedErrorBorder: _field(
+      const BorderSide(color: Palette.danger, width: 1.5),
     ),
-    hintStyle: TextStyle(color: Palette.muted),
+    hintStyle: const TextStyle(color: Palette.muted),
   ),
   snackBarTheme: const SnackBarThemeData(
     backgroundColor: Palette.ink,
@@ -167,27 +162,20 @@ ThemeData bridgeTheme() => ThemeData(
   ),
 );
 
-/// Young Serif headings (brand, page and card titles). Young Serif has one weight and
-/// no Chinese, so Chinese titles fall back to Noto Serif TC; asking that variable font
-/// for a heavier wght keeps them clearly above body text, while the Latin face (which
-/// has no wght axis) stays as drawn instead of getting a synthetic bold.
+/// Headings (brand, page and card titles): bold sans.
 TextStyle displayStyle(double size, {Color color = Palette.ink}) => TextStyle(
-  fontFamily: 'YoungSerif',
-  fontFamilyFallback: _serifFallback,
   fontSize: size,
-  fontVariations: const [FontVariation('wght', 640)],
-  height: 1.4,
+  fontWeight: FontWeight.w700,
+  height: 1.35,
   color: color,
 );
 
-/// Courier Prime section labels.
+/// Small section labels.
 const labelStyle = TextStyle(
-  fontFamily: 'CourierPrime',
-  fontFamilyFallback: _serifFallback,
   fontSize: 13,
   fontWeight: FontWeight.w700,
-  letterSpacing: 1.8,
-  color: Palette.ink,
+  letterSpacing: .2,
+  color: Palette.muted,
 );
 
 const mutedStyle = TextStyle(fontSize: 13, color: Palette.muted, height: 1.5);
@@ -209,6 +197,8 @@ const _iconPaths = {
   'spark': '<path d="M12 3.5v4M12 15.5v4M4.5 12h4M15.5 12h4M6.6 6.6l2.6 2.6M14.8 14.8l2.6 2.6M17.4 6.6l-2.6 2.6M9.2 14.8l-2.6 2.6"/>',
   'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   'more': '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="2.6"/>',
+  'up': '<path d="M12 5l7 8h-4v6H9v-6H5z"/>',
+  'add': '<path d="M12 5v14M5 12h14"/>',
   'guide': '<path d="M7 4.5h10.5c.6 0 1 .4 1 1v13c0 .6-.4 1-1 1H7c-.8 0-1.5-.7-1.5-1.5v-12c0-.8.7-1.5 1.5-1.5z"/><path d="M9 9.2l1.2 1.2 2.3-2.4M9 14.2l1.2 1.2 2.3-2.4M14.6 9.5h1.6M14.6 14.5h1.6"/>',
 };
 
@@ -342,7 +332,6 @@ class Avatar extends StatelessWidget {
 
 // ---------- paper ----------
 
-/// Warm paper with a flat 1px notebook grid every 20px.
 /// One of the hand-drawn botanical stickers from the team's asset library; decoration only.
 class Sticker extends StatelessWidget {
   const Sticker(this.index, {super.key, this.size = 120});
@@ -371,26 +360,16 @@ class NotebookBackground extends StatelessWidget {
 
 class _GridPainter extends CustomPainter {
   const _GridPainter();
-  static const step = 20.0;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = Palette.paper);
-    final line = Paint()
-      ..color = Palette.grid
-      ..strokeWidth = 1;
-    for (double x = .5; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
-    }
-    for (double y = .5; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
-    }
   }
 
   @override
   bool shouldRepaint(_GridPainter old) => false;
 }
 
-/// A sheet of paper: rounded, a hairline border and a soft shadow. [read] dims it.
+/// A white card on the gray page: rounded, no shadow. [read] keeps it (titles dim instead).
 class NoteCard extends StatelessWidget {
   const NoteCard({
     super.key,
@@ -410,33 +389,21 @@ class NoteCard extends StatelessWidget {
   /// Makes the whole card one tap target; buttons inside keep their own actions.
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    // The shadow sits behind; the sheet itself is a Material so list rows and
-    // ink splashes inside it paint correctly.
-    decoration: BoxDecoration(
+  Widget build(BuildContext context) => Material(
+    color: color ?? (read ? Palette.readCard : Palette.high),
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(Radii.card),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x1439362E), // ink, faint
-          blurRadius: 18,
-          offset: Offset(0, 4),
-        ),
-      ],
+      side: borderColor == null
+          ? BorderSide.none
+          : BorderSide(color: borderColor!, width: 1.5),
     ),
-    child: Material(
-      color: color ?? (read ? Palette.readCard : Palette.high),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Radii.card),
-        side: BorderSide(color: borderColor ?? Palette.oat),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: onTap == null
-          ? Padding(padding: padding, child: child)
-          : InkWell(
-              onTap: onTap,
-              child: Padding(padding: padding, child: child),
-            ),
-    ),
+    clipBehavior: Clip.antiAlias,
+    child: onTap == null
+        ? Padding(padding: padding, child: child)
+        : InkWell(
+            onTap: onTap,
+            child: Padding(padding: padding, child: child),
+          ),
   );
 }
 
@@ -498,9 +465,9 @@ class PaperHeading extends StatelessWidget {
   );
 }
 
-/// A small italic label, e.g. a post's category.
+/// A small gray pill, e.g. a post's category.
 class PaperTag extends StatelessWidget {
-  const PaperTag(this.text, {super.key, this.color = Palette.ochre});
+  const PaperTag(this.text, {super.key, this.color = Palette.chip});
   final String text;
   final Color color;
   @override
@@ -512,11 +479,7 @@ class PaperTag extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
     child: Text(
       text,
-      style: const TextStyle(
-        fontSize: 12,
-        height: 1.3,
-        color: Palette.ochreInk,
-      ),
+      style: const TextStyle(fontSize: 12, height: 1.3, color: Palette.inkSoft),
     ),
   );
 }
@@ -559,8 +522,7 @@ class TagLink extends StatelessWidget {
   }
 }
 
-/// A choice chip: pale moss with a moss border and bold text when chosen, paper with a
-/// control border when not. Solid moss is kept for buttons that do something.
+/// A choice pill: dark when chosen, light gray when not.
 class NoteChip extends StatelessWidget {
   const NoteChip({
     super.key,
@@ -578,17 +540,11 @@ class NoteChip extends StatelessWidget {
     button: true,
     selected: selected,
     child: Material(
-      color: selected ? Palette.paleMoss : Palette.high,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Radii.pill),
-        side: BorderSide(
-          color: selected ? Palette.moss : Palette.control,
-          width: selected ? 1.5 : 1,
-        ),
-      ),
+      color: selected ? Palette.ink : Palette.chip,
+      shape: const StadiumBorder(),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.pill),
+        customBorder: const StadiumBorder(),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
@@ -599,7 +555,7 @@ class NoteChip extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: dense ? 13 : 14,
-                  color: selected ? Palette.moss : Palette.ink,
+                  color: selected ? Palette.onMoss : Palette.ink,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                 ),
               ),

@@ -237,32 +237,37 @@ class _Sources extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        key: const Key('guide-sources'),
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: const EdgeInsets.only(bottom: 8),
-        expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        iconColor: Palette.ink,
-        collapsedIconColor: Palette.ink,
-        title: Text(
-          sources.isEmpty
-              ? vm.pair('資料來源（待補上）', 'Sources (to be added)')
-              : vm.pair(
-                  '資料來源（${sources.length}）',
-                  'Sources (${sources.length})',
-                ),
-          style: displayStyle(16),
+    // Its own Material: the tile's ink stays with this page, not the shell's Material that
+    // the pages above it share.
+    return Material(
+      type: MaterialType.transparency,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: const Key('guide-sources'),
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          iconColor: Palette.ink,
+          collapsedIconColor: Palette.ink,
+          title: Text(
+            sources.isEmpty
+                ? vm.pair('資料來源（待補上）', 'Sources (to be added)')
+                : vm.pair(
+                    '資料來源（${sources.length}）',
+                    'Sources (${sources.length})',
+                  ),
+            style: displayStyle(16),
+          ),
+          subtitle: Text(checked, style: mutedStyle),
+          children: [
+            for (final source in sources)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: SourceLine(source: source),
+              ),
+          ],
         ),
-        subtitle: Text(checked, style: mutedStyle),
-        children: [
-          for (final source in sources)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: SourceLine(source: source),
-            ),
-        ],
       ),
     );
   }
