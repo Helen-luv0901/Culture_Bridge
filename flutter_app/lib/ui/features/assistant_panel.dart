@@ -552,7 +552,7 @@ class _Entry extends StatelessWidget {
         'open_action' => vm.pair('打開官方指南', 'Open the guide'),
         'open_progress' => vm.pair('打開辦理進度', 'Open progress'),
         'open_experience' => vm.pair('看這篇學生分享', 'Read this student post'),
-        'open_explore' => vm.pair('去探索看看', 'Go to Explore'),
+        'open_explore' => vm.pair('去看板看看', 'Go to Boards'),
         'open_share' => vm.pair('去分享', 'Go to Share'),
         _ => action.type,
       };

@@ -18,7 +18,7 @@ class AppShell extends StatefulWidget {
   final Uri uri;
 
   static const tabs = ['/', '/guides', '/explore', '/profile'];
-  static const icons = ['home', 'guide', 'explore', 'me'];
+  static const icons = ['home', 'guide', 'boards', 'me'];
   // A feed reads best around 760px; the side menu holds the rest.
   static const maxContentWidth = 760.0;
 
@@ -65,7 +65,7 @@ class _AppShellState extends State<AppShell> {
     // On wider screens the brand and sidebar are already there, so the tabs
     // need no page name beside the brand; phones keep it.
     if (path == '/guides') return phone ? vm.pair('官方指南', 'Guides') : '';
-    if (path == '/explore') return phone ? vm.pair('探索', 'Explore') : '';
+    if (path == '/explore') return phone ? vm.pair('看板', 'Boards') : '';
     if (path == '/share') return phone ? vm.pair('分享', 'Share') : '';
     if (path == '/profile') return phone ? vm.pair('我的', 'Me') : '';
     if (path == '/assistant') return phone ? vm.pair('助理', 'Assistant') : '';
@@ -433,7 +433,7 @@ List<String> _navLabels(BuildContext context) {
   return [
     vm.pair('首頁', 'Home'),
     vm.pair('指南', 'Guides'),
-    vm.pair('探索', 'Explore'),
+    vm.pair('看板', 'Boards'),
     vm.pair('我的', 'Me'),
   ];
 }
@@ -493,7 +493,7 @@ class _Sidebar extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
                 child: Semantics(
                   header: true,
-                  child: Text(vm.pair('看板', 'Boards'), style: labelStyle),
+                  child: Text(vm.pair('所有看板', 'All boards'), style: labelStyle),
                 ),
               ),
               for (final key in categoryLabels.keys)

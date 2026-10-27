@@ -97,7 +97,7 @@ ThemeData bridgeTheme() => ThemeData(
     ),
   ),
   chipTheme: ChipThemeData(
-    backgroundColor: Palette.chip,
+    backgroundColor: Palette.high,
     selectedColor: Palette.moss,
     // A theme labelStyle replaces Material's default instead of merging with it, so the
     // font, size and line height are restated here (as labelLarge).
@@ -115,7 +115,7 @@ ThemeData bridgeTheme() => ThemeData(
     ),
     secondaryLabelStyle: const TextStyle(color: Palette.onMoss),
     checkmarkColor: Palette.onMoss,
-    side: BorderSide.none,
+    side: const BorderSide(color: Palette.control),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
     shape: const StadiumBorder(),
   ),
@@ -180,6 +180,7 @@ const _iconPaths = {
   'more': '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="2.6"/>',
   'up': '<path d="M12 5l7 8h-4v6H9v-6H5z"/>',
   'add': '<path d="M12 5v14M5 12h14"/>',
+  'boards': '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
   'guide': '<path d="M7 4.5h10.5c.6 0 1 .4 1 1v13c0 .6-.4 1-1 1H7c-.8 0-1.5-.7-1.5-1.5v-12c0-.8.7-1.5 1.5-1.5z"/><path d="M9 9.2l1.2 1.2 2.3-2.4M9 14.2l1.2 1.2 2.3-2.4M14.6 9.5h1.6M14.6 14.5h1.6"/>',
 };
 
@@ -527,7 +528,7 @@ class TagLink extends StatelessWidget {
   }
 }
 
-/// A choice pill: moss when chosen, oat when not.
+/// A choice pill: moss when chosen, cream with a clear edge when not.
 class NoteChip extends StatelessWidget {
   const NoteChip({
     super.key,
@@ -545,8 +546,10 @@ class NoteChip extends StatelessWidget {
     button: true,
     selected: selected,
     child: Material(
-      color: selected ? Palette.moss : Palette.chip,
-      shape: const StadiumBorder(),
+      color: selected ? Palette.moss : Palette.high,
+      shape: StadiumBorder(
+        side: BorderSide(color: selected ? Palette.moss : Palette.control),
+      ),
       child: InkWell(
         onTap: onTap,
         customBorder: const StadiumBorder(),

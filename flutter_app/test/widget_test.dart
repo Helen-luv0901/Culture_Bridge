@@ -251,7 +251,7 @@ void main() {
     }
   });
 
-  for (final (route, name) in [('/explore', '探索'), ('/profile', '我的')]) {
+  for (final (route, name) in [('/explore', '看板'), ('/profile', '我的')]) {
     testWidgets('$route shows its name in the header on phones only', (
       tester,
     ) async {
@@ -535,7 +535,7 @@ void main() {
   testWidgets('Mobile tabs, My page and the language setting', (tester) async {
     await mount(tester, '/', const Size(375, 812));
     // Four destinations; the assistant is the bubble and writing is a button.
-    for (final (i, label) in ['首頁', '指南', '探索', '我的'].indexed) {
+    for (final (i, label) in ['首頁', '指南', '看板', '我的'].indexed) {
       expect(
         find.descendant(
           of: find.byKey(Key('nav-$i')),

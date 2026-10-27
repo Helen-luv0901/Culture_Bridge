@@ -47,7 +47,7 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 - lib/data：`ApiClient`、`CultureRepository`（API 版）、`AdminRepository`、登入（`auth_service.dart`）、介面字串、本機偏好。
 - lib/ui/view_models：`BridgeViewModel`：語系、登入、載入中／錯誤狀態、分享流程、助理對話。
 - lib/ui/core：紙張視覺、共用 Widget、響應式導覽、載入與錯誤畫面。
-- lib/ui/features：首頁與探索、流程與辦理、分享與我的、登入、浮動 AI 助理、審查後台（`/admin`）。
+- lib/ui/features：首頁與看板、流程與辦理、分享與我的、登入、浮動 AI 助理、審查後台（`/admin`）。
 - test：以記憶體中的假 API（`fake_repository.dart`）測試畫面與流程。
 
 語言與分享草稿保存在本機；其他資料都在後端。

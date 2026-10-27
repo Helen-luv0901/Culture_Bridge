@@ -1,7 +1,7 @@
 {
   "zh-Hant": {
     "home": "首頁",
-    "explore": "探索",
+    "explore": "看板",
     "share": "分享",
     "my": "我的",
     "myExperiences": "我的",
@@ -180,7 +180,7 @@
   },
   "en": {
     "home": "Home",
-    "explore": "Explore",
+    "explore": "Boards",
     "share": "Share",
     "my": "My",
     "myExperiences": "Me",
