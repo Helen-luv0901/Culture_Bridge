@@ -597,11 +597,22 @@ class _BottomTabs extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AppIcon(
-                      AppShell.icons[i],
-                      size: 22,
-                      color: on ? Palette.ink : Palette.muted,
-                      strokeWidth: on ? 2.3 : 1.7,
+                    // The current tab's icon sits on a pill, not only darker.
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: on ? Palette.paleMoss : Colors.transparent,
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                      ),
+                      child: AppIcon(
+                        AppShell.icons[i],
+                        size: 22,
+                        color: on ? Palette.moss : Palette.muted,
+                        strokeWidth: on ? 2.3 : 1.7,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

@@ -18,7 +18,6 @@ import 'ui/view_models/bridge_view_model.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
-  // Not awaited: the app starts at once and Chinese text switches to this font when it arrives.
   // The token getter is wired up once we know which sign-in to use.
   AuthService? auth;
   final api = ApiClient.fromEnvironment(token: () async => auth?.idToken());

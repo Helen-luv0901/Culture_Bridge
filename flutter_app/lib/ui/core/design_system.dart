@@ -5,42 +5,19 @@ import '../view_models/bridge_view_model.dart';
 
 /// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
 abstract final class Palette {
-  static const paper =
-          Color(0xFFEDEFF1), // the page behind the cards
-      grid = Color(0xFFEDEFF1),
-      header = Color(0xFFFFFFFF),
-      nav = Color(0xFFFFFFFF),
-      high =
-          Color(0xFFFFFFFF), // cards
-      soft =
-          Color(0xFFF8F9FA), // the vote column
-      chip =
-          Color(0xFFF2F3F5), // pills, fields
-      readCard = Color(0xFFFFFFFF),
-      oat =
-          Color(0xFFE3E5E8), // card borders
-      edge =
-          Color(0xFFE3E5E8), // dividers
-      ink = Color(0xFF1C1C1C),
-      inkSoft =
-          Color(0xFF3E4246), // excerpts
-      readInk = Color(0xFF5C6166),
-      // At least 4.5:1 (WCAG AA) on white, the page and the pills.
-      muted = Color(
-        0xFF5C6166,
-      ),
-      control =
-          Color(0xFF8B9096), // borders of things you tap or type in
-      moss = Color(0xFF4C5540),
-      paleMoss = Color(0xFFE6E9DF),
-      brick = Color(0xFF4C5540),
-      brickDeep =
-          Color(0xFF4C5540), // links
-      ochre = Color(0xFFF2F3F5),
-      ochreInk = Color(0xFF3E4246),
-      bubble = Color(0xFFF2F3F5),
-      danger = Color(0xFFB42318),
-      onMoss = Color(0xFFFFFFFF);
+  static const paper = Color(0xFFEDEFF1), // the page behind the cards
+  grid = Color(0xFFEDEFF1), header = Color(0xFFFFFFFF), nav = Color(0xFFFFFFFF), high = Color(0xFFFFFFFF), // cards
+  soft = Color(0xFFF8F9FA), // the vote column
+  chip = Color(0xFFF2F3F5), // pills, fields
+  readCard = Color(0xFFFFFFFF), oat = Color(0xFFE3E5E8), // card borders
+  edge = Color(0xFFE3E5E8), // dividers
+  ink = Color(0xFF1C1C1C), inkSoft = Color(0xFF3E4246), // excerpts
+  readInk = Color(0xFF5C6166),
+  // At least 4.5:1 (WCAG AA) on white, the page and the pills.
+  muted = Color(0xFF5C6166), control = Color(0xFF8B9096), // borders of things you tap or type in
+  moss = Color(0xFF4C5540), paleMoss = Color(0xFFE6E9DF), brick = Color(0xFF4C5540), brickDeep = Color(0xFF4C5540), // links
+  ochre = Color(0xFFFFF1D6), // pale amber: stuck, needs review
+  ochreInk = Color(0xFF6B4A00), bubble = Color(0xFFF2F3F5), danger = Color(0xFFB42318), onMoss = Color(0xFFFFFFFF);
 }
 
 /// Corner radii: soft, so cards and posts don't feel sharp.
@@ -142,8 +119,8 @@ ThemeData bridgeTheme() => ThemeData(
     filled: true,
     fillColor: Palette.chip,
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    border: _field(),
-    enabledBorder: _field(),
+    border: _field(const BorderSide(color: Palette.control)),
+    enabledBorder: _field(const BorderSide(color: Palette.control)),
     focusedBorder: _field(const BorderSide(color: Palette.moss, width: 1.5)),
     errorBorder: _field(const BorderSide(color: Palette.danger, width: 1.5)),
     focusedErrorBorder: _field(

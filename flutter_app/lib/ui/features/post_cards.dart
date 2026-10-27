@@ -277,7 +277,7 @@ class StudentPostCard extends StatelessWidget {
               top: 0,
               bottom: 0,
               width: 48,
-              child: ColoredBox(color: Palette.soft),
+              child: ColoredBox(color: Color(0x0A1C1C1C)),
             ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +289,10 @@ class StudentPostCard extends StatelessWidget {
                     children: [
                       IconButton(
                         key: Key('vote-${item.id}'),
-                        tooltip: vm.pair('我也遇過', 'Me too'),
+                        tooltip: vm.pair(
+                          '我也遇過 ${item.experiencedTooCount}',
+                          'Me too ${item.experiencedTooCount}',
+                        ),
                         isSelected: same,
                         onPressed: () {
                           if (ensureSignedIn(context)) {
@@ -304,12 +307,18 @@ class StudentPostCard extends StatelessWidget {
                           strokeWidth: 2,
                         ),
                       ),
-                      Text(
-                        '${item.experiencedTooCount}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: same ? Palette.moss : Palette.ink,
+                      ExcludeSemantics(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${item.experiencedTooCount}',
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: same ? Palette.moss : Palette.ink,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -332,6 +341,14 @@ class StudentPostCard extends StatelessWidget {
                                 ),
                               ),
                               TextSpan(text: '  ·  ${authorLine(vm, item)}'),
+                              if (item.mine)
+                                TextSpan(
+                                  text: vm.pair('  ·  你的分享', '  ·  Your post'),
+                                ),
+                              if (read)
+                                TextSpan(
+                                  text: vm.pair('  ·  已看過', '  ·  Read'),
+                                ),
                             ],
                           ),
                           style: mutedStyle.copyWith(fontSize: 12),
@@ -356,33 +373,35 @@ class StudentPostCard extends StatelessWidget {
                         ],
                         Row(
                           children: [
-                            Flexible(
-                              child: TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Palette.muted,
-                                  textStyle: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
+                            Expanded(
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Palette.muted,
+                                    textStyle: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
+                                  onPressed: () => openPost(context, item.id),
+                                  icon: const AppIcon(
+                                    'chat',
+                                    size: 17,
+                                    color: Palette.muted,
                                   ),
-                                ),
-                                onPressed: () => openPost(context, item.id),
-                                icon: const AppIcon(
-                                  'chat',
-                                  size: 17,
-                                  color: Palette.muted,
-                                ),
-                                label: Text(
-                                  vm.pair(
-                                    '${item.commentCount} 則留言',
-                                    '${item.commentCount} comments',
+                                  label: Text(
+                                    vm.pair(
+                                      '${item.commentCount} 則留言',
+                                      '${item.commentCount} comments',
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                            const Spacer(),
                             BookmarkButton(
                               saved: item.saved,
                               label: item.saved
