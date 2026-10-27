@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/api_models.dart';
 import '../../domain/keys.dart';
 import '../core/design_system.dart';
+import '../core/layout.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 import 'guide_stages.dart';
@@ -94,11 +95,13 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            TextButton(
-              key: const Key('home-share'),
-              onPressed: () => startSharing(context),
-              child: Text(vm.pair('發文', 'Write a post')),
-            ),
+            // Wider screens write from the header's button.
+            if (AppLayout.of(context) == AppLayout.phone)
+              TextButton(
+                key: const Key('home-share'),
+                onPressed: () => startSharing(context),
+                child: Text(vm.pair('發文', 'Write a post')),
+              ),
           ],
         ),
         ResourceView<ExperiencePage>(

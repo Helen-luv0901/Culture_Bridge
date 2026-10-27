@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../features/assistant_panel.dart';
 import '../features/explore_page.dart';
-import '../features/post_cards.dart' show startSharing;
+import '../../domain/keys.dart';
+import '../features/post_cards.dart' show categoryName, startSharing;
 import 'design_system.dart';
 import 'layout.dart';
 
@@ -18,7 +19,8 @@ class AppShell extends StatefulWidget {
 
   static const tabs = ['/', '/guides', '/explore', '/profile'];
   static const icons = ['home', 'guide', 'explore', 'me'];
-  static const maxContentWidth = 880.0;
+  // A feed reads best around 760px; the side menu holds the rest.
+  static const maxContentWidth = 760.0;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -166,6 +168,7 @@ class _AppShellState extends State<AppShell> {
                               compact: layout == AppLayout.tablet,
                               index: _index,
                               onTap: (i) => _goTab(context, i),
+                              uri: widget.uri,
                             ),
                             Expanded(child: content),
                           ],
@@ -289,33 +292,56 @@ class _Header extends StatelessWidget {
                   onPressed: onBack,
                   icon: const AppIcon('back'),
                 ),
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: displayStyle(18),
+              if (phone || title.isNotEmpty)
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: displayStyle(18),
+                    ),
                   ),
                 ),
-              ),
               if (!phone)
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: layout == AppLayout.web ? 300 : 240,
-                    ),
-                    child: SearchField(
-                      key: const Key('header-search'),
-                      compact: true,
-                      initial: onExplore ? uri.queryParameters['q'] ?? '' : '',
-                      category: onExplore
-                          ? uri.queryParameters['cat'] ?? 'all'
-                          : 'all',
+                Expanded(
+                  flex: title.isEmpty ? 1 : 0,
+                  child: Align(
+                    // Centred like a forum's search bar when the page has no title.
+                    alignment: title.isEmpty
+                        ? Alignment.center
+                        : AlignmentDirectional.centerEnd,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: title.isEmpty ? 520 : 300,
+                      ),
+                      child: SearchField(
+                        key: const Key('header-search'),
+                        compact: true,
+                        initial: onExplore
+                            ? uri.queryParameters['q'] ?? ''
+                            : '',
+                        category: onExplore
+                            ? uri.queryParameters['cat'] ?? 'all'
+                            : 'all',
+                      ),
                     ),
                   ),
                 ),
+              if (!phone) ...[
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  key: const Key('nav-share'),
+                  onPressed: () => startSharing(context),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  icon: const AppIcon('add', size: 18, strokeWidth: 2.2),
+                  label: Text(vm.pair('發文', 'Write a post')),
+                ),
+              ],
               if (phone && !onExplore)
                 IconButton(
                   key: const Key('header-search-button'),
@@ -417,64 +443,68 @@ class _Sidebar extends StatelessWidget {
     required this.compact,
     required this.index,
     required this.onTap,
+    required this.uri,
   });
 
   /// Tablet portrait: icons with small labels in a 76px rail.
   final bool compact;
   final int index;
   final ValueChanged<int> onTap;
+  final Uri uri;
   @override
   Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
     final labels = _navLabels(context);
+    final board = uri.path == '/explore' ? uri.queryParameters['cat'] : null;
     return Container(
       key: const Key('desktop-navigation'),
       width: compact ? 76 : 232,
       decoration: const BoxDecoration(
-        color: Palette.nav,
+        color: Palette.header,
         border: Border(right: BorderSide(color: Palette.edge)),
       ),
-      // Short landscape screens with large text scroll the tabs instead of clipping them.
+      // Short landscape screens with large text scroll the menu instead of clipping it.
       child: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
-          vertical: compact ? 20 : 24,
-          horizontal: compact ? 10 : 16,
+          vertical: compact ? 16 : 20,
+          horizontal: compact ? 10 : 12,
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (int i = 0; i < AppShell.tabs.length; i++)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 2),
                 child: _SidebarItem(
                   key: Key('nav-$i'),
                   icon: AppShell.icons[i],
                   label: labels[i],
-                  selected: index == i,
+                  selected: index == i && board == null,
                   compact: compact,
                   onTap: () => onTap(i),
                 ),
               ),
-            const SizedBox(height: 14),
-            if (compact)
-              _SidebarItem(
-                key: const Key('nav-share'),
-                icon: 'share',
-                label: BridgeScope.of(context).pair('分享', 'Share'),
-                selected: false,
-                compact: true,
-                onTap: () => startSharing(context),
-              )
-            else
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  key: const Key('nav-share'),
-                  onPressed: () => startSharing(context),
-                  icon: const AppIcon('share', size: 20, color: Palette.onMoss),
-                  label: Text(
-                    BridgeScope.of(context).pair('寫一篇分享', 'Write a post'),
-                  ),
+            if (!compact) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Divider(height: 1),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                child: Semantics(
+                  header: true,
+                  child: Text(vm.pair('看板', 'Boards'), style: labelStyle),
                 ),
               ),
+              for (final key in categoryLabels.keys)
+                if (key != 'all' && key != 'official')
+                  _BoardItem(
+                    key: Key('side-board-$key'),
+                    label: categoryName(vm, key),
+                    selected: board == key,
+                    onTap: () => context.go('/explore?cat=$key'),
+                  ),
+            ],
           ],
         ),
       ),
@@ -498,17 +528,17 @@ class _SidebarItem extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    final color = selected ? Palette.moss : Palette.muted;
+    final color = selected ? Palette.ink : Palette.muted;
     final weight = selected ? FontWeight.w700 : FontWeight.w400;
     return Semantics(
       selected: selected,
       button: true,
       label: label,
       child: Material(
-        color: selected ? Palette.paleMoss : Colors.transparent,
-        borderRadius: BorderRadius.circular(Radii.control),
+        color: selected ? Palette.chip : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: ExcludeSemantics(
             child: compact
@@ -537,22 +567,27 @@ class _SidebarItem extends StatelessWidget {
                     ),
                   )
                 : ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 48),
+                    constraints: const BoxConstraints(minHeight: 44),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
+                        horizontal: 12,
+                        vertical: 4,
                       ),
                       child: Row(
                         children: [
-                          AppIcon(icon, color: color),
+                          AppIcon(
+                            icon,
+                            size: 20,
+                            color: color,
+                            strokeWidth: selected ? 2.2 : 1.7,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               label,
                               style: TextStyle(
-                                fontSize: 16,
-                                color: selected ? Palette.moss : Palette.ink,
+                                fontSize: 15,
+                                color: Palette.ink,
                                 fontWeight: weight,
                               ),
                             ),
@@ -566,6 +601,66 @@ class _SidebarItem extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A board in the side menu; it opens Explore on that board.
+class _BoardItem extends StatelessWidget {
+  const _BoardItem({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    selected: selected,
+    button: true,
+    label: label,
+    child: Material(
+      color: selected ? Palette.chip : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: ExcludeSemantics(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: selected ? Palette.moss : Palette.edge,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Palette.ink,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _BottomTabs extends StatelessWidget {
