@@ -298,7 +298,7 @@ void main() {
         .renderObject<RenderParagraph>(find.text('檢舉'))
         .text
         .style!;
-    expect(style.fontFamily, isNot('Spectral'));
+    expect(style.fontFamily, 'NotoSansTC');
     expect(style.fontSize, 14);
   });
 

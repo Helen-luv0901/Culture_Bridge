@@ -1,21 +1,30 @@
-"""Cuts the Chinese serif font down to the characters the app needs, so the site opens fast.
+"""Cuts a Chinese font down to the characters the app needs, so the site opens fast.
 
-Run from flutter_app/: uv run --no-project --with fonttools python tool/subset_chinese_font.py
+Run from flutter_app/: uv run --no-project --with fonttools python tool/subset_chinese_font.py [sans|serif]
 
-The full Noto Serif TC (tool/fonts/, 16.9 MB) is not shipped. The app gets a copy with the common
-Traditional Chinese characters (Big5 level 1, about 5,400), punctuation, and every character in
-the app's own text and official guides, about 4.6 MB. Rarer characters in student posts are
-drawn by Flutter's automatic fallback font. Run again after adding official content with rare
-characters.
+sans (the app's font): Noto Sans TC from google/fonts,
+  https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf (12 MB), saved
+  as tool/fonts/NotoSansTC-Variable.ttf. Its weight axis is cut to 400-700, the weights the app uses.
+serif: Noto Serif TC (tool/fonts/, 16.9 MB), used by the earlier notebook look.
+
+The full fonts are not shipped. The app gets a copy with the common Traditional Chinese
+characters (Big5 level 1, about 5,400), punctuation, and every character in the app's own text
+and official guides. Rarer characters in student posts are drawn by Flutter's automatic fallback
+font. Run again after adding official content with rare characters.
 """
 
+import sys
 from pathlib import Path
 
 from fontTools import subset
+from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 APP = Path(__file__).resolve().parents[1]
-SOURCE = APP / "tool" / "fonts" / "NotoSerifTC-Variable.ttf"
-TARGET = APP / "assets" / "fonts" / "NotoSerifTC-Subset.ttf"
+FONTS = {
+    "sans": ("NotoSansTC-Variable.ttf", "NotoSansTC-Subset.ttf", (400, 700)),
+    "serif": ("NotoSerifTC-Variable.ttf", "NotoSerifTC-Subset.ttf", None),
+}
 TEXT_FILES = [
     *sorted((APP / "lib").rglob("*.dart")),
     *sorted((APP / "assets" / "data").glob("*.json")),
@@ -55,17 +64,24 @@ def characters() -> set[str]:
 
 
 def main() -> None:
+    name = sys.argv[1] if len(sys.argv) > 1 else "sans"
+    source_name, target_name, weights = FONTS[name]
+    source = APP / "tool" / "fonts" / source_name
+    target = APP / "assets" / "fonts" / target_name
     chars = characters()
     options = subset.Options()
     options.layout_features = ["*"]
     options.name_IDs = ["*"]
-    font = subset.load_font(str(SOURCE), options)
+    font = TTFont(str(source))
     subsetter = subset.Subsetter(options)
     subsetter.populate(text="".join(sorted(chars)))
     subsetter.subset(font)
-    subset.save_font(font, str(TARGET), options)
-    size = TARGET.stat().st_size / 1_000_000
-    print(f"{len(chars)} characters -> {TARGET.relative_to(APP)} ({size:.1f} MB)")
+    if weights is not None:
+        # After subsetting: fewer glyphs, and the axis cut keeps only what is left.
+        font = instancer.instantiateVariableFont(font, {"wght": weights})
+    subset.save_font(font, str(target), options)
+    size = target.stat().st_size / 1_000_000
+    print(f"{len(chars)} characters -> {target.relative_to(APP)} ({size:.1f} MB)")
 
 
 if __name__ == "__main__":

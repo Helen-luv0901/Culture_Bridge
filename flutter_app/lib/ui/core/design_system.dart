@@ -41,10 +41,11 @@ OutlineInputBorder _field([BorderSide side = BorderSide.none]) =>
       borderSide: side,
     );
 
-/// Forum look: light gray page, white cards, the platform's sans (Noto Sans TC for Chinese
-/// on the web, fetched by Flutter on demand), one moss accent.
+/// Forum look: light gray page, white cards, Noto Sans TC, one moss accent.
 ThemeData bridgeTheme() => ThemeData(
   useMaterial3: true,
+  // Bundled (pubspec), so Latin and Chinese text never waits on a font download.
+  fontFamily: 'NotoSansTC',
   scaffoldBackgroundColor: Palette.paper,
   colorScheme: ColorScheme.fromSeed(
     seedColor: Palette.moss,
@@ -97,8 +98,9 @@ ThemeData bridgeTheme() => ThemeData(
     backgroundColor: Palette.chip,
     selectedColor: Palette.ink,
     // A theme labelStyle replaces Material's default instead of merging with it, so the
-    // size and line height are restated here (as labelLarge).
+    // font, size and line height are restated here (as labelLarge).
     labelStyle: TextStyle(
+      fontFamily: 'NotoSansTC',
       fontSize: 14,
       height: 20 / 14,
       fontWeight: FontWeight.w500,

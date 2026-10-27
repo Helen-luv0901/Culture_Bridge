@@ -16,3 +16,6 @@ frontend/dist/
 # Quality review sheets and the real shares they read (D-17, B-22) stay local
 backend/*-review.md
 backend/shares*.json
+
+# Source for tool/subset_chinese_font.py sans (12 MB, from google/fonts; see the script).
+flutter_app/tool/fonts/NotoSansTC-Variable.ttf

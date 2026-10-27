@@ -33,3 +33,10 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
+  # Listed fonts are downloaded before the first frame on the web, so text never shows as
+  # boxes while a font arrives. Noto Sans TC is cut to the common Traditional Chinese
+  # characters (tool/subset_chinese_font.py); rarer ones use Flutter's fallback.
+  fonts:
+    - family: NotoSansTC
+      fonts:
+        - asset: assets/fonts/NotoSansTC-Subset.ttf
