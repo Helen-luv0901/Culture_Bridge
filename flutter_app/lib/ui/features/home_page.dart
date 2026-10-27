@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
     final vm = BridgeScope.of(context);
     final filter = _category == 'all' ? null : _category;
     return FlowBody(
-      gap: 12,
+      gap: 22,
       children: [
         Semantics(
           label: vm.pair('看板', 'Boards'),
@@ -241,7 +241,7 @@ class _PinnedChecklistState extends State<_PinnedChecklist> {
             ),
           ),
         ),
-        const Positioned(top: -8, left: 26, child: _Tape()),
+        const Positioned(top: -9, left: 28, child: _Tape()),
       ],
     );
   }
