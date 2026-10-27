@@ -151,82 +151,115 @@ class _PinnedChecklistState extends State<_PinnedChecklist> {
           ...guides,
     ];
     final read = firstMonth.where((g) => vm.isRead('guide:${g.id}')).length;
-    return Material(
-      key: const Key('pinned-checklist'),
-      color: Palette.high,
-      borderRadius: BorderRadius.circular(Radii.card),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              key: const Key('open-checklist'),
-              onTap: () => context.go('/guides'),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-                child: Row(
-                  children: [
-                    const AppIcon('guide', size: 22, color: Palette.moss),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+    // A strip of tape holds the pinned card, like a note in a scrapbook.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        DecoratedBox(
+          decoration: paperShadow,
+          child: Material(
+            key: const Key('pinned-checklist'),
+            color: Palette.high,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Radii.card),
+              side: const BorderSide(color: Palette.oat),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    key: const Key('open-checklist'),
+                    onTap: () => context.go('/guides'),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                      child: Row(
                         children: [
-                          Text(
-                            vm.pair('來台第一個月要辦的事', 'Your first month in Taiwan'),
-                            style: displayStyle(15),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                    Radii.pill,
-                                  ),
-                                  child: LinearProgressIndicator(
-                                    value: firstMonth.isEmpty
-                                        ? 0
-                                        : read / firstMonth.length,
-                                    minHeight: 6,
-                                    color: Palette.moss,
-                                    backgroundColor: Palette.chip,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
+                          const AppIcon('guide', size: 22, color: Palette.moss),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
                                   vm.pair(
-                                    '已看 $read / ${firstMonth.length}',
-                                    '$read of ${firstMonth.length} read',
+                                    '來台第一個月要辦的事',
+                                    'Your first month in Taiwan',
                                   ),
-                                  style: mutedStyle.copyWith(fontSize: 12),
+                                  style: displayStyle(15),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          Radii.pill,
+                                        ),
+                                        child: LinearProgressIndicator(
+                                          value: firstMonth.isEmpty
+                                              ? 0
+                                              : read / firstMonth.length,
+                                          minHeight: 6,
+                                          color: Palette.moss,
+                                          backgroundColor: Palette.chip,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        vm.pair(
+                                          '已看 $read / ${firstMonth.length}',
+                                          '$read of ${firstMonth.length} read',
+                                        ),
+                                        style: mutedStyle.copyWith(
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                IconButton(
+                  key: const Key('i-am-settled'),
+                  tooltip: vm.pair(
+                    '我在台灣一段時間了，不用顯示',
+                    "I've been here a while; hide this",
+                  ),
+                  onPressed: () => vm.setSettled(true),
+                  icon: const AppIcon('close', size: 18, color: Palette.muted),
+                ),
+              ],
             ),
           ),
-          IconButton(
-            key: const Key('i-am-settled'),
-            tooltip: vm.pair(
-              '我在台灣一段時間了，不用顯示',
-              "I've been here a while; hide this",
-            ),
-            onPressed: () => vm.setSettled(true),
-            icon: const AppIcon('close', size: 18, color: Palette.muted),
-          ),
-        ],
-      ),
+        ),
+        const Positioned(top: -8, left: 26, child: _Tape()),
+      ],
     );
   }
+}
+
+/// A plain, straight strip of tape.
+class _Tape extends StatelessWidget {
+  const _Tape();
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: ExcludeSemantics(
+      child: Container(
+        width: 74,
+        height: 18,
+        color: Palette.brick.withValues(alpha: .28),
+      ),
+    ),
+  );
 }
 
 /// The guide to read next in the first month (one being done comes first), or null.

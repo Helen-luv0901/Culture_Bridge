@@ -262,166 +262,175 @@ class StudentPostCard extends StatelessWidget {
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     final same = vm.reacted(item, 'experienced_too');
-    return Material(
-      color: Palette.high,
-      borderRadius: BorderRadius.circular(Radii.card),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('post-${item.id}'),
-        onTap: () => openPost(context, item.id),
-        // The vote column's tint fills the card's height without measuring it first.
-        child: Stack(
-          children: [
-            const Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 48,
-              child: ColoredBox(color: Color(0x0A1C1C1C)),
-            ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 48,
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Column(
-                    children: [
-                      IconButton(
-                        key: Key('vote-${item.id}'),
-                        tooltip: vm.pair(
-                          '我也遇過 ${item.experiencedTooCount}',
-                          'Me too ${item.experiencedTooCount}',
-                        ),
-                        isSelected: same,
-                        onPressed: () {
-                          if (ensureSignedIn(context)) {
-                            vm.toggleReaction(item, 'experienced_too');
-                          }
-                        },
-                        icon: AppIcon(
-                          'up',
-                          size: 20,
-                          filled: same,
-                          color: same ? Palette.moss : Palette.muted,
-                          strokeWidth: 2,
-                        ),
-                      ),
-                      ExcludeSemantics(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '${item.experiencedTooCount}',
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: same ? Palette.moss : Palette.ink,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 2),
+    return DecoratedBox(
+      decoration: paperShadow,
+      child: Material(
+        color: Palette.high,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.card),
+          side: const BorderSide(color: Palette.oat),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: Key('post-${item.id}'),
+          onTap: () => openPost(context, item.id),
+          // The vote column's tint fills the card's height without measuring it first.
+          child: Stack(
+            children: [
+              const Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 48,
+                child: ColoredBox(color: Palette.soft),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    padding: const EdgeInsets.only(top: 6),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: categoryName(vm, item.categoryKey),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Palette.ink,
-                                ),
-                              ),
-                              TextSpan(text: '  ·  ${authorLine(vm, item)}'),
-                              if (item.mine)
-                                TextSpan(
-                                  text: vm.pair('  ·  你的分享', '  ·  Your post'),
-                                ),
-                              if (read)
-                                TextSpan(
-                                  text: vm.pair('  ·  已看過', '  ·  Read'),
-                                ),
-                            ],
+                        IconButton(
+                          key: Key('vote-${item.id}'),
+                          tooltip: vm.pair(
+                            '我也遇過 ${item.experiencedTooCount}',
+                            'Me too ${item.experiencedTooCount}',
                           ),
-                          style: mutedStyle.copyWith(fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: postTitleStyle(read: read),
-                        ),
-                        if (excerpt.isNotEmpty && excerpt != title) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            excerpt,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: postExcerptStyle,
+                          isSelected: same,
+                          onPressed: () {
+                            if (ensureSignedIn(context)) {
+                              vm.toggleReaction(item, 'experienced_too');
+                            }
+                          },
+                          icon: AppIcon(
+                            'up',
+                            size: 20,
+                            filled: same,
+                            color: same ? Palette.moss : Palette.muted,
+                            strokeWidth: 2,
                           ),
-                        ],
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Palette.muted,
-                                    textStyle: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                  ),
-                                  onPressed: () => openPost(context, item.id),
-                                  icon: const AppIcon(
-                                    'chat',
-                                    size: 17,
-                                    color: Palette.muted,
-                                  ),
-                                  label: Text(
-                                    vm.pair(
-                                      '${item.commentCount} 則留言',
-                                      '${item.commentCount} comments',
-                                    ),
-                                  ),
-                                ),
+                        ),
+                        ExcludeSemantics(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${item.experiencedTooCount}',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: same ? Palette.moss : Palette.ink,
                               ),
                             ),
-                            BookmarkButton(
-                              saved: item.saved,
-                              label: item.saved
-                                  ? vm.pair('取消收藏「$title」', 'Unsave "$title"')
-                                  : vm.pair('收藏「$title」', 'Save "$title"'),
-                              onPressed: () {
-                                if (ensureSignedIn(context)) {
-                                  vm.toggleSaved(item);
-                                }
-                              },
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 8, 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: categoryName(vm, item.categoryKey),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Palette.ink,
+                                  ),
+                                ),
+                                TextSpan(text: '  ·  ${authorLine(vm, item)}'),
+                                if (item.mine)
+                                  TextSpan(
+                                    text: vm.pair(
+                                      '  ·  你的分享',
+                                      '  ·  Your post',
+                                    ),
+                                  ),
+                                if (read)
+                                  TextSpan(
+                                    text: vm.pair('  ·  已看過', '  ·  Read'),
+                                  ),
+                              ],
+                            ),
+                            style: mutedStyle.copyWith(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: postTitleStyle(read: read),
+                          ),
+                          if (excerpt.isNotEmpty && excerpt != title) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              excerpt,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: postExcerptStyle,
+                            ),
+                          ],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Palette.muted,
+                                      textStyle: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                    ),
+                                    onPressed: () => openPost(context, item.id),
+                                    icon: const AppIcon(
+                                      'chat',
+                                      size: 17,
+                                      color: Palette.muted,
+                                    ),
+                                    label: Text(
+                                      vm.pair(
+                                        '${item.commentCount} 則留言',
+                                        '${item.commentCount} comments',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              BookmarkButton(
+                                saved: item.saved,
+                                label: item.saved
+                                    ? vm.pair('取消收藏「$title」', 'Unsave "$title"')
+                                    : vm.pair('收藏「$title」', 'Save "$title"'),
+                                onPressed: () {
+                                  if (ensureSignedIn(context)) {
+                                    vm.toggleSaved(item);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

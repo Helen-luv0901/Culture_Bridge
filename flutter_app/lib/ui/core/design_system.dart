@@ -4,20 +4,22 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../view_models/bridge_view_model.dart';
 
 /// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
+/// The notebook palette (docs/product/design.md): paper with a faint grid, cream cards,
+/// moss for actions, brick for links and tape.
 abstract final class Palette {
-  static const paper = Color(0xFFEDEFF1), // the page behind the cards
-  grid = Color(0xFFEDEFF1), header = Color(0xFFFFFFFF), nav = Color(0xFFFFFFFF), high = Color(0xFFFFFFFF), // cards
-  soft = Color(0xFFF8F9FA), // the vote column
-  chip = Color(0xFFF2F3F5), // pills, fields
-  readCard = Color(0xFFFFFFFF), oat = Color(0xFFE3E5E8), // card borders
-  edge = Color(0xFFE3E5E8), // dividers
-  ink = Color(0xFF1C1C1C), inkSoft = Color(0xFF3E4246), // excerpts
-  readInk = Color(0xFF5C6166),
-  // At least 4.5:1 (WCAG AA) on white, the page and the pills.
-  muted = Color(0xFF5C6166), control = Color(0xFF8B9096), // borders of things you tap or type in
-  moss = Color(0xFF4C5540), paleMoss = Color(0xFFE6E9DF), brick = Color(0xFF4C5540), brickDeep = Color(0xFF4C5540), // links
-  ochre = Color(0xFFFFF1D6), // pale amber: stuck, needs review
-  ochreInk = Color(0xFF6B4A00), bubble = Color(0xFFF2F3F5), danger = Color(0xFFB42318), onMoss = Color(0xFFFFFFFF);
+  static const paper = Color(0xFFF1EADC), grid = Color(0xFFEBE3D3), // faint, so text over the paper stays easy to read
+  header = Color(0xFFF3EDE1), nav = Color(0xFFF4EEE0), high = Color(0xFFFBF6EA), // cards
+  soft = Color(0x0D6B5320), // the vote column: a faint brown wash
+  chip = Color(0xFFEFE6D2), // pills, fields
+  readCard = Color(0xFFFBF6EA), oat = Color(0xFFE4D8BE), // card borders
+  edge = Color(0xFFD6C6A6), // dividers
+  ink = Color(0xFF39362E), inkSoft = Color(0xFF4F493E), // excerpts
+  readInk = Color(0xFF655D4E),
+  // At least 4.5:1 (WCAG AA) on paper, cards, the grid and the pills.
+  muted = Color(0xFF655D4E), control = Color(0xFF8C8270), // borders of things you tap or type in
+  moss = Color(0xFF4C5540), paleMoss = Color(0xFFDEE1CE), brick = Color(0xFF9E5B4A), brickDeep = Color(0xFF79392E), // links
+  ochre = Color(0xFFEFE1C3), // stuck, needs review
+  ochreInk = Color(0xFF6B5320), bubble = Color(0xFFEFE6D2), danger = Color(0xFFB42318), onMoss = Color(0xFFFFFFFF);
 }
 
 /// Corner radii: soft, so cards and posts don't feel sharp.
@@ -41,7 +43,7 @@ OutlineInputBorder _field([BorderSide side = BorderSide.none]) =>
       borderSide: side,
     );
 
-/// Forum look: light gray page, white cards, Noto Sans TC, one moss accent.
+/// Forum layout in the notebook look: paper, cream cards, Noto Sans TC, moss and brick.
 ThemeData bridgeTheme() => ThemeData(
   useMaterial3: true,
   // Bundled (pubspec), so Latin and Chinese text never waits on a font download.
@@ -78,7 +80,7 @@ ThemeData bridgeTheme() => ThemeData(
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       minimumSize: const Size(44, 44),
-      foregroundColor: Palette.moss,
+      foregroundColor: Palette.brickDeep,
       textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       shape: const StadiumBorder(),
@@ -96,7 +98,7 @@ ThemeData bridgeTheme() => ThemeData(
   ),
   chipTheme: ChipThemeData(
     backgroundColor: Palette.chip,
-    selectedColor: Palette.ink,
+    selectedColor: Palette.moss,
     // A theme labelStyle replaces Material's default instead of merging with it, so the
     // font, size and line height are restated here (as labelLarge).
     labelStyle: TextStyle(
@@ -337,18 +339,38 @@ class NotebookBackground extends StatelessWidget {
       CustomPaint(painter: const _GridPainter(), isComplex: true, child: child);
 }
 
+/// Warm paper with a flat 1px notebook grid every 20px.
 class _GridPainter extends CustomPainter {
   const _GridPainter();
+  static const step = 20.0;
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = Palette.paper);
+    final line = Paint()
+      ..color = Palette.grid
+      ..strokeWidth = 1;
+    for (double x = .5; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
+    }
+    for (double y = .5; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
+    }
   }
 
   @override
   bool shouldRepaint(_GridPainter old) => false;
 }
 
-/// A white card on the gray page: rounded, no shadow. [read] keeps it (titles dim instead).
+/// A soft shadow under a sheet of paper.
+const paperShadow = BoxDecoration(
+  borderRadius: BorderRadius.all(Radius.circular(Radii.card)),
+  boxShadow: [
+    BoxShadow(color: Color(0x1439362E), blurRadius: 16, offset: Offset(0, 3)),
+  ],
+);
+
+/// A cream card on the paper: rounded, a hairline and a soft shadow. [read] keeps it (titles
+/// dim instead).
 class NoteCard extends StatelessWidget {
   const NoteCard({
     super.key,
@@ -368,21 +390,25 @@ class NoteCard extends StatelessWidget {
   /// Makes the whole card one tap target; buttons inside keep their own actions.
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: color ?? (read ? Palette.readCard : Palette.high),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(Radii.card),
-      side: borderColor == null
-          ? BorderSide.none
-          : BorderSide(color: borderColor!, width: 1.5),
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: paperShadow,
+    child: Material(
+      color: color ?? (read ? Palette.readCard : Palette.high),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.card),
+        side: BorderSide(
+          color: borderColor ?? Palette.oat,
+          width: borderColor == null ? 1 : 1.5,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? Padding(padding: padding, child: child)
+          : InkWell(
+              onTap: onTap,
+              child: Padding(padding: padding, child: child),
+            ),
     ),
-    clipBehavior: Clip.antiAlias,
-    child: onTap == null
-        ? Padding(padding: padding, child: child)
-        : InkWell(
-            onTap: onTap,
-            child: Padding(padding: padding, child: child),
-          ),
   );
 }
 
@@ -501,7 +527,7 @@ class TagLink extends StatelessWidget {
   }
 }
 
-/// A choice pill: dark when chosen, light gray when not.
+/// A choice pill: moss when chosen, oat when not.
 class NoteChip extends StatelessWidget {
   const NoteChip({
     super.key,
@@ -519,7 +545,7 @@ class NoteChip extends StatelessWidget {
     button: true,
     selected: selected,
     child: Material(
-      color: selected ? Palette.ink : Palette.chip,
+      color: selected ? Palette.moss : Palette.chip,
       shape: const StadiumBorder(),
       child: InkWell(
         onTap: onTap,
