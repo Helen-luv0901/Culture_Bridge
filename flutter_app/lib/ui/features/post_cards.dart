@@ -226,20 +226,15 @@ class BookmarkButton extends StatelessWidget {
   final VoidCallback onPressed;
   final String label;
   @override
-  Widget build(BuildContext context) => MergeSemantics(
-    child: Semantics(
-      toggled: saved,
-      child: IconButton(
-        tooltip: label,
-        isSelected: saved,
-        onPressed: onPressed,
-        icon: AppIcon(
-          'bookmark',
-          size: 20,
-          color: saved ? Palette.moss : Palette.muted,
-          filled: saved,
-        ),
-      ),
+  Widget build(BuildContext context) => ToggleIconButton(
+    label: label,
+    on: saved,
+    onPressed: onPressed,
+    icon: AppIcon(
+      'bookmark',
+      size: 20,
+      color: saved ? Palette.moss : Palette.muted,
+      filled: saved,
     ),
   );
 }
@@ -271,12 +266,10 @@ class StudentPostCard extends StatelessWidget {
         .voice(translated)
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    // A body of only "-" or "." shows no excerpt line.
+    // A body of only "-" or "." shows no excerpt line (emoji still count as words).
     final hasExcerpt =
         excerpt != title &&
-        excerpt
-            .replaceAll(RegExp(r'[\p{P}\p{S}\s]', unicode: true), '')
-            .isNotEmpty;
+        excerpt.replaceAll(RegExp(r'[\p{P}\s]', unicode: true), '').isNotEmpty;
     final same = vm.reacted(item, 'experienced_too');
     return DecoratedBox(
       decoration: paperShadow,
@@ -312,29 +305,24 @@ class StudentPostCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Column(
                       children: [
-                        MergeSemantics(
-                          child: Semantics(
-                            toggled: same,
-                            child: IconButton(
-                              key: Key('vote-${item.id}'),
-                              tooltip: vm.pair(
-                                '我也遇過 ${item.experiencedTooCount}',
-                                'Me too ${item.experiencedTooCount}',
-                              ),
-                              isSelected: same,
-                              onPressed: () {
-                                if (ensureSignedIn(context)) {
-                                  vm.toggleReaction(item, 'experienced_too');
-                                }
-                              },
-                              icon: AppIcon(
-                                'up',
-                                size: 20,
-                                filled: same,
-                                color: same ? Palette.moss : Palette.muted,
-                                strokeWidth: 2,
-                              ),
-                            ),
+                        ToggleIconButton(
+                          key: Key('vote-${item.id}'),
+                          label: vm.pair(
+                            '我也遇過 ${item.experiencedTooCount}',
+                            'Me too ${item.experiencedTooCount}',
+                          ),
+                          on: same,
+                          onPressed: () {
+                            if (ensureSignedIn(context)) {
+                              vm.toggleReaction(item, 'experienced_too');
+                            }
+                          },
+                          icon: AppIcon(
+                            'up',
+                            size: 20,
+                            filled: same,
+                            color: same ? Palette.moss : Palette.muted,
+                            strokeWidth: 2,
                           ),
                         ),
                         // The count, and what the arrow means, so it doesn't read as a like.
@@ -404,7 +392,10 @@ class StudentPostCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 6),
+                          // Its own node: the title and excerpt are the button's name,
+                          // and the vote, comments and save buttons stay outside it.
                           Semantics(
+                            container: true,
                             button: true,
                             child: FocusInk(
                               key: Key('post-title-${item.id}'),
@@ -412,23 +403,35 @@ class StudentPostCard extends StatelessWidget {
                               ringRadius: const BorderRadius.all(
                                 Radius.circular(6),
                               ),
-                              child: Text(
-                                title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: postTitleStyle(read: read),
+                              child: ConstrainedBox(
+                                // A one-line title alone is still a 44px target.
+                                constraints: const BoxConstraints(
+                                  minHeight: 44,
+                                  minWidth: double.infinity,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: postTitleStyle(read: read),
+                                    ),
+                                    if (hasExcerpt) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        excerpt,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: postExcerptStyle,
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                          if (hasExcerpt) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              excerpt,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: postExcerptStyle,
-                            ),
-                          ],
                           Row(
                             children: [
                               Expanded(

@@ -75,13 +75,26 @@ class AssistantOverlay extends StatefulWidget {
 }
 
 class _AssistantOverlayState extends State<AssistantOverlay> {
-  // Esc closes the assistant even when the focus is still on the page behind it.
+  late BridgeViewModel _vm;
+  ModalRoute<Object?>? _route;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vm = BridgeScope.of(context);
+    _route = ModalRoute.of(context);
+  }
+
+  // Esc closes the assistant even when the focus is still on the page behind it, but
+  // not while a dialog or menu is open over the page: Esc is that one's to close.
   bool _onKey(KeyEvent event) {
-    if (event is! KeyDownEvent ||
-        event.logicalKey != LogicalKeyboardKey.escape) {
+    if (!mounted ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape ||
+        _route?.isCurrent == false) {
       return false;
     }
-    BridgeScope.of(context).closeAssistant();
+    _vm.closeAssistant();
     return true;
   }
 
@@ -158,10 +171,13 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
         children: [
           // The panel covers the page, so screen readers leave the page behind it.
           const BlockSemantics(),
+          // The scrim is for taps; screen readers close with the panel's own button.
           Positioned.fill(
-            child: GestureDetector(
-              onTap: vm.closeAssistant,
-              child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+            child: ExcludeSemantics(
+              child: GestureDetector(
+                onTap: vm.closeAssistant,
+                child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+              ),
             ),
           ),
           Positioned(

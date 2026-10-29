@@ -496,6 +496,41 @@ class _FocusInkState extends State<FocusInk> {
   );
 }
 
+/// An on/off icon button (save, "me too"): one named switch to screen readers and one
+/// tab stop, a 48px round target, the focus ring, and a tooltip for the mouse.
+class ToggleIconButton extends StatelessWidget {
+  const ToggleIconButton({
+    super.key,
+    required this.label,
+    required this.on,
+    required this.onPressed,
+    required this.icon,
+  });
+  final String label;
+  final bool on;
+  final VoidCallback onPressed;
+  final Widget icon;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    toggled: on,
+    label: label,
+    child: Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: FocusInk(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        ringRadius: const BorderRadius.all(Radius.circular(24)),
+        child: SizedBox.square(
+          dimension: 48,
+          child: Center(child: ExcludeSemantics(child: icon)),
+        ),
+      ),
+    ),
+  );
+}
+
 /// Older screens' name for a card.
 class PaperCard extends StatelessWidget {
   const PaperCard({

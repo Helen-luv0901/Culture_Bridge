@@ -131,6 +131,42 @@ void main() {
     expect(app.vm.assistantOpen, isFalse);
   });
 
+  testWidgets('Votes and card titles are single nodes with plain names', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await mount(tester, '/', const Size(375, 900));
+    final vote = tester.getSemantics(
+      find.byKey(const Key('vote-first-rental')),
+    );
+    expect(vote.label, startsWith('我也遇過 '));
+    expect(vote.childrenCount, 0);
+    final title = tester.getSemantics(
+      find.byKey(const Key('post-title-first-rental')),
+    );
+    // Only the title: not the byline or the excerpt, and no buttons inside it.
+    expect(title.label, isNot(contains('·')));
+    expect(title.childrenCount, 0);
+    handle.dispose();
+  });
+
+  testWidgets('Esc over a dialog closes the dialog, not the assistant', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(1280, 900));
+    await tester.tap(find.byKey(const Key('assistant-button')));
+    await tester.pumpAndSettle();
+    showDialog<void>(
+      context: tester.element(find.byType(Scaffold).first),
+      builder: (_) => const AlertDialog(content: Text('對話框')),
+    );
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('對話框'), findsNothing);
+    expect(app.vm.assistantOpen, isTrue);
+  });
+
   testWidgets('On phones the bubble stays off posts, where it covered Send', (
     tester,
   ) async {
