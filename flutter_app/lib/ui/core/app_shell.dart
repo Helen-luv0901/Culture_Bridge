@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,13 +36,14 @@ class _AppShellState extends State<AppShell> {
     final path = widget.uri.path;
     if (path == '/') return 0;
     if (path == '/guides') return 1;
-    // Writing a post belongs with the posts.
-    if (path.startsWith('/explore') || path == '/share') return 2;
+    if (path.startsWith('/explore')) return 2;
     if (path.startsWith('/profile')) return 3;
     return null;
   }
 
   int get _index => _tabOfPath ?? _lastTab;
+
+  bool get _onShare => widget.uri.path == '/share';
 
   bool get _isTabRoot =>
       AppShell.tabs.contains(widget.uri.path) || widget.uri.path == '/share';
@@ -142,7 +145,12 @@ class _AppShellState extends State<AppShell> {
       });
     }
     // The route navigator; each page brings its own scrolling frame (PageFrame).
-    final content = widget.child;
+    final content = Semantics(
+      role: SemanticsRole.main,
+      container: true,
+      child: widget.child,
+    );
+    final navLabel = vm.pair('主選單', 'Main menu');
     final header = _Header(
       layout: layout,
       title: _title(context, layout),
@@ -164,11 +172,16 @@ class _AppShellState extends State<AppShell> {
                       : Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _Sidebar(
-                              compact: layout == AppLayout.tablet,
-                              index: _index,
-                              onTap: (i) => _goTab(context, i),
-                              uri: widget.uri,
+                            Semantics(
+                              role: SemanticsRole.navigation,
+                              container: true,
+                              label: navLabel,
+                              child: _Sidebar(
+                                compact: layout == AppLayout.tablet,
+                                index: _index,
+                                onTap: (i) => _goTab(context, i),
+                                uri: widget.uri,
+                              ),
                             ),
                             Expanded(child: content),
                           ],
@@ -178,7 +191,10 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
           // Phone: the panel covers the page, so the bubble hides. Elsewhere it toggles.
-          if (!onAssistantPage && !(phone && vm.assistantOpen))
+          // Phones also leave it off posts, guides and the share form, where it sat
+          // over Send and the guide's steps; the tabs still have it.
+          if (!onAssistantPage &&
+              !(phone && (vm.assistantOpen || !_isTabRoot || _onShare)))
             Positioned(
               right: phone ? 16 : 28,
               bottom: phone ? 16 : 28,
@@ -187,7 +203,15 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
       bottomNavigationBar: phone
-          ? _BottomTabs(index: _index, onTap: (i) => _goTab(context, i))
+          ? Semantics(
+              role: SemanticsRole.navigation,
+              container: true,
+              label: navLabel,
+              child: _BottomTabs(
+                index: _index,
+                onTap: (i) => _goTab(context, i),
+              ),
+            )
           : null,
     );
     // The assistant sits above everything, the phone's tab bar included; back closes it.
@@ -210,6 +234,19 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+/// Tabs whose page starts with its own PageTitle.
+const _ownTitle = {'/guides', '/share'};
+
+/// The tab's name, for the h1 when the header shows none.
+String _pageName(BuildContext context, Uri uri) {
+  final vm = BridgeScope.of(context);
+  return switch (uri.path) {
+    '/explore' => vm.pair('看板', 'Boards'),
+    '/profile' => vm.pair('我的', 'Me'),
+    _ => vm.pair('Culture Bridge 首頁', 'Culture Bridge home'),
+  };
+}
+
 class _Header extends StatelessWidget {
   const _Header({
     required this.layout,
@@ -229,6 +266,9 @@ class _Header extends StatelessWidget {
     final vm = BridgeScope.of(context);
     final phone = layout == AppLayout.phone;
     final onExplore = uri.path == '/explore';
+    // The page's name is its h1, unless the page has its own title (PageTitle) or is
+    // a post or guide (those titles are the h1).
+    final nameIsH1 = !showBack && !_ownTitle.contains(uri.path);
     return Material(
       color: Palette.header,
       child: SafeArea(
@@ -292,10 +332,19 @@ class _Header extends StatelessWidget {
                   onPressed: onBack,
                   icon: const AppIcon('back'),
                 ),
+              // Wide screens show no page name; screen readers still get one h1.
+              if (!phone && title.isEmpty && nameIsH1)
+                Semantics(
+                  header: true,
+                  headingLevel: 1,
+                  label: _pageName(context, uri),
+                  child: const SizedBox(width: 1, height: 1),
+                ),
               if (phone || title.isNotEmpty)
                 Expanded(
                   child: Semantics(
-                    header: true,
+                    header: nameIsH1,
+                    headingLevel: nameIsH1 ? 1 : null,
                     child: Text(
                       title,
                       maxLines: 1,
@@ -537,8 +586,11 @@ class _SidebarItem extends StatelessWidget {
       child: Material(
         color: selected ? Palette.chip : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+        child: FocusInk(
+          customBorder: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          ringRadius: const BorderRadius.all(Radius.circular(10)),
           onTap: onTap,
           child: ExcludeSemantics(
             child: compact
@@ -622,8 +674,11 @@ class _BoardItem extends StatelessWidget {
     child: Material(
       color: selected ? Palette.chip : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+      child: FocusInk(
+        customBorder: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        ringRadius: const BorderRadius.all(Radius.circular(10)),
         onTap: onTap,
         child: ExcludeSemantics(
           child: ConstrainedBox(

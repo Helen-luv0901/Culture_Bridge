@@ -22,6 +22,10 @@ abstract final class Palette {
   ochreInk = Color(0xFF6B5320), bubble = Color(0xFFEFE6D2), danger = Color(0xFFB42318), onMoss = Color(0xFFFFFFFF);
 }
 
+/// The bundled font. Every style that replaces the theme's text (button text, chip
+/// labels) names it again, or that text falls back to Roboto, which has no Chinese.
+const appFont = 'NotoSansTC';
+
 /// Corner radii: soft, so cards and posts don't feel sharp.
 abstract final class Radii {
   static const card = 12.0, control = 12.0, pill = 999.0;
@@ -37,6 +41,18 @@ class BridgeScope extends InheritedNotifier<BridgeViewModel> {
       context.dependOnInheritedWidgetOfExactType<BridgeScope>()!.notifier!;
 }
 
+/// A 2px ring while a control has keyboard focus: Material's grey focus wash hardly
+/// shows on the paper. Buttons take it through copyWith: styleFrom(side:) would freeze it
+/// into a plain 1px black border.
+WidgetStateProperty<BorderSide?> _focusRing(
+  BorderSide? rest, {
+  Color ring = Palette.moss,
+}) => WidgetStateProperty.resolveWith(
+  (states) => states.contains(WidgetState.focused)
+      ? BorderSide(color: ring, width: 2)
+      : rest,
+);
+
 OutlineInputBorder _field([BorderSide side = BorderSide.none]) =>
     OutlineInputBorder(
       borderRadius: BorderRadius.circular(Radii.control),
@@ -47,7 +63,7 @@ OutlineInputBorder _field([BorderSide side = BorderSide.none]) =>
 ThemeData bridgeTheme() => ThemeData(
   useMaterial3: true,
   // Bundled (pubspec), so Latin and Chinese text never waits on a font download.
-  fontFamily: 'NotoSansTC',
+  fontFamily: appFont,
   scaffoldBackgroundColor: Palette.paper,
   colorScheme: ColorScheme.fromSeed(
     seedColor: Palette.moss,
@@ -69,32 +85,44 @@ ThemeData bridgeTheme() => ThemeData(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       backgroundColor: Palette.moss,
       foregroundColor: Palette.onMoss,
-      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      textStyle: const TextStyle(
+        fontFamily: appFont,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+      ),
       shape: const StadiumBorder(),
-    ),
+    ).copyWith(side: _focusRing(null, ring: Palette.ink)),
   ),
   // Icon buttons (back, bookmark, report) are 40px by default; 44 is the floor.
   iconButtonTheme: IconButtonThemeData(
-    style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
+    style: IconButton.styleFrom(minimumSize: const Size(44, 44))
+        .copyWith(side: _focusRing(null)),
   ),
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       minimumSize: const Size(44, 44),
       foregroundColor: Palette.brickDeep,
-      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      textStyle: const TextStyle(
+        fontFamily: appFont,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       shape: const StadiumBorder(),
-    ),
+    ).copyWith(side: _focusRing(null)),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       minimumSize: const Size(48, 48),
       foregroundColor: Palette.ink,
       backgroundColor: Palette.high,
-      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      textStyle: const TextStyle(
+        fontFamily: appFont,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+      ),
       shape: const StadiumBorder(),
-      side: const BorderSide(color: Palette.control),
-    ),
+    ).copyWith(side: _focusRing(const BorderSide(color: Palette.control))),
   ),
   chipTheme: ChipThemeData(
     backgroundColor: Palette.high,
@@ -102,7 +130,7 @@ ThemeData bridgeTheme() => ThemeData(
     // A theme labelStyle replaces Material's default instead of merging with it, so the
     // font, size and line height are restated here (as labelLarge).
     labelStyle: TextStyle(
-      fontFamily: 'NotoSansTC',
+      fontFamily: appFont,
       fontSize: 14,
       height: 20 / 14,
       fontWeight: FontWeight.w500,
@@ -113,9 +141,16 @@ ThemeData bridgeTheme() => ThemeData(
             : Palette.ink,
       ),
     ),
-    secondaryLabelStyle: const TextStyle(color: Palette.onMoss),
+    secondaryLabelStyle: const TextStyle(
+      fontFamily: appFont,
+      color: Palette.onMoss,
+    ),
     checkmarkColor: Palette.onMoss,
-    side: const BorderSide(color: Palette.control),
+    side: WidgetStateBorderSide.resolveWith(
+      (states) => states.contains(WidgetState.focused)
+          ? const BorderSide(color: Palette.moss, width: 2)
+          : const BorderSide(color: Palette.control),
+    ),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
     shape: const StadiumBorder(),
   ),
@@ -381,6 +416,7 @@ class NoteCard extends StatelessWidget {
     this.color,
     this.borderColor,
     this.onTap,
+    this.focusable = true,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -390,6 +426,10 @@ class NoteCard extends StatelessWidget {
 
   /// Makes the whole card one tap target; buttons inside keep their own actions.
   final VoidCallback? onTap;
+
+  /// False when a title inside is the button for the same tap, so keyboards and screen
+  /// readers meet it once.
+  final bool focusable;
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: paperShadow,
@@ -405,10 +445,53 @@ class NoteCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: onTap == null
           ? Padding(padding: padding, child: child)
-          : InkWell(
+          : FocusInk(
               onTap: onTap,
+              focusable: focusable,
               child: Padding(padding: padding, child: child),
             ),
+    ),
+  );
+}
+
+/// An InkWell that draws a 2px moss ring while it has keyboard focus. [focusable] false
+/// keeps the mouse tap but leaves keyboards and screen readers to a button inside.
+class FocusInk extends StatefulWidget {
+  const FocusInk({
+    super.key,
+    required this.child,
+    required this.onTap,
+    this.ringRadius = const BorderRadius.all(Radius.circular(Radii.card)),
+    this.customBorder,
+    this.focusable = true,
+  });
+  final Widget child;
+  final VoidCallback? onTap;
+  final BorderRadius ringRadius;
+  final ShapeBorder? customBorder;
+  final bool focusable;
+  @override
+  State<FocusInk> createState() => _FocusInkState();
+}
+
+class _FocusInkState extends State<FocusInk> {
+  var _focused = false;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: widget.onTap,
+    customBorder: widget.customBorder,
+    canRequestFocus: widget.focusable,
+    excludeFromSemantics: !widget.focusable,
+    onFocusChange: (focused) => setState(() => _focused = focused),
+    child: DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: _focused
+          ? BoxDecoration(
+              border: Border.all(color: Palette.moss, width: 2),
+              borderRadius: widget.ringRadius,
+            )
+          : const BoxDecoration(),
+      child: widget.child,
     ),
   );
 }
@@ -550,9 +633,10 @@ class NoteChip extends StatelessWidget {
       shape: StadiumBorder(
         side: BorderSide(color: selected ? Palette.moss : Palette.control),
       ),
-      child: InkWell(
+      child: FocusInk(
         onTap: onTap,
         customBorder: const StadiumBorder(),
+        ringRadius: const BorderRadius.all(Radius.circular(Radii.pill)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
@@ -634,14 +718,17 @@ class _ExpandableTextState extends State<ExpandableText> {
   }
 }
 
-/// The page's own heading (Young Serif).
+/// The page's own heading: the h1 of a post or guide.
 class PageTitle extends StatelessWidget {
   const PageTitle(this.text, {super.key, this.size = 26});
   final String text;
   final double size;
   @override
-  Widget build(BuildContext context) =>
-      Semantics(header: true, child: Text(text, style: displayStyle(size)));
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    headingLevel: 1,
+    child: Text(text, style: displayStyle(size)),
+  );
 }
 
 /// A vertical list with even gaps, capped to a comfortable reading width.

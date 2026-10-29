@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/link.dart';
@@ -57,7 +59,7 @@ class AssistantBubble extends StatelessWidget {
 }
 
 /// The open assistant: a near-full-height panel on phones, a floating window elsewhere.
-class AssistantOverlay extends StatelessWidget {
+class AssistantOverlay extends StatefulWidget {
   const AssistantOverlay({
     super.key,
     required this.uri,
@@ -69,22 +71,46 @@ class AssistantOverlay extends StatelessWidget {
   static const windowSize = Size(380, 540);
 
   @override
+  State<AssistantOverlay> createState() => _AssistantOverlayState();
+}
+
+class _AssistantOverlayState extends State<AssistantOverlay> {
+  // Esc closes the assistant even when the focus is still on the page behind it.
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape) {
+      return false;
+    }
+    BridgeScope.of(context).closeAssistant();
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final uri = widget.uri;
+    final onNavigate = widget.onNavigate;
     final vm = BridgeScope.of(context);
     final phone = AppLayout.of(context) == AppLayout.phone;
-    final panel = CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): vm.closeAssistant,
-      },
-      child: FocusScope(
-        autofocus: true,
-        child: AssistantPanel(
-          uri: uri,
-          onNavigate: (path) {
-            if (phone) vm.closeAssistant();
-            onNavigate(path);
-          },
-        ),
+    final panel = FocusScope(
+      autofocus: true,
+      child: AssistantPanel(
+        uri: uri,
+        onNavigate: (path) {
+          if (phone) vm.closeAssistant();
+          onNavigate(path);
+        },
       ),
     );
     if (!phone) {
@@ -92,9 +118,13 @@ class AssistantOverlay extends StatelessWidget {
       return Positioned(
         right: 28,
         bottom: 96,
-        width: windowSize.width,
-        height: (size.height - 96 - 80).clamp(320, windowSize.height),
+        width: AssistantOverlay.windowSize.width,
+        height: (size.height - 96 - 80).clamp(
+          320,
+          AssistantOverlay.windowSize.height,
+        ),
         child: Semantics(
+          role: SemanticsRole.dialog,
           scopesRoute: true,
           explicitChildNodes: true,
           label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
@@ -126,6 +156,8 @@ class AssistantOverlay extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
+          // The panel covers the page, so screen readers leave the page behind it.
+          const BlockSemantics(),
           Positioned.fill(
             child: GestureDetector(
               onTap: vm.closeAssistant,
@@ -138,6 +170,7 @@ class AssistantOverlay extends StatelessWidget {
             top: top,
             bottom: 0,
             child: Semantics(
+              role: SemanticsRole.dialog,
               scopesRoute: true,
               namesRoute: true,
               explicitChildNodes: true,
@@ -463,16 +496,18 @@ class _Bubble extends StatelessWidget {
               bottomRight: Radius.circular(mine ? 4 : 12),
             ),
           ),
-          child: SelectableText(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: mine
-                  ? Palette.onMoss
-                  : muted
-                  ? Palette.muted
-                  : Palette.ink,
+          child: SelectionArea(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: mine
+                    ? Palette.onMoss
+                    : muted
+                    ? Palette.muted
+                    : Palette.ink,
+              ),
             ),
           ),
         ),
@@ -514,6 +549,7 @@ class _Entry extends StatelessWidget {
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               textStyle: const TextStyle(
+                fontFamily: appFont,
                 fontSize: 14,
                 decoration: TextDecoration.underline,
                 decorationColor: Palette.brick,

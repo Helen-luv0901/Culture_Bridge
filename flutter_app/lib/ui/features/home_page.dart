@@ -80,6 +80,7 @@ class _HomePageState extends State<HomePage> {
                                 ? Palette.ink
                                 : Palette.muted,
                             textStyle: TextStyle(
+                              fontFamily: appFont,
                               fontSize: 14,
                               fontWeight: _sort == value
                                   ? FontWeight.w700
@@ -171,62 +172,76 @@ class _PinnedChecklistState extends State<_PinnedChecklist> {
             child: Row(
               children: [
                 Expanded(
-                  child: InkWell(
-                    key: const Key('open-checklist'),
-                    onTap: () => context.go('/guides'),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-                      child: Row(
-                        children: [
-                          const AppIcon('guide', size: 22, color: Palette.moss),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  vm.pair(
-                                    '來台第一個月要辦的事',
-                                    'Your first month in Taiwan',
-                                  ),
-                                  style: displayStyle(15),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
+                  // One button to screen readers, not a progress bar with a number.
+                  child: Semantics(
+                    button: true,
+                    label: vm.pair(
+                      '來台第一個月要辦的事，已看 $read / ${firstMonth.length}',
+                      'Your first month in Taiwan, $read of ${firstMonth.length} read',
+                    ),
+                    child: FocusInk(
+                      key: const Key('open-checklist'),
+                      onTap: () => context.go('/guides'),
+                      child: ExcludeSemantics(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                          child: Row(
+                            children: [
+                              const AppIcon(
+                                'guide',
+                                size: 22,
+                                color: Palette.moss,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                          Radii.pill,
-                                        ),
-                                        child: LinearProgressIndicator(
-                                          value: firstMonth.isEmpty
-                                              ? 0
-                                              : read / firstMonth.length,
-                                          minHeight: 6,
-                                          color: Palette.moss,
-                                          backgroundColor: Palette.chip,
-                                        ),
+                                    Text(
+                                      vm.pair(
+                                        '來台第一個月要辦的事',
+                                        'Your first month in Taiwan',
                                       ),
+                                      style: displayStyle(15),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        vm.pair(
-                                          '已看 $read / ${firstMonth.length}',
-                                          '$read of ${firstMonth.length} read',
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              Radii.pill,
+                                            ),
+                                            child: LinearProgressIndicator(
+                                              value: firstMonth.isEmpty
+                                                  ? 0
+                                                  : read / firstMonth.length,
+                                              minHeight: 6,
+                                              color: Palette.moss,
+                                              backgroundColor: Palette.chip,
+                                            ),
+                                          ),
                                         ),
-                                        style: mutedStyle.copyWith(
-                                          fontSize: 12,
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            vm.pair(
+                                              '已看 $read / ${firstMonth.length}',
+                                              '$read of ${firstMonth.length} read',
+                                            ),
+                                            style: mutedStyle.copyWith(
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

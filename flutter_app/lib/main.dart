@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
@@ -18,6 +20,11 @@ import 'ui/view_models/bridge_view_model.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
+  // Screen readers get the page from the start, not only after an "Enable accessibility"
+  // button that Flutter otherwise puts first.
+  SemanticsBinding.instance.ensureSemantics();
+  // Posts and guides opened with push get their own address, so they can be shared.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
   // The token getter is wired up once we know which sign-in to use.
   AuthService? auth;
   final api = ApiClient.fromEnvironment(token: () async => auth?.idToken());

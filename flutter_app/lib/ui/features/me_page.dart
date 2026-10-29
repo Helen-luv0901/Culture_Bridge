@@ -282,7 +282,10 @@ class _MyPostCard extends StatelessWidget {
           'Me too ${item.impact.experiencedToo}',
         ),
       if (item.commentCount > 0)
-        vm.pair('${item.commentCount} 則留言', '${item.commentCount} comments'),
+        vm.pair(
+          '${item.commentCount} 則留言',
+          commentsInEnglish(item.commentCount),
+        ),
       if (item.publishedAt != null) timeAgo(vm, item.publishedAt!),
     ];
     return NoteCard(
@@ -557,9 +560,11 @@ class _AccountPanel extends StatelessWidget {
           if (vm.profile != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: SelectableText(
-                '${vm.pair('帳號編號', 'Account ID')}: ${vm.profile!.id}',
-                style: mutedStyle.copyWith(fontSize: 12),
+              child: SelectionArea(
+                child: Text(
+                  '${vm.pair('帳號編號', 'Account ID')}: ${vm.profile!.id}',
+                  style: mutedStyle.copyWith(fontSize: 12),
+                ),
               ),
             ),
         ],

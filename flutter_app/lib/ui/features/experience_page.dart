@@ -111,9 +111,12 @@ class _PostCard extends StatelessWidget {
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: SelectableText(
-              item.voice(translated),
-              style: const TextStyle(fontSize: 16, height: 1.8),
+            // SelectableText reaches screen readers as an empty, disabled text box.
+            child: SelectionArea(
+              child: Text(
+                item.voice(translated),
+                style: const TextStyle(fontSize: 16, height: 1.8),
+              ),
             ),
           ),
           if (translated)
@@ -221,6 +224,7 @@ class _LinkLine extends StatelessWidget {
       style: TextButton.styleFrom(
         padding: EdgeInsets.zero,
         textStyle: const TextStyle(
+          fontFamily: appFont,
           fontSize: 14,
           decoration: TextDecoration.underline,
           decorationColor: Palette.brick,
@@ -564,7 +568,7 @@ class _CommentTile extends StatelessWidget {
     final small = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       foregroundColor: Palette.muted,
-      textStyle: const TextStyle(fontSize: 13),
+      textStyle: const TextStyle(fontFamily: appFont, fontSize: 13),
     );
     return Padding(
       key: Key('comment-${c.id}'),

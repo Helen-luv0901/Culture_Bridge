@@ -320,6 +320,7 @@ class _SortToggle extends StatelessWidget {
                         ? Palette.ink
                         : Palette.muted,
                     textStyle: TextStyle(
+                      fontFamily: appFont,
                       fontSize: 14,
                       fontWeight: sort == value
                           ? FontWeight.w700
