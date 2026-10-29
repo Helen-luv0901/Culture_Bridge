@@ -325,35 +325,20 @@ class StudentPostCard extends StatelessWidget {
                             strokeWidth: 2,
                           ),
                         ),
-                        // The count, and what the arrow means, so it doesn't read as a like.
                         ExcludeSemantics(
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${item.experiencedTooCount}',
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: same ? Palette.moss : Palette.ink,
-                                  ),
-                                ),
-                                Text(
-                                  vm.pair('我也遇過', 'Me too'),
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    height: 1.3,
-                                    color: same ? Palette.moss : Palette.muted,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              '${item.experiencedTooCount}',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: same ? Palette.moss : Palette.ink,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
                       ],
                     ),
                   ),
@@ -363,37 +348,9 @@ class StudentPostCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: categoryName(vm, item.categoryKey),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: Palette.ink,
-                                  ),
-                                ),
-                                TextSpan(text: '  ·  ${authorLine(vm, item)}'),
-                                if (item.mine)
-                                  TextSpan(
-                                    text: vm.pair(
-                                      '  ·  你的分享',
-                                      '  ·  Your post',
-                                    ),
-                                  ),
-                                if (read)
-                                  TextSpan(
-                                    text: vm.pair('  ·  已看過', '  ·  Read'),
-                                  ),
-                              ],
-                            ),
-                            style: mutedStyle.copyWith(fontSize: 12.5),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          // Its own node: the title and excerpt are the button's name,
-                          // and the vote, comments and save buttons stay outside it.
+                          // The byline, title and excerpt are one button of their own (well
+                          // over 44px tall, no change to the look); the vote, comments and
+                          // save buttons stay outside it.
                           Semantics(
                             container: true,
                             button: true,
@@ -403,32 +360,62 @@ class StudentPostCard extends StatelessWidget {
                               ringRadius: const BorderRadius.all(
                                 Radius.circular(6),
                               ),
-                              child: ConstrainedBox(
-                                // A one-line title alone is still a 44px target.
-                                constraints: const BoxConstraints(
-                                  minHeight: 44,
-                                  minWidth: double.infinity,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: categoryName(
+                                            vm,
+                                            item.categoryKey,
+                                          ),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: Palette.ink,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: '  ·  ${authorLine(vm, item)}',
+                                        ),
+                                        if (item.mine)
+                                          TextSpan(
+                                            text: vm.pair(
+                                              '  ·  你的分享',
+                                              '  ·  Your post',
+                                            ),
+                                          ),
+                                        if (read)
+                                          TextSpan(
+                                            text: vm.pair(
+                                              '  ·  已看過',
+                                              '  ·  Read',
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    style: mutedStyle.copyWith(fontSize: 12),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: postTitleStyle(read: read),
+                                  ),
+                                  if (hasExcerpt) ...[
+                                    const SizedBox(height: 4),
                                     Text(
-                                      title,
+                                      excerpt,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: postTitleStyle(read: read),
+                                      style: postExcerptStyle,
                                     ),
-                                    if (hasExcerpt) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        excerpt,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: postExcerptStyle,
-                                      ),
-                                    ],
                                   ],
-                                ),
+                                ],
                               ),
                             ),
                           ),

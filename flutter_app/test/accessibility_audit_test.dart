@@ -73,12 +73,6 @@ void main() {
     expect(find.byType(SelectableText), findsNothing);
   });
 
-  testWidgets('Vote columns say what the arrow means', (tester) async {
-    await mount(tester, '/', const Size(375, 900));
-    expect(find.byKey(const Key('vote-first-rental')), findsOneWidget);
-    expect(find.text('我也遇過'), findsWidgets);
-  });
-
   testWidgets('The pinned card is one button with a plain name', (
     tester,
   ) async {
@@ -144,8 +138,8 @@ void main() {
     final title = tester.getSemantics(
       find.byKey(const Key('post-title-first-rental')),
     );
-    // Only the title: not the byline or the excerpt, and no buttons inside it.
-    expect(title.label, isNot(contains('·')));
+    // The byline, title and excerpt, with no buttons inside it.
+    expect(title.label, contains('·'));
     expect(title.childrenCount, 0);
     handle.dispose();
   });
