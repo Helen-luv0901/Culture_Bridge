@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/link.dart';
@@ -13,11 +15,9 @@ import 'post_cards.dart';
 /// Opens the assistant. Only signed-in users may use it; guests are asked to sign in first.
 Future<void> openAssistantFor(BuildContext context, {String? question}) async {
   final vm = BridgeScope.of(context);
-  if (vm.signedIn) {
-    vm.openAssistant(question: question);
-    return;
-  }
-  await askToSignIn(context, signInForAssistant);
+  // Guests see the panel too: suggestions that search the guides, and a sign-in line
+  // where the input would be, instead of a sign-in dialog in front of everything.
+  vm.openAssistant(question: vm.signedIn ? question : null);
 }
 
 /// The round chat bubble at the bottom right; it opens and closes the assistant.
@@ -59,7 +59,7 @@ class AssistantBubble extends StatelessWidget {
 }
 
 /// The open assistant: a near-full-height panel on phones, a floating window elsewhere.
-class AssistantOverlay extends StatelessWidget {
+class AssistantOverlay extends StatefulWidget {
   const AssistantOverlay({
     super.key,
     required this.uri,
@@ -71,22 +71,59 @@ class AssistantOverlay extends StatelessWidget {
   static const windowSize = Size(380, 540);
 
   @override
+  State<AssistantOverlay> createState() => _AssistantOverlayState();
+}
+
+class _AssistantOverlayState extends State<AssistantOverlay> {
+  late BridgeViewModel _vm;
+  ModalRoute<Object?>? _route;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vm = BridgeScope.of(context);
+    _route = ModalRoute.of(context);
+  }
+
+  // Esc closes the assistant even when the focus is still on the page behind it, but
+  // not while a dialog or menu is open over the page: Esc is that one's to close.
+  bool _onKey(KeyEvent event) {
+    if (!mounted ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape ||
+        _route?.isCurrent == false) {
+      return false;
+    }
+    _vm.closeAssistant();
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final uri = widget.uri;
+    final onNavigate = widget.onNavigate;
     final vm = BridgeScope.of(context);
     final phone = AppLayout.of(context) == AppLayout.phone;
-    final panel = CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): vm.closeAssistant,
-      },
-      child: FocusScope(
-        autofocus: true,
-        child: AssistantPanel(
-          uri: uri,
-          onNavigate: (path) {
-            if (phone) vm.closeAssistant();
-            onNavigate(path);
-          },
-        ),
+    final panel = FocusScope(
+      autofocus: true,
+      child: AssistantPanel(
+        uri: uri,
+        onNavigate: (path) {
+          if (phone) vm.closeAssistant();
+          onNavigate(path);
+        },
       ),
     );
     if (!phone) {
@@ -94,9 +131,13 @@ class AssistantOverlay extends StatelessWidget {
       return Positioned(
         right: 28,
         bottom: 96,
-        width: windowSize.width,
-        height: (size.height - 96 - 80).clamp(320, windowSize.height),
+        width: AssistantOverlay.windowSize.width,
+        height: (size.height - 96 - 80).clamp(
+          320,
+          AssistantOverlay.windowSize.height,
+        ),
         child: Semantics(
+          role: SemanticsRole.dialog,
           scopesRoute: true,
           explicitChildNodes: true,
           label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
@@ -104,7 +145,7 @@ class AssistantOverlay extends StatelessWidget {
             decoration: BoxDecoration(
               color: Palette.high,
               border: Border.all(color: Palette.edge),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(Radii.card),
               boxShadow: [
                 BoxShadow(
                   color: Palette.ink.withValues(alpha: .12),
@@ -128,10 +169,15 @@ class AssistantOverlay extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
+          // The panel covers the page, so screen readers leave the page behind it.
+          const BlockSemantics(),
+          // The scrim is for taps; screen readers close with the panel's own button.
           Positioned.fill(
-            child: GestureDetector(
-              onTap: vm.closeAssistant,
-              child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+            child: ExcludeSemantics(
+              child: GestureDetector(
+                onTap: vm.closeAssistant,
+                child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+              ),
             ),
           ),
           Positioned(
@@ -140,6 +186,7 @@ class AssistantOverlay extends StatelessWidget {
             top: top,
             bottom: 0,
             child: Semantics(
+              role: SemanticsRole.dialog,
               scopesRoute: true,
               namesRoute: true,
               explicitChildNodes: true,
@@ -160,10 +207,11 @@ class AssistantOverlay extends StatelessWidget {
   }
 }
 
+/// Suggested questions, and what a guest searches for instead of asking.
 const _suggested = [
-  ('居留證要準備什麼？', 'What do I need for an ARC?'),
-  ('怎麼加入健保？', 'How do I join NHI?'),
-  ('租屋要注意什麼？', 'What should I check when renting?'),
+  ('居留證要準備什麼？', 'What do I need for an ARC?', '居留證'),
+  ('怎麼加入健保？', 'How do I join NHI?', '健保'),
+  ('租屋要注意什麼？', 'What should I check when renting?', '租屋'),
 ];
 
 class AssistantPanel extends StatefulWidget {
@@ -297,7 +345,16 @@ class _AssistantPanelState extends State<AssistantPanel> {
                               NoteChip(
                                 label: vm.pair(q.$1, q.$2),
                                 selected: false,
-                                onTap: () => _ask(vm.pair(q.$1, q.$2)),
+                                onTap: vm.signedIn
+                                    ? () => _ask(vm.pair(q.$1, q.$2))
+                                    : () {
+                                        if (widget.closable) {
+                                          vm.closeAssistant();
+                                        }
+                                        widget.onNavigate(
+                                          '/explore?q=${Uri.encodeQueryComponent(q.$3)}',
+                                        );
+                                      },
                               ),
                           ],
                         ),
@@ -319,36 +376,61 @@ class _AssistantPanelState extends State<AssistantPanel> {
           const DashedRule(color: Palette.edge),
           const SizedBox(height: 6),
           if (!urgentInLog) ...[const _UrgentLine(), const SizedBox(height: 4)],
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('assistant-input'),
-                  controller: _input,
-                  minLines: 1,
-                  maxLines: 3,
-                  maxLength: 1000,
-                  textInputAction: TextInputAction.send,
-                  decoration: InputDecoration(
-                    hintText: vm.pair('輸入你的問題…', 'Type your question…'),
-                    counterText: '',
+          if (!vm.signedIn)
+            Row(
+              key: const Key('assistant-sign-in'),
+              children: [
+                Expanded(
+                  child: Text(
+                    vm.pair(
+                      '登入後就能直接問助理；沒登入也可以點上面的問題，看相關的指南和分享。',
+                      'Sign in to ask the assistant. You can still tap a question above '
+                          'to see related guides and posts.',
+                    ),
+                    style: mutedStyle,
                   ),
-                  onSubmitted: _ask,
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                key: const Key('assistant-send'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(44, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () {
+                    vm.closeAssistant();
+                    ensureSignedIn(context);
+                  },
+                  child: Text(vm.t('signIn')),
                 ),
-                onPressed: vm.asking ? null : () => _ask(_input.text),
-                child: Text(vm.pair('送出', 'Send')),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('assistant-input'),
+                    controller: _input,
+                    minLines: 1,
+                    maxLines: 3,
+                    maxLength: 1000,
+                    textInputAction: TextInputAction.send,
+                    decoration: InputDecoration(
+                      hintText: vm.pair('輸入你的問題…', 'Type your question…'),
+                      counterText: '',
+                    ),
+                    onSubmitted: _ask,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  key: const Key('assistant-send'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onPressed: vm.asking ? null : () => _ask(_input.text),
+                  child: Text(vm.pair('送出', 'Send')),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -430,16 +512,18 @@ class _Bubble extends StatelessWidget {
               bottomRight: Radius.circular(mine ? 4 : 12),
             ),
           ),
-          child: SelectableText(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: mine
-                  ? Palette.onMoss
-                  : muted
-                  ? Palette.muted
-                  : Palette.ink,
+          child: SelectionArea(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: mine
+                    ? Palette.onMoss
+                    : muted
+                    ? Palette.muted
+                    : Palette.ink,
+              ),
             ),
           ),
         ),
@@ -481,6 +565,7 @@ class _Entry extends StatelessWidget {
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               textStyle: const TextStyle(
+                fontFamily: appFont,
                 fontSize: 14,
                 decoration: TextDecoration.underline,
                 decorationColor: Palette.brick,
@@ -519,7 +604,7 @@ class _Entry extends StatelessWidget {
         'open_action' => vm.pair('打開官方指南', 'Open the guide'),
         'open_progress' => vm.pair('打開辦理進度', 'Open progress'),
         'open_experience' => vm.pair('看這篇學生分享', 'Read this student post'),
-        'open_explore' => vm.pair('去探索看看', 'Go to Explore'),
+        'open_explore' => vm.pair('去看板看看', 'Go to Boards'),
         'open_share' => vm.pair('去分享', 'Go to Share'),
         _ => action.type,
       };
@@ -620,7 +705,7 @@ class _PostCard extends StatelessWidget {
       child: Material(
         color: Palette.high,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Radii.control),
           side: const BorderSide(color: Palette.edge),
         ),
         clipBehavior: Clip.antiAlias,

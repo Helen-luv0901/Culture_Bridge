@@ -15,6 +15,16 @@
 # scripts/gcp-setup.sh step 5. NO_PULL=1 deploys the checked-out commit as is; BUILD_WITH=docker
 # builds locally and pushes instead of using Cloud Build.
 # .github/workflows/deploy.yml runs it that way after CI passes on main (setup: gcp-setup.sh step 8).
+#
+# A version to look at before deciding (Cloud Shell; the CI credentials only deploy main):
+#
+#   PREVIEW=preview bash scripts/deploy.sh
+#
+# pulls dev (BRANCH=… for another branch), builds it and deploys it as a revision with no traffic
+# at https://preview---<service URL>. The live site keeps its revision and traffic; nothing is
+# migrated or imported, so a version that changes backend/migrations is refused (it shares the
+# production database). Remove it with:
+#   gcloud run services update-traffic culture-bridge --region=asia-east1 --remove-tags=preview
 
 set -euo pipefail
 
@@ -32,6 +42,8 @@ PROJECT="${PROJECT:-culture-bridge-511321}"
 REGION="${REGION:-asia-east1}"
 INSTANCE="${INSTANCE:-culturebridge-db}"
 BUILD_WITH="${BUILD_WITH:-cloudbuild}"  # cloudbuild (Cloud Shell) or docker (CI runner)
+PREVIEW="${PREVIEW:-}"  # a tag name: deploy for viewing only, traffic untouched
+if [[ -n "${PREVIEW}" ]]; then BRANCH="${BRANCH:-dev}"; else BRANCH=main; fi
 IMAGE_REPO="${REGION}-docker.pkg.dev/${PROJECT}/culture-bridge/app"
 SERVICE=culture-bridge
 CARDS=backend/app/content/official_procedures.json
@@ -64,6 +76,13 @@ import json, sys
 print(next(t["url"] for t in json.load(sys.stdin)["status"]["traffic"] if t.get("tag") == sys.argv[1]))' "$1"
 }
 
+# The revision behind a tag.
+tag_revision() {
+  service_json | python3 -c '
+import json, sys
+print(next(t["revisionName"] for t in json.load(sys.stdin)["status"]["traffic"] if t.get("tag") == sys.argv[1]))' "$1"
+}
+
 # /health answers 200 only when the app is up and reaches the database. A new revision starts
 # cold, so a few tries.
 check_health() {
@@ -78,15 +97,20 @@ check_health() {
 }
 
 command -v gcloud >/dev/null || die "找不到 gcloud；請在 Google Cloud Shell 執行。"
+if [[ -n "${PREVIEW}" ]]; then
+  [[ "${PREVIEW}" =~ ^[a-z][a-z0-9-]{0,40}$ && "${PREVIEW}" != candidate ]] \
+    || die "PREVIEW 要是小寫英文開頭的名稱（例如 preview），也不能是 candidate。"
+fi
 require_login
 cd "${REPO_ROOT}"
 
 if [[ "${NO_PULL:-0}" != "1" ]]; then
-  bold "1/5 取得最新的 main"
+  bold "1/5 取得最新的 ${BRANCH}"
   [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
     || die "這個資料夾有改過的檔案，先處理掉（例如 git stash）再部署。"
-  git checkout -q main
-  git pull -q --ff-only origin main
+  git fetch -q origin main "${BRANCH}"
+  git checkout -q "${BRANCH}" || git checkout -q -b "${BRANCH}" "origin/${BRANCH}"
+  git pull -q --ff-only origin "${BRANCH}"
 fi
 tag="$(git rev-parse --short HEAD)"
 image="${IMAGE_REPO}:${tag}"
@@ -106,6 +130,20 @@ fi
 live_image="$(gc run revisions describe "$(serving_revision)" --region="${REGION}" \
   --format='value(spec.containers[0].image)')"
 live_tag="${live_image##*:}"
+if [[ "${live_image}" == *@sha256:* ]]; then
+  # Cloud Run records the image by digest; the commit is the tag on that digest.
+  live_tag="$(gcloud artifacts docker images list "${live_image%@*}" --include-tags \
+    --filter="version=${live_image##*@}" --format='value(tags)' 2>/dev/null \
+    | tr ',' '\n' | grep -m1 -E '^[0-9a-f]{7,40}$' || true)"
+fi
+
+if [[ -n "${PREVIEW}" ]]; then
+  # A preview shares the production database, so it must run on the schema already there.
+  git cat-file -e "${live_tag}^{commit}" 2>/dev/null \
+    || die "找不到正式站的版本 ${live_tag}（git fetch origin main 之後再試）。"
+  git diff --quiet "${live_tag}" HEAD -- backend/migrations \
+    || die "這版的資料表和正式站（${live_tag}）不同，不能當預覽版；先合併到 main 正式部署。"
+fi
 
 bold "2/5 映像檔"
 if gcloud artifacts docker images describe "${image}" >/dev/null 2>&1; then
@@ -120,6 +158,22 @@ else
   require_login  # Cloud Shell tends to drop its login during the build
 fi
 
+if [[ -n "${PREVIEW}" ]]; then
+  bold "3/5 預覽版（不給流量，正式站不變；不動資料表和流程卡）"
+  live_rev="$(serving_revision)"
+  # --no-traffic pins the live traffic to its revision, so users stay where they are.
+  gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" \
+    --no-traffic --tag="${PREVIEW}" --quiet
+  preview_url="$(tag_url "${PREVIEW}")" || die "找不到預覽版的網址；正式站仍是 ${live_rev}。"
+  check_health "${preview_url}" || die "預覽版沒通過健康檢查；正式站仍是 ${live_rev}，不受影響。"
+  [[ "$(serving_revision)" == "${live_rev}" ]] \
+    || die "正式站的版本變了（原本 ${live_rev}），請到 Cloud Run 檢查流量。"
+  bold "完成：預覽版 ${preview_url}"
+  note "版本 ${tag}（${BRANCH}）。正式站仍是 ${live_rev}：$(gc run services describe "${SERVICE}" --region="${REGION}" --format='value(status.url)')"
+  note "拿掉預覽版：gcloud run services update-traffic ${SERVICE} --region=${REGION} --remove-tags=${PREVIEW}"
+  exit 0
+fi
+
 bold "3/5 資料表（Alembic）"
 gc run jobs update culture-bridge-migrate --image="${image}" --region="${REGION}" --quiet
 gc run jobs execute culture-bridge-migrate --region="${REGION}" --wait
@@ -129,13 +183,14 @@ old_rev="$(serving_revision)"
 # Only the image changes; secrets, Cloud SQL, environment and access stay as step 5 set them.
 gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" \
   --no-traffic --tag=candidate --quiet
-new_rev="$(gc run services describe "${SERVICE}" --region="${REGION}" \
-  --format='value(status.latestCreatedRevisionName)')"
+new_rev="$(tag_revision candidate)" || die "找不到剛部署的 candidate 版本，流量仍在 ${old_rev}。"
 candidate_url="$(tag_url candidate)"   || die "找不到新版本 ${new_rev} 的 candidate 網址，流量仍在 ${old_rev}。"
 if ! check_health "${candidate_url}"; then
   die "新版本 ${new_rev} 沒通過健康檢查，流量仍在 ${old_rev}，使用者不受影響。到 Cloud Run → 修訂版本 → ${new_rev} → 記錄查原因。"
 fi
-gc run services update-traffic "${SERVICE}" --region="${REGION}" --to-latest --quiet
+# By name, not --to-latest: a preview deployed meanwhile (PREVIEW=…) must not go live.
+gc run services update-traffic "${SERVICE}" --region="${REGION}" \
+  --to-revisions="${new_rev}=100" --quiet
 url="$(gc run services describe "${SERVICE}" --region="${REGION}" --format='value(status.url)')"
 if ! check_health "${url}"; then
   gc run services update-traffic "${SERVICE}" --region="${REGION}" \

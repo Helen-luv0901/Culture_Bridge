@@ -17,6 +17,10 @@ abstract class PreferencesRepository {
   /// Official guides bookmarked on this device (student posts are saved on the server).
   Set<String> get savedGuides;
   Future<void> saveSavedGuides(Set<String> ids);
+
+  /// The reader has lived in Taiwan a while, so Home skips the first-month checklist.
+  bool get settled;
+  Future<void> saveSettled(bool value);
 }
 
 class LocalPreferencesRepository implements PreferencesRepository {
@@ -68,5 +72,12 @@ class LocalPreferencesRepository implements PreferencesRepository {
   @override
   Future<void> saveSavedGuides(Set<String> ids) async {
     await preferences.setStringList('savedGuides', ids.toList());
+  }
+
+  @override
+  bool get settled => preferences.getBool('settled') ?? false;
+  @override
+  Future<void> saveSettled(bool value) async {
+    await preferences.setBool('settled', value);
   }
 }

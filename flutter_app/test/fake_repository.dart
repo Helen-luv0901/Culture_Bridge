@@ -7,6 +7,14 @@ import 'package:culture_bridge/data/auth_service.dart';
 import 'package:culture_bridge/data/culture_repository.dart';
 import 'package:culture_bridge/domain/api_models.dart';
 
+/// The production slugs of the sample guides, so the home page can put them in stages.
+const _slugs = {
+  'arc': 'arc-first',
+  'insurance': 'nhi',
+  'bank': 'bank-account',
+  'certificate': 'enrollment-certificate',
+};
+
 /// An in-memory backend built from assets/data/content.json, behaving like the real API for the
 /// flows the screens use.
 class FakeCultureRepository implements CultureRepository {
@@ -21,6 +29,7 @@ class FakeCultureRepository implements CultureRepository {
       _actions[c['id'] as String] = ActionDetail(
         summary: ActionSummary(
           id: c['id'] as String,
+          slug: _slugs[c['id']] ?? c['id'] as String,
           versionNumber: 1,
           title: Text2(c['title'] as String, en['title'] as String),
           description: Text2(

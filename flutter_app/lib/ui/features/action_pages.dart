@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/link.dart';
 
 import '../../domain/api_models.dart';
-import '../../domain/keys.dart';
 import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
@@ -19,6 +18,21 @@ class ActionDetailPage extends StatelessWidget {
     load: (vm) => vm.loadAction(id),
     builder: (context, detail) => _ActionDetail(detail: detail),
   );
+}
+
+/// Drops "（內政部移民署）" after each sentence: the sources are listed once, under 資料來源.
+String withoutCitations(String text, List<SourceInfo> sources) {
+  var out = text;
+  for (final source in sources) {
+    for (final name in {source.publisher, source.publisherEn}) {
+      if (name.trim().isEmpty) continue;
+      out = out
+          .replaceAll('（$name）', '')
+          .replaceAll(' ($name)', '')
+          .replaceAll('($name)', '');
+    }
+  }
+  return out;
 }
 
 class _ActionDetail extends StatefulWidget {
@@ -48,21 +62,18 @@ class _ActionDetailState extends State<_ActionDetail> {
     }
   }
 
-  String _meta(BridgeViewModel vm) {
+  /// Whether the guide was checked by a person, said once beside its sources.
+  String _checked(BridgeViewModel vm) {
     final action = widget.detail.summary;
-    final publishers = {
-      for (final s in widget.detail.sources) s.publisherFor(vm.english),
-    }.join(vm.english ? ', ' : '、');
-    final sources = publishers.isEmpty
-        ? vm.pair(' · 來源待補上', '')
-        : vm.pair(' · 來源：$publishers', ' · Sources: $publishers');
     if (action.verificationStatus == 'verified') {
       final date = formatDate(action.lastVerifiedAt);
-      return vm.pair('已驗證 · 最後確認 $date', 'Verified · last checked $date') +
-          sources;
+      return vm.pair('已驗證 · 最後確認 $date', 'Verified · last checked $date');
     }
-    final status = vm.t(statusKey(action.verificationStatus));
-    return vm.pair('$status，內容待確認', '$status; still being checked') + sources;
+    return vm.pair(
+      'Culture Bridge 從官方公告整理，還在逐項人工確認；辦理前請以這些來源為準。',
+      'Culture Bridge put this together from official notices and is still '
+          'checking it line by line; the sources have the final say.',
+    );
   }
 
   @override
@@ -71,7 +82,11 @@ class _ActionDetailState extends State<_ActionDetail> {
     final detail = widget.detail;
     final action = detail.summary;
     vm.markRead('guide:${action.id}');
-    final description = action.description.of(vm.english);
+    final description = withoutCitations(
+      action.description.of(vm.english),
+      detail.sources,
+    );
+    final doing = vm.openExecution(action.id) != null;
     return FlowBody(
       maxWidth: 760,
       children: [
@@ -85,65 +100,53 @@ class _ActionDetailState extends State<_ActionDetail> {
             onPressed: () => vm.toggleSavedGuide(action.id),
           ),
         ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            PageTitle(action.title.of(vm.english)),
-            const SizedBox(height: 2),
-            Text(_meta(vm), style: mutedStyle),
-          ],
-        ),
+        PageTitle(action.title.of(vm.english)),
         if (description.isNotEmpty)
-          Text(description, style: const TextStyle(fontSize: 16, height: 1.75)),
+          ExpandableText(
+            description,
+            style: const TextStyle(fontSize: 16, height: 1.75),
+          ),
+        _KeyFacts(detail: detail),
         Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SectionLabel(vm.t('applicableTo')),
+            FilledButton(
+              key: const Key('start-action'),
+              onPressed: _starting ? null : _track,
+              child: Text(
+                doing
+                    ? vm.t('continueAction')
+                    : vm.pair('開始逐步辦理', 'Start, step by step'),
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(action.applicableTo.of(vm.english)),
-            if (action.location != null) ...[
-              const SizedBox(height: 4),
-              Text(action.location!.of(vm.english), style: mutedStyle),
-            ],
+            Text(
+              vm.pair(
+                '會記下你做到哪一步，下次回來接著做。',
+                'Your progress is kept, so you can pick up where you left off.',
+              ),
+              style: mutedStyle,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
-        if (detail.steps.isNotEmpty) _Steps(steps: detail.steps),
+        if (detail.steps.isNotEmpty)
+          _Steps(steps: detail.steps, sources: detail.sources),
         if (detail.documents.isNotEmpty)
           _Documents(actionId: action.id, documents: detail.documents),
         _Voices(actionId: action.id),
-        if (detail.sources.isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SectionLabel(vm.t('sources')),
-              const SizedBox(height: 8),
-              for (final source in detail.sources)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: SourceLine(source: source),
-                ),
-            ],
-          ),
-        OutlinedButton(
-          key: const Key('share-under-guide'),
-          onPressed: () {
-            if (!ensureSignedIn(context)) return;
-            vm.startPostForAction(action.id);
-            context.go('/share');
-          },
-          child: Text(
-            vm.pair('我也遇過，分享經驗', 'Been there? Share your experience'),
-          ),
-        ),
+        _Sources(sources: detail.sources, checked: _checked(vm)),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            key: const Key('start-action'),
-            onPressed: _starting ? null : _track,
+            key: const Key('share-under-guide'),
+            onPressed: () {
+              if (!ensureSignedIn(context)) return;
+              vm.startPostForAction(action.id);
+              context.go('/share');
+            },
             child: Text(
-              vm.openExecution(action.id) != null
-                  ? '${vm.t('continueAction')} ›'
-                  : vm.pair('逐步記錄我的辦理進度 ›', 'Track my progress step by step ›'),
+              vm.pair('辦過了？分享你的經驗 ›', 'Done it? Share your experience ›'),
             ),
           ),
         ),
@@ -152,9 +155,128 @@ class _ActionDetailState extends State<_ActionDetail> {
   }
 }
 
+/// Who it is for, where to go, and how much there is to do, before the details.
+class _KeyFacts extends StatelessWidget {
+  const _KeyFacts({required this.detail});
+  final ActionDetail detail;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final action = detail.summary;
+    final size = [
+      if (detail.steps.isNotEmpty)
+        vm.pair('${detail.steps.length} 個步驟', '${detail.steps.length} steps'),
+      if (detail.documents.isNotEmpty)
+        vm.pair(
+          '要帶 ${detail.documents.length} 份文件',
+          '${detail.documents.length} documents to bring',
+        ),
+    ].join(vm.english ? ' · ' : '・');
+    String clean(String text) => withoutCitations(text, detail.sources);
+    final facts = [
+      if (size.isNotEmpty) (vm.pair('要做的事', 'What it takes'), size),
+      if (action.location != null)
+        (vm.pair('地點', 'Where'), clean(action.location!.of(vm.english))),
+      (vm.t('applicableTo'), clean(action.applicableTo.of(vm.english))),
+    ];
+    // With large text the labels go above their values instead of being squeezed.
+    final stacked = MediaQuery.textScalerOf(context).scale(14) > 18;
+    const labelText = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      color: Palette.muted,
+      height: 1.6,
+    );
+    const valueText = TextStyle(fontSize: 15, height: 1.6);
+    return NoteCard(
+      key: const Key('guide-key-facts'),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      child: Column(
+        children: [
+          for (final (i, (label, value)) in facts.indexed) ...[
+            if (i > 0) const DashedRule(),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: stacked
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(label, style: labelText),
+                        ExpandableText(value, maxLines: 2, style: valueText),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: vm.english ? 104 : 72,
+                          child: Text(label, style: labelText),
+                        ),
+                        Expanded(
+                          child: ExpandableText(
+                            value,
+                            maxLines: 2,
+                            style: valueText,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The official sources, folded away under one line, with how far the guide was checked.
+class _Sources extends StatelessWidget {
+  const _Sources({required this.sources, required this.checked});
+  final List<SourceInfo> sources;
+  final String checked;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    // Its own Material: the tile's ink stays with this page, not the shell's Material that
+    // the pages above it share.
+    return Material(
+      type: MaterialType.transparency,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: const Key('guide-sources'),
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          iconColor: Palette.ink,
+          collapsedIconColor: Palette.ink,
+          title: Text(
+            sources.isEmpty
+                ? vm.pair('資料來源（待補上）', 'Sources (to be added)')
+                : vm.pair(
+                    '資料來源（${sources.length}）',
+                    'Sources (${sources.length})',
+                  ),
+            style: displayStyle(16),
+          ),
+          subtitle: Text(checked, style: mutedStyle),
+          children: [
+            for (final source in sources)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: SourceLine(source: source),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Steps extends StatelessWidget {
-  const _Steps({required this.steps});
+  const _Steps({required this.steps, required this.sources});
   final List<ActionStepInfo> steps;
+  final List<SourceInfo> sources;
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
@@ -193,10 +315,18 @@ class _Steps extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(step.title.of(vm.english)),
+                      Text(
+                        step.title.of(vm.english),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          height: 1.6,
+                        ),
+                      ),
                       if ((step.notesFor(vm.english) ?? '').isNotEmpty)
-                        Text(
-                          step.notesFor(vm.english)!,
+                        ExpandableText(
+                          withoutCitations(step.notesFor(vm.english)!, sources),
+                          maxLines: 2,
                           style: mutedStyle.copyWith(fontSize: 14),
                         ),
                       if (step.recentStuckCount > 0)
@@ -360,9 +490,7 @@ class _Voices extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          CardList(
-            children: [for (final e in page.items) StudentPostCard(item: e)],
-          ),
+          PostList(items: page.items),
         ],
       );
     },

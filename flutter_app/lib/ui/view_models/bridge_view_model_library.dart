@@ -13,6 +13,18 @@ mixin _BridgeLibrary on _BridgeCore {
     // Lists rebuild when the reader comes back, so no notify is needed here.
   }
 
+  late bool _settled;
+
+  /// Lived in Taiwan a while: Home shows the guides for later instead of the
+  /// first-month checklist. Kept on this device.
+  bool get settled => _settled;
+  void setSettled(bool value) {
+    if (_settled == value) return;
+    _settled = value;
+    unawaited(preferences.saveSettled(value));
+    notifyListeners();
+  }
+
   late final Set<String> _savedGuides;
   bool guideSaved(String actionId) => _savedGuides.contains(actionId);
   List<String> get savedGuideIds => _savedGuides.toList().reversed.toList();

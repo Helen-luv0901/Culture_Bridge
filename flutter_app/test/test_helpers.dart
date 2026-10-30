@@ -37,6 +37,13 @@ class MemoryPreferences implements PreferencesRepository {
   Future<void> saveSavedGuides(Set<String> ids) async {
     savedGuides = {...ids};
   }
+
+  @override
+  bool settled = false;
+  @override
+  Future<void> saveSettled(bool value) async {
+    settled = value;
+  }
 }
 
 MessageCatalog loadMessages() => MessageCatalog(

@@ -33,18 +33,10 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
+  # Listed fonts are downloaded before the first frame on the web, so text never shows as
+  # boxes while a font arrives. Noto Sans TC is cut to the common Traditional Chinese
+  # characters (tool/subset_chinese_font.py); rarer ones use Flutter's fallback.
   fonts:
-    - family: YoungSerif
+    - family: NotoSansTC
       fonts:
-        - asset: assets/fonts/YoungSerif-Regular.ttf
-    - family: Spectral
-      fonts:
-        - asset: assets/fonts/Spectral-Regular.ttf
-        - asset: assets/fonts/Spectral-Italic.ttf
-          style: italic
-    - family: CourierPrime
-      fonts:
-        - asset: assets/fonts/CourierPrime-Regular.ttf
-    # NotoSerifTC (Chinese) is loaded in lib/main.dart after start-up, so the first screen does
-    # not wait for its 3 MB download; see tool/subset_chinese_font.py. Every font listed here
-    # is downloaded before the first frame, so list only fonts the app uses.
+        - asset: assets/fonts/NotoSansTC-Subset.ttf

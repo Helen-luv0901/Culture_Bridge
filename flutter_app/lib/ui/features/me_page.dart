@@ -21,6 +21,7 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
+    if (!vm.signedIn) return const _GuestProfile();
     final name = vm.profile?.nickname ?? vm.pair('匿名學生', 'Anonymous student');
     final postCount = vm.mine.data
         ?.where((e) => e.status == 'published')
@@ -72,17 +73,7 @@ class ProfilePage extends StatelessWidget {
           ],
         ),
         _Tabs(tab: tab),
-        if (!vm.signedIn && tab == 'posts')
-          EmptyNote(
-            title: vm.t('signInNeeded'),
-            body: vm.pair(
-              '登入後，你分享的經驗和收藏會在這裡。',
-              'Sign in to see your posts and saved posts here.',
-            ),
-            action: vm.t('signIn'),
-            onAction: () => ensureSignedIn(context),
-          )
-        else if (tab == 'posts')
+        if (tab == 'posts')
           ResourceView<List<MyExperience>>(
             resource: (vm) => vm.mine,
             load: (vm) => vm.loadMine(),
@@ -90,6 +81,60 @@ class ProfilePage extends StatelessWidget {
           )
         else
           const _Saved(),
+      ],
+    );
+  }
+}
+
+/// A guest's 我的: what an account is for, then the guides they saved on this device.
+class _GuestProfile extends StatelessWidget {
+  const _GuestProfile();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return FlowBody(
+      children: [
+        NoteCard(
+          key: const Key('guest-profile'),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  vm.pair('登入後，這裡就是你的空間', 'Sign in to make this yours'),
+                  style: displayStyle(21),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                vm.pair(
+                  '你分享的經驗、收藏的貼文、辦到哪一步，都會記在這裡；也能直接問 AI 助理。',
+                  'Your posts, saved posts and how far you got with each guide are kept '
+                      'here, and you can ask the AI assistant.',
+                ),
+                style: const TextStyle(fontSize: 15, height: 1.7),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                key: const Key('guest-sign-in'),
+                onPressed: () => ensureSignedIn(context),
+                child: Text(vm.t('signIn')),
+              ),
+              Align(
+                alignment: Alignment.center,
+                child: TextButton(
+                  key: const Key('open-settings'),
+                  onPressed: () => context.push('/profile/settings'),
+                  child: Text(vm.pair('語言與設定', 'Language and settings')),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SectionLabel(vm.pair('收藏', 'Saved')),
+        const _Saved(),
       ],
     );
   }
@@ -237,7 +282,10 @@ class _MyPostCard extends StatelessWidget {
           'Me too ${item.impact.experiencedToo}',
         ),
       if (item.commentCount > 0)
-        vm.pair('${item.commentCount} 則留言', '${item.commentCount} comments'),
+        vm.pair(
+          '${item.commentCount} 則留言',
+          commentsInEnglish(item.commentCount),
+        ),
       if (item.publishedAt != null) timeAgo(vm, item.publishedAt!),
     ];
     return NoteCard(
@@ -348,9 +396,7 @@ class _Saved extends StatelessWidget {
             ResourceView<List<ExperienceItem>>(
               resource: (vm) => vm.saved,
               load: (vm) => vm.loadSaved(),
-              builder: (context, items) => CardList(
-                children: [for (final e in items) StudentPostCard(item: e)],
-              ),
+              builder: (context, items) => PostList(items: items),
             ),
           ];
     final nothing =
@@ -514,9 +560,11 @@ class _AccountPanel extends StatelessWidget {
           if (vm.profile != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: SelectableText(
-                '${vm.pair('帳號編號', 'Account ID')}: ${vm.profile!.id}',
-                style: mutedStyle.copyWith(fontSize: 12),
+              child: SelectionArea(
+                child: Text(
+                  '${vm.pair('帳號編號', 'Account ID')}: ${vm.profile!.id}',
+                  style: mutedStyle.copyWith(fontSize: 12),
+                ),
               ),
             ),
         ],
