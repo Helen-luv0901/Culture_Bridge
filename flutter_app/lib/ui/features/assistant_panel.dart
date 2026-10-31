@@ -120,8 +120,9 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
       autofocus: true,
       child: AssistantPanel(
         uri: uri,
+        // Opening a guide or post closes the chat, so the page isn't covered.
         onNavigate: (path) {
-          if (phone) vm.closeAssistant();
+          vm.closeAssistant();
           onNavigate(path);
         },
       ),

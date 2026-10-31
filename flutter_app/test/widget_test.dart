@@ -816,45 +816,52 @@ void main() {
     expect(find.byKey(const Key('remove-avatar')), findsNothing);
   });
 
-  testWidgets('Assistant answers show the closest posts, which open', (
-    tester,
-  ) async {
-    final app = await mount(tester, '/', const Size(375, 812));
-    app.repository.assistantReply = (message) => const AssistantReply(
-      conversationId: 'c1',
-      text: '租屋前先看清楚合約。',
-      cards: [
-        AssistantCard(
-          type: 'experience',
-          id: 'first-rental',
-          title: '第一次在台中租房子',
-          verificationStatus: null,
-          lastVerifiedAt: null,
-          recentSuccessCount: 0,
-          sources: [],
-          reminder: '',
-          excerpt: '看房時記得問電費怎麼算……',
-          category: 'housing',
-        ),
-      ],
-      screenActions: [],
-      pendingOperations: [],
-      fallback: false,
-    );
-    await tap(tester, find.byKey(const Key('assistant-button')));
-    await tester.enterText(find.byType(TextField).last, '租房子要注意什麼？');
-    await tester.testTextInput.receiveAction(TextInputAction.send);
-    await tester.pumpAndSettle();
-    expect(find.text('相關貼文'), findsOneWidget);
-    expect(find.text('第一次在台中租房子'), findsOneWidget);
+  for (final (layout, size) in [
+    ('phone', const Size(375, 812)),
+    ('tablet', const Size(1180, 820)),
+  ]) {
+    testWidgets(
+      'Assistant answers show the closest posts, which open ($layout)',
+      (tester) async {
+        final app = await mount(tester, '/', size);
+        app.repository.assistantReply = (message) => const AssistantReply(
+          conversationId: 'c1',
+          text: '租屋前先看清楚合約。',
+          cards: [
+            AssistantCard(
+              type: 'experience',
+              id: 'first-rental',
+              title: '第一次在台中租房子',
+              verificationStatus: null,
+              lastVerifiedAt: null,
+              recentSuccessCount: 0,
+              sources: [],
+              reminder: '',
+              excerpt: '看房時記得問電費怎麼算……',
+              category: 'housing',
+            ),
+          ],
+          screenActions: [],
+          pendingOperations: [],
+          fallback: false,
+        );
+        await tap(tester, find.byKey(const Key('assistant-button')));
+        await tester.enterText(find.byType(TextField).last, '租房子要注意什麼？');
+        await tester.testTextInput.receiveAction(TextInputAction.send);
+        await tester.pumpAndSettle();
+        expect(find.text('相關貼文'), findsOneWidget);
+        expect(find.text('第一次在台中租房子'), findsOneWidget);
 
-    await tap(tester, find.byKey(const Key('assistant-post-first-rental')));
-    expect(app.vm.assistantOpen, isFalse); // phones close the chat
-    expect(
-      find.byKey(const Key('save-post')),
-      findsOneWidget,
-    ); // on the post's page
-  });
+        await tap(tester, find.byKey(const Key('assistant-post-first-rental')));
+        // Opening a post closes the chat on every screen, so the post isn't covered.
+        expect(app.vm.assistantOpen, isFalse);
+        expect(
+          find.byKey(const Key('save-post')),
+          findsOneWidget,
+        ); // on the post's page
+      },
+    );
+  }
 
   testWidgets('Assistant on a phone covers the page and hides the bubble', (
     tester,
