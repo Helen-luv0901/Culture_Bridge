@@ -9,6 +9,7 @@ import '../../domain/keys.dart';
 import '../features/post_cards.dart' show categoryName, startSharing;
 import 'design_system.dart';
 import 'layout.dart';
+import 'motion.dart';
 
 /// The frame around every screen. Phone: header and bottom tabs. Tablet portrait: a 76px
 /// icon sidebar. Tablet landscape and web: a 232px sidebar and search in the header.
@@ -223,10 +224,23 @@ class _AppShellState extends State<AppShell> {
       child: Stack(
         children: [
           Positioned.fill(child: scaffold),
-          if (vm.assistantOpen && !onAssistantPage)
-            AssistantOverlay(
-              uri: widget.uri,
-              onNavigate: (path) => context.push(path),
+          // It slides (phone) or grows (wider screens) in, and out before it goes.
+          if (!onAssistantPage)
+            Positioned.fill(
+              child: AnimatedPresence(
+                visible: vm.assistantOpen,
+                enter: phone ? Motion.sheetIn : Motion.windowIn,
+                exit: phone ? Motion.sheetOut : Motion.windowOut,
+                builder: (context, animation) => Stack(
+                  children: [
+                    AssistantOverlay(
+                      uri: widget.uri,
+                      onNavigate: (path) => context.push(path),
+                      animation: animation,
+                    ),
+                  ],
+                ),
+              ),
             ),
         ],
       ),
@@ -718,7 +732,18 @@ class _BoardItem extends StatelessWidget {
   );
 }
 
-class _BottomTabs extends StatelessWidget {
+/// The box a tab's icon sits in; the sliding highlight lines up with it.
+class AppIconSlot extends StatelessWidget {
+  const AppIconSlot({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+    child: child,
+  );
+}
+
+class _BottomTabs extends StatefulWidget {
   const _BottomTabs({required this.index, required this.onTap});
 
   /// Low like other phone apps' tab bars; each tab is still well over 44px to tap.
@@ -726,7 +751,101 @@ class _BottomTabs extends StatelessWidget {
   final int index;
   final ValueChanged<int> onTap;
   @override
+  State<_BottomTabs> createState() => _BottomTabsState();
+}
+
+class _BottomTabsState extends State<_BottomTabs>
+    with SingleTickerProviderStateMixin {
+  final _bar = GlobalKey();
+  final _slots = List.generate(4, (_) => GlobalKey());
+
+  /// Straight over on one side of 發文; across it, off one edge and in at the other.
+  static const _slide = Duration(milliseconds: 280);
+  static const _wrap = Duration(milliseconds: 400);
+  late final _motion = AnimationController(vsync: this, duration: _slide);
+
+  /// The highlight moves from [_from] to [_to] (the current tab's icon, in the bar).
+  Rect? _from;
+  Rect? _to;
+  int? _toIndex;
+
+  /// Which way it leaves when it wraps: -1 out the left edge, 1 out the right.
+  int _wrapOut = 0;
+  double _barWidth = 0;
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
+
+  /// Tabs 0 and 1 sit left of 發文, 2 and 3 right of it.
+  static bool _leftOfShare(int i) => i < 2;
+
+  /// Where the highlight is drawn now.
+  Rect? get _shown {
+    final from = _from, to = _to;
+    if (to == null) return null;
+    if (from == null || _motion.isCompleted || _motion.isDismissed) return to;
+    final t = _motion.value;
+    if (_wrapOut == 0) return Rect.lerp(from, to, Motion.easeOut.transform(t));
+    // First half: speed up out of one edge; second half: come in at the other and settle.
+    if (t < 0.5) {
+      final out = _wrapOut < 0 ? -from.width : _barWidth;
+      final p = Curves.easeIn.transform(t / 0.5);
+      return from.translate((out - from.left) * p, 0);
+    }
+    final enter = _wrapOut < 0 ? _barWidth : -to.width;
+    final p = Motion.easeOut.transform((t - 0.5) / 0.5);
+    return Rect.fromLTWH(
+      enter + (to.left - enter) * p,
+      to.top,
+      to.width,
+      to.height,
+    );
+  }
+
+  /// Measure the current tab's icon after layout (large text moves it), and move the
+  /// highlight there if it changed.
+  void _measure() {
+    if (!mounted) return;
+    final bar = _bar.currentContext?.findRenderObject() as RenderBox?;
+    final slot =
+        _slots[widget.index].currentContext?.findRenderObject() as RenderBox?;
+    if (bar == null || slot == null || !bar.hasSize || !slot.hasSize) return;
+    final rect = slot.localToGlobal(Offset.zero, ancestor: bar) & slot.size;
+    if (rect == _to) return;
+    final previous = _toIndex;
+    final moved = previous != null && previous != widget.index;
+    setState(() {
+      _barWidth = bar.size.width;
+      if (!moved || _to == null || Motion.reduced(context)) {
+        // First paint, a resize or larger text, or less motion: just be there.
+        _from = null;
+        _to = rect;
+        _toIndex = widget.index;
+        _motion.value = 1;
+        return;
+      }
+      _from = _shown;
+      _to = rect;
+      _toIndex = widget.index;
+      _wrapOut = _leftOfShare(previous) == _leftOfShare(widget.index)
+          ? 0
+          : _leftOfShare(previous)
+          ? -1
+          : 1;
+      _motion.duration = _wrapOut == 0 ? _slide : _wrap;
+      _motion.forward(from: 0);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    final index = widget.index;
+    final onTap = widget.onTap;
+    const height = _BottomTabs.height;
     final vm = BridgeScope.of(context);
     final labels = _navLabels(context);
     Widget tab(int i) {
@@ -747,16 +866,10 @@ class _BottomTabs extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // The current tab's icon sits on a pill, not only darker.
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: on ? Palette.paleMoss : Colors.transparent,
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                      ),
+                    // The current tab's icon sits on a pill (drawn once, below, so it
+                    // can slide from tab to tab), not only darker.
+                    AppIconSlot(
+                      key: _slots[i],
                       child: AppIcon(
                         AppShell.icons[i],
                         size: 22,
@@ -792,37 +905,57 @@ class _BottomTabs extends StatelessWidget {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Palette.edge)),
           ),
-          child: Row(
+          child: Stack(
+            key: _bar,
             children: [
-              tab(0),
-              tab(1),
-              // Writing a post sits in the middle, like a forum app's ＋.
-              Expanded(
-                child: SizedBox(
-                  height: height,
-                  child: Center(
-                    child: Semantics(
-                      button: true,
-                      label: vm.pair('發文', 'Write a post'),
-                      child: Material(
-                        color: Palette.moss,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: InkWell(
-                          key: const Key('nav-share'),
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => startSharing(context),
-                          child: const ExcludeSemantics(
-                            child: SizedBox(
-                              width: 52,
-                              height: 44,
-                              child: Center(
-                                child: AppIcon(
-                                  'add',
-                                  size: 22,
-                                  color: Palette.onMoss,
-                                  strokeWidth: 2.4,
+              if (_to != null)
+                AnimatedBuilder(
+                  animation: _motion,
+                  builder: (context, child) =>
+                      Positioned.fromRect(rect: _shown!, child: child!),
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      key: const Key('nav-indicator'),
+                      decoration: BoxDecoration(
+                        color: Palette.paleMoss,
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                      ),
+                    ),
+                  ),
+                ),
+              Row(
+                children: [
+                  tab(0),
+                  tab(1),
+                  // Writing a post sits in the middle, like a forum app's ＋.
+                  Expanded(
+                    child: SizedBox(
+                      height: height,
+                      child: Center(
+                        child: Semantics(
+                          button: true,
+                          label: vm.pair('發文', 'Write a post'),
+                          child: Material(
+                            color: Palette.moss,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: InkWell(
+                              key: const Key('nav-share'),
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => startSharing(context),
+                              child: const ExcludeSemantics(
+                                child: SizedBox(
+                                  width: 52,
+                                  height: 44,
+                                  child: Center(
+                                    child: AppIcon(
+                                      'add',
+                                      size: 22,
+                                      color: Palette.onMoss,
+                                      strokeWidth: 2.4,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -831,10 +964,10 @@ class _BottomTabs extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
+                  tab(2),
+                  tab(3),
+                ],
               ),
-              tab(2),
-              tab(3),
             ],
           ),
         ),

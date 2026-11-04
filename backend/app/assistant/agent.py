@@ -25,6 +25,7 @@ from app.assistant.llm import (
 )
 from app.assistant.memory import ConversationStore
 from app.assistant.operations import OperationStore, PendingOperation
+from app.assistant.plain_text import plain_text
 from app.assistant.prefetch import Prefetched, cite_named_procedures, prefetch
 from app.assistant.prompts import build_system_prompt, build_user_message, message_locale
 from app.assistant.related import parse_related, related_cards
@@ -190,7 +191,7 @@ class Assistant:
         tools_used: list[str],
         found: Prefetched,
     ) -> AssistantReply:
-        related = parse_related(turn.text or "")
+        related = parse_related(plain_text(turn.text or ""))
         if not related.text:
             logger.warning("Assistant fallback: model returned an empty answer")
             return self._fallback(conversation_id, ctx.locale, tools_used)

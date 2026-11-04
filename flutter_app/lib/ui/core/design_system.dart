@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../view_models/bridge_view_model.dart';
+import 'motion.dart';
 
 /// The teammate's scrapbook palette on a notebook-grid page (docs/product/design.md).
 /// The notebook palette (docs/product/design.md): paper with a faint grid, cream cards,
@@ -64,6 +65,8 @@ ThemeData bridgeTheme() => ThemeData(
   useMaterial3: true,
   // Bundled (pubspec), so Latin and Chinese text never waits on a font download.
   fontFamily: appFont,
+  // No Android ripple: pressed things shrink a little instead (PressScale in FocusInk).
+  splashFactory: NoSplash.splashFactory,
   scaffoldBackgroundColor: Palette.paper,
   colorScheme: ColorScheme.fromSeed(
     seedColor: Palette.moss,
@@ -477,21 +480,24 @@ class FocusInk extends StatefulWidget {
 class _FocusInkState extends State<FocusInk> {
   var _focused = false;
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: widget.onTap,
-    customBorder: widget.customBorder,
-    canRequestFocus: widget.focusable,
-    excludeFromSemantics: !widget.focusable,
-    onFocusChange: (focused) => setState(() => _focused = focused),
-    child: DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: _focused
-          ? BoxDecoration(
-              border: Border.all(color: Palette.moss, width: 2),
-              borderRadius: widget.ringRadius,
-            )
-          : const BoxDecoration(),
-      child: widget.child,
+  Widget build(BuildContext context) => PressScale(
+    enabled: widget.onTap != null,
+    child: InkWell(
+      onTap: widget.onTap,
+      customBorder: widget.customBorder,
+      canRequestFocus: widget.focusable,
+      excludeFromSemantics: !widget.focusable,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: _focused
+            ? BoxDecoration(
+                border: Border.all(color: Palette.moss, width: 2),
+                borderRadius: widget.ringRadius,
+              )
+            : const BoxDecoration(),
+        child: widget.child,
+      ),
     ),
   );
 }
@@ -505,11 +511,15 @@ class ToggleIconButton extends StatelessWidget {
     required this.on,
     required this.onPressed,
     required this.icon,
+    this.burst = false,
   });
   final String label;
   final bool on;
   final VoidCallback onPressed;
   final Widget icon;
+
+  /// Lines spray out when it turns on (save); without it the icon only pops ("me too").
+  final bool burst;
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
@@ -524,7 +534,16 @@ class ToggleIconButton extends StatelessWidget {
         ringRadius: const BorderRadius.all(Radius.circular(24)),
         child: SizedBox.square(
           dimension: 48,
-          child: Center(child: ExcludeSemantics(child: icon)),
+          child: Center(
+            child: ExcludeSemantics(
+              child: PopOnToggle(
+                on: on,
+                burst: burst,
+                burstColor: Palette.moss,
+                child: icon,
+              ),
+            ),
+          ),
         ),
       ),
     ),

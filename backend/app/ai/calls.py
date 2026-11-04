@@ -23,6 +23,7 @@ import random
 import threading
 import time
 from collections.abc import Callable, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 
 import httpx
 from google.genai import errors as genai_errors
@@ -36,6 +37,12 @@ _DEADLINE_STATUS = 504
 BUSY_RETRIES = 2  # per model, after a 5xx; these answers come back fast
 BUDGET_SECONDS = 45.0  # one request: every model and retry together
 REST_SECONDS = 60.0  # long enough for a per-minute quota; a used-up day is tried again then
+# A slow model stays slow for a while (all of 2026-11-04): skip it for ten minutes, then one
+# request finds out whether it has recovered.
+SLOW_REST_SECONDS = 600.0
+# A person is waiting (the assistant): normal answers take 1-3 s, so a model silent after 2 s
+# gets company from the next one, and the first answer wins (call_gemini_hedged).
+HEDGE_AFTER_SECONDS = 2.0
 
 _resting_until: dict[str, float] = {}
 _resting_lock = threading.Lock()
@@ -69,9 +76,9 @@ def _pause(retry: int) -> float:
     return min(8.0, 1.5 * 2 ** (retry - 1)) * random.uniform(0.5, 1.0)
 
 
-def _rest(model: str, now: Callable[[], float]) -> None:
+def _rest(model: str, now: Callable[[], float], seconds: float = REST_SECONDS) -> None:
     with _resting_lock:
-        _resting_until[model] = now() + REST_SECONDS
+        _resting_until[model] = max(_resting_until.get(model, 0.0), now() + seconds)
 
 
 def _awake(models: Sequence[str], now: Callable[[], float]) -> list[str]:
@@ -105,7 +112,7 @@ def call_gemini[T](
             except Exception as exc:  # the SDK raises several error types
                 last = exc
                 if _out_of_quota(exc) or _too_slow(exc):
-                    _rest(model, now)
+                    _rest(model, now, SLOW_REST_SECONDS if _too_slow(exc) else REST_SECONDS)
                     if model != models[-1]:
                         logger.warning(
                             "Gemini %s is %s; trying the next model",
@@ -135,3 +142,124 @@ def call_gemini[T](
             return result, model
     assert last is not None
     raise last
+
+
+def _hands_over(exc: Exception) -> bool:
+    """Whether another model may answer where this one failed (not an invalid request)."""
+    return _out_of_quota(exc) or _too_slow(exc) or _busy(exc) or _worth_retrying(exc)
+
+
+def call_gemini_hedged[T](
+    request: Callable[[str], T],
+    models: Sequence[str],
+    hedge_after: float = HEDGE_AFTER_SECONDS,
+    budget: float = BUDGET_SECONDS,
+) -> tuple[T, str]:
+    """For a person waiting: ask the first awake model; when it has not answered after
+    `hedge_after` seconds, or fails, ask the next one too, and take the first answer.
+
+    A model overtaken by one asked after it, or silent until the budget runs out, rests for
+    SLOW_REST_SECONDS so the next messages go straight to the quicker model; a model asked
+    later that loses only by being late is not rested. A busy (5xx) model is asked again
+    after a short pause, BUSY_RETRIES times. When the daily budget refuses an extra model,
+    the calls already running are still awaited. Calls left running finish in the background
+    and are ignored. Raises the last error, GeminiBudgetReached, or TimeoutError."""
+    now = time.monotonic
+    candidates = _awake(models, now)
+    start = now()
+    pool = ThreadPoolExecutor(max_workers=len(candidates) * (1 + BUSY_RETRIES))
+    finished = threading.Event()  # tells retries still pausing not to call any more
+    pending: dict[Future[T], str] = {}
+    position: dict[str, int] = {}  # the order models were first asked in
+    busy: dict[str, int] = {}
+    last: Exception | None = None
+    refused = False
+
+    def submit(model: str, pause: float = 0.0) -> bool:
+        if not spend_gemini_call():
+            return False
+
+        def run() -> T:
+            if pause:
+                time.sleep(pause)
+                if finished.is_set():
+                    raise TimeoutError("answered by another model")
+            return request(model)
+
+        pending[pool.submit(run)] = model
+        return True
+
+    def ask_next() -> None:
+        nonlocal refused
+        if refused or len(position) >= len(candidates):
+            return
+        model = candidates[len(position)]
+        if submit(model):
+            position[model] = len(position)
+        else:
+            refused = True
+
+    def more_to_ask() -> bool:
+        return not refused and len(position) < len(candidates)
+
+    try:
+        ask_next()
+        while pending:
+            remaining = budget - (now() - start)
+            if remaining <= 0:
+                for silent in set(pending.values()):
+                    _rest(silent, now, SLOW_REST_SECONDS)
+                break
+            more = more_to_ask()
+            done, _ = wait(
+                pending,
+                timeout=min(hedge_after, remaining) if more else remaining,
+                return_when=FIRST_COMPLETED,
+            )
+            if not done:
+                if more:
+                    logger.warning(
+                        "Gemini %s has not answered in %.0f s; asking %s too",
+                        ", ".join(sorted(set(pending.values()))),
+                        now() - start,
+                        candidates[len(position)],
+                    )
+                    ask_next()
+                continue
+            results = [(pending.pop(future), future) for future in done]
+            winner = next(((m, f) for m, f in results if f.exception() is None), None)
+            for model, future in results:
+                exc = future.exception()
+                if exc is None:
+                    continue
+                last = exc
+                if not _hands_over(exc):
+                    if winner is None:
+                        raise exc  # an invalid request fails the same on any model
+                    continue
+                logger.warning("Gemini %s failed: %s", model, exc)
+                if _out_of_quota(exc) or _too_slow(exc):
+                    _rest(model, now, SLOW_REST_SECONDS if _too_slow(exc) else REST_SECONDS)
+                elif winner is None and _busy(exc) and busy.get(model, 0) < BUSY_RETRIES:
+                    busy[model] = busy.get(model, 0) + 1
+                    pause = _pause(busy[model])
+                    if now() - start + pause < budget and not submit(model, pause):
+                        refused = True
+            if winner is not None:
+                model, future = winner
+                for slower in set(pending.values()):
+                    if position.get(slower, len(candidates)) < position[model]:
+                        _rest(slower, now, SLOW_REST_SECONDS)
+                        logger.warning("Gemini %s is too slow; resting it", slower)
+                if model != models[0]:
+                    logger.info("Gemini %s answered instead of %s", model, models[0])
+                return future.result(), model
+            ask_next()  # something failed: the next model need not wait for the hedge
+    finally:
+        finished.set()
+        pool.shutdown(wait=False, cancel_futures=True)
+    if last is not None:
+        raise last
+    if refused and not position:
+        raise GeminiBudgetReached("daily Gemini budget reached")
+    raise TimeoutError("no Gemini answer within the budget")

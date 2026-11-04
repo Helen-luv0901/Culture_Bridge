@@ -230,6 +230,7 @@ class BookmarkButton extends StatelessWidget {
     label: label,
     on: saved,
     onPressed: onPressed,
+    burst: true,
     icon: AppIcon(
       'bookmark',
       size: 20,
