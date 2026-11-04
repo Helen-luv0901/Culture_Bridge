@@ -135,38 +135,34 @@ class _BoardCard extends StatelessWidget {
       button: true,
       child: NoteCard(
         key: Key('board-card-$boardKey'),
-        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+        padding: const EdgeInsets.all(14),
         onTap: () => context.go(ExplorePage.location(boardKey, '', sort)),
         child: ConstrainedBox(
           // Same height for every card, even when a note wraps to two lines.
-          constraints: const BoxConstraints(minHeight: 72),
-          child: Row(
+          constraints: const BoxConstraints(
+            minHeight: 72,
+            minWidth: double.infinity,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      categoryName(vm, boardKey),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (note != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        vm.pair(note.$1, note.$2),
-                        style: mutedStyle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
+              Text(
+                categoryName(vm, boardKey),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const AppIcon('chevron', size: 18, color: Palette.control),
+              if (note != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  vm.pair(note.$1, note.$2),
+                  style: mutedStyle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
