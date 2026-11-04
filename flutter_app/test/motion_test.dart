@@ -264,29 +264,77 @@ void main() {
     expect(scale(), 1);
   });
 
-  testWidgets('The tab bar highlight slides to the new tab', (tester) async {
-    await mount(tester, '/', const Size(375, 812));
-    Rect highlight() => tester.getRect(find.byKey(const Key('nav-indicator')));
-    double iconCenter(int i) => tester
-        .getCenter(
-          find.descendant(
-            of: find.byKey(Key('nav-$i')),
-            matching: find.byType(AppIconSlot),
-          ),
-        )
-        .dx;
-    expect(highlight().center.dx, moreOrLessEquals(iconCenter(0), epsilon: 1));
-
-    await tester.tap(find.byKey(const Key('nav-3')));
+  Rect highlight(WidgetTester tester) =>
+      tester.getRect(find.byKey(const Key('nav-indicator')));
+  double iconCenter(WidgetTester tester, int i) => tester
+      .getCenter(
+        find.descendant(
+          of: find.byKey(Key('nav-$i')),
+          matching: find.byType(AppIconSlot),
+        ),
+      )
+      .dx;
+  Future<void> switchTab(WidgetTester tester, int i) async {
+    await tester.tap(find.byKey(Key('nav-$i')));
     await tester.pump(); // the route changes
     await tester.pump(); // the new tab is measured
+  }
+
+  testWidgets('On the same side of 發文 the highlight slides straight over', (
+    tester,
+  ) async {
+    await mount(tester, '/', const Size(375, 812));
+    expect(
+      highlight(tester).center.dx,
+      moreOrLessEquals(iconCenter(tester, 0), epsilon: 1),
+    );
+    await switchTab(tester, 1);
     await tester.pump(const Duration(milliseconds: 90));
-    final midway = highlight().center.dx;
-    expect(midway, greaterThan(iconCenter(0) + 20)); // on its way
-    expect(midway, lessThan(iconCenter(3) - 5)); // not there yet
+    final midway = highlight(tester).center.dx;
+    expect(midway, greaterThan(iconCenter(tester, 0) + 5)); // on its way
+    expect(midway, lessThan(iconCenter(tester, 1) - 5)); // not there yet
     await tester.pumpAndSettle();
-    expect(highlight().center.dx, moreOrLessEquals(iconCenter(3), epsilon: 1));
+    expect(
+      highlight(tester).center.dx,
+      moreOrLessEquals(iconCenter(tester, 1), epsilon: 1),
+    );
   });
+
+  testWidgets(
+    'Across 發文 the highlight leaves one edge and comes in the other',
+    (tester) async {
+      await mount(tester, '/', const Size(375, 812));
+      // Left tabs to right tabs: out to the left, in from the right.
+      await switchTab(tester, 3);
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(highlight(tester).center.dx, lessThan(iconCenter(tester, 0) - 5));
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(
+        highlight(tester).center.dx,
+        greaterThan(iconCenter(tester, 3) + 5),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        highlight(tester).center.dx,
+        moreOrLessEquals(iconCenter(tester, 3), epsilon: 1),
+      );
+
+      // Right to left: out to the right, in from the left.
+      await switchTab(tester, 0);
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(
+        highlight(tester).center.dx,
+        greaterThan(iconCenter(tester, 3) + 5),
+      );
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(highlight(tester).center.dx, lessThan(iconCenter(tester, 0) - 5));
+      await tester.pumpAndSettle();
+      expect(
+        highlight(tester).center.dx,
+        moreOrLessEquals(iconCenter(tester, 0), epsilon: 1),
+      );
+    },
+  );
 
   testWidgets('With reduced motion the tab highlight jumps', (tester) async {
     await mount(tester, '/', const Size(375, 812), reduceMotion: true);
