@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from google import genai
 from google.genai import types
 
-from app.ai.calls import call_gemini
+from app.ai.calls import call_gemini_hedged
 from app.assistant.llm import (
     LLMError,
     ModelTurn,
@@ -54,9 +54,11 @@ class GeminiLLM:
             thinking_config=self._thinking,
         )
         try:
-            response, _ = call_gemini(
+            contents = to_contents(history)
+            # Someone is waiting: a model slow to answer gets company from the next one.
+            response, _ = call_gemini_hedged(
                 lambda model: self._client.models.generate_content(
-                    model=model, contents=to_contents(history), config=config
+                    model=model, contents=contents, config=config
                 ),
                 self._models,
                 # Each answer round gets less: a message can take several rounds (agent.py).
