@@ -9,6 +9,7 @@ import '../../domain/keys.dart';
 import '../features/post_cards.dart' show categoryName, startSharing;
 import 'design_system.dart';
 import 'layout.dart';
+import 'motion.dart';
 
 /// The frame around every screen. Phone: header and bottom tabs. Tablet portrait: a 76px
 /// icon sidebar. Tablet landscape and web: a 232px sidebar and search in the header.
@@ -223,10 +224,23 @@ class _AppShellState extends State<AppShell> {
       child: Stack(
         children: [
           Positioned.fill(child: scaffold),
-          if (vm.assistantOpen && !onAssistantPage)
-            AssistantOverlay(
-              uri: widget.uri,
-              onNavigate: (path) => context.push(path),
+          // It slides (phone) or grows (wider screens) in, and out before it goes.
+          if (!onAssistantPage)
+            Positioned.fill(
+              child: AnimatedPresence(
+                visible: vm.assistantOpen,
+                enter: phone ? Motion.sheetIn : Motion.windowIn,
+                exit: phone ? Motion.sheetOut : Motion.windowOut,
+                builder: (context, animation) => Stack(
+                  children: [
+                    AssistantOverlay(
+                      uri: widget.uri,
+                      onNavigate: (path) => context.push(path),
+                      animation: animation,
+                    ),
+                  ],
+                ),
+              ),
             ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/link.dart';
 
@@ -9,6 +10,7 @@ import '../../domain/keys.dart';
 import '../core/design_system.dart';
 import '../core/layout.dart';
 import '../core/loading.dart';
+import '../core/motion.dart';
 import '../view_models/bridge_view_model.dart';
 import 'post_cards.dart';
 
@@ -64,9 +66,14 @@ class AssistantOverlay extends StatefulWidget {
     super.key,
     required this.uri,
     required this.onNavigate,
+    required this.animation,
   });
   final Uri uri;
   final void Function(String path) onNavigate;
+
+  /// 0 = gone, 1 = open (AnimatedPresence in the shell). A drag on the phone sheet
+  /// moves it by hand.
+  final AnimationController animation;
 
   static const windowSize = Size(380, 540);
 
@@ -77,6 +84,40 @@ class AssistantOverlay extends StatefulWidget {
 class _AssistantOverlayState extends State<AssistantOverlay> {
   late BridgeViewModel _vm;
   ModalRoute<Object?>? _route;
+
+  /// While a finger moves the sheet (and its spring settles), it follows 1:1, no curve.
+  var _byHand = false;
+  late final _sheetOffset = _SheetOffset(widget.animation, () => _byHand);
+
+  void _dragStart(DragStartDetails _) {
+    widget.animation.stop();
+    setState(() => _byHand = true);
+  }
+
+  void _dragUpdate(DragUpdateDetails details, double height) {
+    final moved = (details.primaryDelta ?? 0) / height;
+    widget.animation.value = (widget.animation.value - moved).clamp(0.0, 1.0);
+  }
+
+  /// Let go: the finger's speed carries into a spring (apple-design, velocity handoff).
+  /// A quick flick down, or a sheet already more than half way down, closes.
+  Future<void> _dragEnd(DragEndDetails details, double height) async {
+    final speed = details.velocity.pixelsPerSecond.dy;
+    final value = widget.animation.value;
+    final close = speed > 700 || (speed > -300 && value < 0.55);
+    final simulation = SpringSimulation(
+      _sheetSpring,
+      value,
+      close ? 0 : 1,
+      -speed / height,
+    );
+    await widget.animation.animateWith(simulation);
+    if (!mounted) return;
+    // A spring stops within a hair of its target; land exactly on it.
+    widget.animation.value = close ? 0 : 1;
+    setState(() => _byHand = false);
+    if (close) _vm.closeAssistant();
+  }
 
   @override
   void didChangeDependencies() {
@@ -137,31 +178,50 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
           320,
           AssistantOverlay.windowSize.height,
         ),
-        child: Semantics(
-          role: SemanticsRole.dialog,
-          scopesRoute: true,
-          explicitChildNodes: true,
-          label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Palette.high,
-              border: Border.all(color: Palette.edge),
-              borderRadius: BorderRadius.circular(Radii.card),
-              boxShadow: [
-                BoxShadow(
-                  color: Palette.ink.withValues(alpha: .12),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-                BoxShadow(
-                  color: Palette.ink.withValues(alpha: .3),
-                  blurRadius: 36,
-                  spreadRadius: -16,
-                  offset: const Offset(0, 18),
-                ),
-              ],
+        child: FadeTransition(
+          opacity: CurvedAnimation(
+            parent: widget.animation,
+            curve: Motion.easeOut,
+            reverseCurve: Motion.easeOut.flipped,
+          ),
+          child: ScaleTransition(
+            key: const Key('assistant-window-motion'),
+            // Grows out of the bubble below it, not from the middle of the screen.
+            alignment: Alignment.bottomRight,
+            scale: Tween(begin: 0.92, end: 1.0).animate(
+              CurvedAnimation(
+                parent: widget.animation,
+                curve: Motion.easeOut,
+                reverseCurve: Motion.easeOut.flipped,
+              ),
             ),
-            child: Material(type: MaterialType.transparency, child: panel),
+            child: Semantics(
+              role: SemanticsRole.dialog,
+              scopesRoute: true,
+              explicitChildNodes: true,
+              label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Palette.high,
+                  border: Border.all(color: Palette.edge),
+                  borderRadius: BorderRadius.circular(Radii.card),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Palette.ink.withValues(alpha: .12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                    BoxShadow(
+                      color: Palette.ink.withValues(alpha: .3),
+                      blurRadius: 36,
+                      spreadRadius: -16,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: Material(type: MaterialType.transparency, child: panel),
+              ),
+            ),
           ),
         ),
       );
@@ -177,7 +237,10 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
             child: ExcludeSemantics(
               child: GestureDetector(
                 onTap: vm.closeAssistant,
-                child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+                child: FadeTransition(
+                  opacity: widget.animation,
+                  child: ColoredBox(color: Palette.ink.withValues(alpha: .38)),
+                ),
               ),
             ),
           ),
@@ -186,25 +249,96 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
             right: 0,
             top: top,
             bottom: 0,
-            child: Semantics(
-              role: SemanticsRole.dialog,
-              scopesRoute: true,
-              namesRoute: true,
-              explicitChildNodes: true,
-              label: vm.pair('Culture Bridge 助理', 'Culture Bridge assistant'),
-              child: Material(
-                color: Palette.high,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
-                  side: BorderSide(color: Palette.oat),
+            child: LayoutBuilder(
+              builder: (context, constraints) => SlideTransition(
+                key: const Key('assistant-sheet-motion'),
+                position: _sheetOffset,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Semantics(
+                        role: SemanticsRole.dialog,
+                        scopesRoute: true,
+                        namesRoute: true,
+                        explicitChildNodes: true,
+                        label: vm.pair(
+                          'Culture Bridge 助理',
+                          'Culture Bridge assistant',
+                        ),
+                        child: Material(
+                          color: Palette.high,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(6),
+                            ),
+                            side: BorderSide(color: Palette.oat),
+                          ),
+                          child: SafeArea(top: false, child: panel),
+                        ),
+                      ),
+                    ),
+                    // The top edge is the handle: drag the sheet down to close it.
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      height: 22,
+                      child: ExcludeSemantics(
+                        child: GestureDetector(
+                          key: const Key('assistant-grabber'),
+                          behavior: HitTestBehavior.translucent,
+                          onVerticalDragStart: _dragStart,
+                          onVerticalDragUpdate: (d) =>
+                              _dragUpdate(d, constraints.maxHeight),
+                          onVerticalDragEnd: (d) =>
+                              _dragEnd(d, constraints.maxHeight),
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              width: 36,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Palette.oat,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: SafeArea(top: false, child: panel),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+/// A critically damped spring that settles in about a third of a second, no bounce.
+const _sheetSpring = SpringDescription(mass: 1, stiffness: 320, damping: 36);
+
+/// Where the phone sheet sits: below the screen at 0, in place at 1. It eases in and out
+/// on the iOS sheet curve, but follows the finger (and its spring) without a curve.
+class _SheetOffset extends Animation<Offset>
+    with AnimationWithParentMixin<double> {
+  _SheetOffset(this.parent, this.byHand);
+  @override
+  final Animation<double> parent;
+  final bool Function() byHand;
+
+  @override
+  Offset get value {
+    final t = parent.value;
+    final shown = byHand()
+        ? t
+        : parent.status == AnimationStatus.reverse
+        ? Motion.drawer.flipped.transform(t)
+        : Motion.drawer.transform(t);
+    return Offset(0, 1 - shown);
   }
 }
 
@@ -363,7 +497,11 @@ class _AssistantPanelState extends State<AssistantPanel> {
                     for (final entry in vm.chat)
                       _Entry(entry: entry, onNavigate: widget.onNavigate),
                     if (vm.asking)
-                      _Bubble(text: vm.pair('想一下…', 'Thinking…'), muted: true),
+                      _Bubble(
+                        text: vm.pair('想一下…', 'Thinking…'),
+                        muted: true,
+                        thinking: true,
+                      ),
                     if (urgentInLog)
                       const Padding(
                         padding: EdgeInsets.only(top: 8),
@@ -487,10 +625,18 @@ class _UrgentLine extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.text, this.mine = false, this.muted = false});
+  const _Bubble({
+    required this.text,
+    this.mine = false,
+    this.muted = false,
+    this.thinking = false,
+  });
   final String text;
   final bool mine;
   final bool muted;
+
+  /// Dots that rise in turn instead of the text (still read out as [text]).
+  final bool thinking;
   @override
   Widget build(BuildContext context) => Align(
     alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -513,20 +659,22 @@ class _Bubble extends StatelessWidget {
               bottomRight: Radius.circular(mine ? 4 : 12),
             ),
           ),
-          child: SelectionArea(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: mine
-                    ? Palette.onMoss
-                    : muted
-                    ? Palette.muted
-                    : Palette.ink,
-              ),
-            ),
-          ),
+          child: thinking
+              ? ThinkingDots(label: text, color: Palette.muted)
+              : SelectionArea(
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: mine
+                          ? Palette.onMoss
+                          : muted
+                          ? Palette.muted
+                          : Palette.ink,
+                    ),
+                  ),
+                ),
         ),
       ),
     ),
