@@ -45,6 +45,7 @@ def translate(db: Session, ai: ExperienceAI, experience_id: str, target: Locale)
     try:
         if db.get(ExperienceTranslation, key) is not None:  # finished just before
             return False
+        db.commit()  # that check took a connection again; not held for the AI call
         translated = ai.translate(fields, source, target)
         db.add(
             ExperienceTranslation(

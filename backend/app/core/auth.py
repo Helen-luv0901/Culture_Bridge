@@ -147,6 +147,10 @@ def resolve_user(db: Session, identity: Identity) -> CurrentUser:
     from app.services.metrics import record_activity  # services import this module
 
     record_activity(db, user.id)
+    # End the read above so the pooled connection goes back now, not after the response: many
+    # endpoints then wait up to a minute on Gemini, and five such requests would starve the
+    # pool. The session reconnects if the endpoint queries again.
+    db.commit()
     return CurrentUser(id=user.id, role=user.role, preferred_locale=user.preferred_locale)  # type: ignore[arg-type]
 
 

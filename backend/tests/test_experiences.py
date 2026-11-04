@@ -249,3 +249,23 @@ def test_author_can_delete(api, ai):
     assert api.delete(f"/api/experiences/{published['id']}", headers=MEI).status_code == 204
     assert api.get(f"/api/experiences/{published['id']}").status_code == 404
     assert api.get("/api/me/experiences", headers=MEI).json() == []
+
+
+def test_translation_runs_without_holding_a_database_connection(api, ai, db):
+    from app.services.experiences.translations import translate
+
+    draft = api.post("/api/experiences", json=DRAFT, headers=MEI).json()
+    summary = api.post(f"/api/experiences/{draft['id']}/summaries", headers=MEI).json()
+    ai.fail = True  # no background translation
+    api.post(
+        f"/api/experiences/{draft['id']}/publish", json={"summary_id": summary["id"]}, headers=MEI
+    )
+
+    class CheckingAI(FakeAI):
+        def translate(self, fields, source, target):
+            assert not db.in_transaction(), "the AI call held a database connection"
+            return super().translate(fields, source, target)
+
+    checking = CheckingAI()
+    assert translate(db, checking, draft["id"], "en") is True
+    assert checking.translations == 1

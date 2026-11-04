@@ -811,11 +811,15 @@ class _OperationCard extends StatelessWidget {
                 children: [
                   FilledButton(
                     key: Key('confirm-${operation.id}'),
-                    onPressed: () => vm.resolveOperation(operation, true),
+                    onPressed: vm.resolvingOperation(operation.id)
+                        ? null
+                        : () => vm.resolveOperation(operation, true),
                     child: Text(vm.t('confirm')),
                   ),
                   TextButton(
-                    onPressed: () => vm.resolveOperation(operation, false),
+                    onPressed: vm.resolvingOperation(operation.id)
+                        ? null
+                        : () => vm.resolveOperation(operation, false),
                     child: Text(vm.t('cancel')),
                   ),
                 ],

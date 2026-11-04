@@ -302,6 +302,12 @@ class _PostFeed extends StatelessWidget {
       key: ValueKey('$category-$sort'),
       resource: (vm) => vm.posts(filter, sort),
       load: (vm) => vm.loadPosts(filter, false, sort),
+      watch: (vm, on) => vm.watchPosts(filter, sort, null, on),
+      retry: (vm) => vm.loadPosts(
+        filter,
+        vm.posts(filter, sort).data?.nextOffset != null,
+        sort,
+      ),
       builder: (context, page) {
         if (page.items.isEmpty) {
           return EmptyNote(

@@ -202,7 +202,8 @@ void main() {
           addTearDown(vm.dispose);
           addTearDown(base.vm.dispose);
           if (english) vm.setEnglish(true);
-          base.auth.signInAsDev('admin');
+          // Sign-in lands asynchronously; a profile asked for before it is dropped.
+          await base.auth.signInAsDev('admin');
           await vm.loadProfile();
           expect(vm.isAdmin, isTrue);
 

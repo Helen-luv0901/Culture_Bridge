@@ -1,6 +1,6 @@
 """Ranking rules behind the Explore search (app/core/text_search.py)."""
 
-from app.core.text_search import relevant
+from app.core.text_search import MAX_UNITS, relevant, search_units
 
 
 def test_a_lone_weak_match_is_not_shown():
@@ -25,3 +25,12 @@ def test_weaker_results_are_cut_relative_to_the_best():
         ("mentions", "申請工作證", "準備學生證 申請在學證明"),
     ]
     assert relevant(guides, "申請在學證明", 10) == ["about"]
+
+
+def test_long_queries_give_a_bounded_number_of_units():
+    # /api/search is public: every unit becomes several ILIKE conditions over all posts.
+    assert search_units("工作證" * 60) == ["工作", "作證", "證工"]
+    many = "".join(chr(0x4E00 + i) for i in range(199))
+    units = search_units(many)
+    assert len(units) == MAX_UNITS
+    assert units[0] == many[:2]  # the first words of the question are kept

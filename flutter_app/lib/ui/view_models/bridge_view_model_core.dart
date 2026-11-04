@@ -82,12 +82,19 @@ abstract class _BridgeCore extends ChangeNotifier {
 
   // ---------- loading helpers ----------
 
+  int _nextLoadId = 1;
+
   Future<void> _load<T>(
     Resource<T> Function() current,
     void Function(Resource<T>) store,
     Future<T> Function() fetch,
   ) async {
-    final pending = Resource<T>(data: current().data, loading: true);
+    final id = _nextLoadId++;
+    final pending = Resource<T>(
+      data: current().data,
+      loading: true,
+      loadId: id,
+    );
     store(pending);
     notifyListeners();
     Resource<T> result;
@@ -107,8 +114,9 @@ abstract class _BridgeCore extends ChangeNotifier {
       );
     }
     // Dropped meanwhile (sign-out, language switch, a newer load): an answer to the old
-    // request must not put old data back.
-    if (!identical(current(), pending)) return;
+    // request must not put old data back. Data edited meanwhile keeps the load's id.
+    final now = current();
+    if (!now.loading || now.loadId != id) return;
     store(result);
     notifyListeners();
   }
@@ -141,25 +149,23 @@ abstract class _BridgeCore extends ChangeNotifier {
     for (final entry in _explore.entries.toList()) {
       final page = entry.value.data;
       if (page == null) continue;
-      _explore[entry.key] = Resource(
-        data: ExperiencePage([
-          for (final e in page.items) swap(e),
-        ], page.nextOffset),
+      _explore[entry.key] = entry.value.withData(
+        ExperiencePage([for (final e in page.items) swap(e)], page.nextOffset),
       );
     }
     for (final entry in _searches.entries.toList()) {
       final found = entry.value.data;
       if (found == null) continue;
-      _searches[entry.key] = Resource(
-        data: SearchResults(found.actions, [
+      _searches[entry.key] = entry.value.withData(
+        SearchResults(found.actions, [
           for (final e in found.experiences) swap(e),
         ]),
       );
     }
     final detail = _experiences[item.id]?.data;
     if (detail != null) {
-      _experiences[item.id] = Resource(
-        data: ExperienceDetail(item, detail.different, detail.respondsToId),
+      _experiences[item.id] = _experiences[item.id]!.withData(
+        ExperienceDetail(item, detail.different, detail.respondsToId),
       );
     }
     notifyListeners();

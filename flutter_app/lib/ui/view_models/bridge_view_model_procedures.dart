@@ -53,6 +53,20 @@ mixin _BridgeProcedures on _BridgeCore {
     String stepId,
     bool done,
   ) async {
+    // Tick at once (a slow network otherwise looks like the box ignored the tap); put it
+    // back if the server says no.
+    final before = executions.data
+        ?.where((e) => e.id == execution.id)
+        .firstOrNull;
+    final previous = before?.steps
+        .where((s) => s.stepId == stepId)
+        .firstOrNull
+        ?.state;
+    if (before != null) {
+      _replaceExecution(
+        _withStepState(before, stepId, done ? 'done' : 'pending'),
+      );
+    }
     try {
       _replaceExecution(
         await repository.setStep(
@@ -62,9 +76,42 @@ mixin _BridgeProcedures on _BridgeCore {
         ),
       );
     } on ApiException catch (e) {
+      // Put back only this step: other ticks may have landed meanwhile.
+      final now = executions.data
+          ?.where((e) => e.id == execution.id)
+          .firstOrNull;
+      if (now != null && previous != null) {
+        _replaceExecution(_withStepState(now, stepId, previous));
+      }
       showNotice(errorText(e));
     }
   }
+
+  static Execution _withStepState(Execution e, String stepId, String state) =>
+      Execution(
+        id: e.id,
+        actionId: e.actionId,
+        versionNumber: e.versionNumber,
+        title: e.title,
+        startedAt: e.startedAt,
+        finishedAt: e.finishedAt,
+        outcome: e.outcome,
+        steps: [
+          for (final s in e.steps)
+            s.stepId == stepId
+                ? ExecutionStepState(
+                    stepId: s.stepId,
+                    position: s.position,
+                    title: s.title,
+                    state: state,
+                  )
+                : s,
+        ],
+        newerVersionAvailable: e.newerVersionAvailable,
+      );
+
+  /// A stuck report is on its way; its send button waits.
+  bool reportingStuck = false;
 
   Future<bool> reportStuck(
     Execution execution,
@@ -72,6 +119,9 @@ mixin _BridgeProcedures on _BridgeCore {
     String reasonKey,
     String? text,
   ) async {
+    if (reportingStuck) return false; // a second tap would send it twice
+    reportingStuck = true;
+    notifyListeners();
     try {
       await repository.sendFeedback(
         execution.id,
@@ -92,6 +142,9 @@ mixin _BridgeProcedures on _BridgeCore {
       return false;
     } on StateError {
       return true;
+    } finally {
+      reportingStuck = false;
+      notifyListeners();
     }
   }
 

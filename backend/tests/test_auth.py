@@ -10,6 +10,8 @@ from app.core.auth import (
     OptionalUser,
     RequiredUser,
     StaffUser,
+    dev_identity,
+    resolve_user,
 )
 from app.core.config import get_settings
 from app.core.errors import ApiError, register_error_handlers
@@ -128,3 +130,11 @@ def test_firebase_keys_are_fetched_again_when_google_rotates_them(monkeypatch):
 def test_current_user_staff_flag():
     assert CurrentUser(id="x", role="admin").is_staff
     assert not CurrentUser(id="x").is_staff
+
+
+def test_resolving_a_user_hands_the_database_connection_back(db):
+    # Endpoints may then wait 45 s on Gemini; holding a pooled connection that long lets five
+    # such requests starve every other one (and /health).
+    resolve_user(db, dev_identity("mei"))  # first sign-in: the row is created
+    resolve_user(db, dev_identity("mei"))  # already recorded today: nothing is written
+    assert not db.in_transaction()

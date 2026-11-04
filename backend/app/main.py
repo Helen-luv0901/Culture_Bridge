@@ -17,6 +17,7 @@ from app.api import (
     me,
     moderation,
 )
+from app.core.body_limit import BodyLimitMiddleware
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.errors import register_error_handlers
@@ -43,6 +44,8 @@ app = FastAPI(
     redoc_url=None,
 )
 register_error_handlers(app)
+# Added first, so it runs inside the middleware below and its 413s get the same headers.
+app.add_middleware(BodyLimitMiddleware)
 
 _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
