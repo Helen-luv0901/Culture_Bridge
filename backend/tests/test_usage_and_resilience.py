@@ -2,6 +2,7 @@
 
 from datetime import date
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from google.genai import errors as genai_errors
@@ -10,6 +11,8 @@ from sqlalchemy import func, select
 from app.ai import calls
 from app.ai.calls import GeminiBudgetReached, call_gemini
 from app.ai.experience_ai import get_experience_ai
+from app.api import assistant as assistant_api
+from app.assistant.gemini import ROUND_BUDGET_SECONDS
 from app.assistant.limits import RateLimited, UsageLimiter
 from app.core.config import get_settings
 from app.core.usage import DatabaseCounter
@@ -137,6 +140,81 @@ def test_a_busy_model_is_asked_again_before_moving_on(monkeypatch):
 
     assert call_gemini(always_busy_main, MODELS, sleep=lambda _: None)[1] == "backup-model"
     assert asked == ["main-model"] * 3 + ["backup-model"]
+
+
+@pytest.mark.parametrize(
+    "slow",
+    [lambda: _api_error(504), lambda: httpx.ReadTimeout("no answer in time")],
+    ids=["server-deadline", "client-timeout"],
+)
+def test_a_slow_model_hands_over_to_the_backup_at_once(monkeypatch, slow):
+    # 2026-11-04: the main model took 20-30 s and then answered 504, while the backup was never
+    # asked. A slow model is not asked again; it rests and the backup answers.
+    monkeypatch.setattr(calls, "spend_gemini_call", lambda: True)
+    monkeypatch.setattr(calls, "_resting_until", {})
+    clock = [100.0]
+    asked: list[str] = []
+
+    def answer(model: str) -> str:
+        asked.append(model)
+        if model == "main-model":
+            raise slow()
+        return f"answer from {model}"
+
+    assert call_gemini(answer, MODELS, attempts=3, sleep=lambda _: None, now=lambda: clock[0]) == (
+        "answer from backup-model",
+        "backup-model",
+    )
+    assert asked == ["main-model", "backup-model"]
+    # The next messages skip the slow model for a minute instead of waiting on it again.
+    asked.clear()
+    call_gemini(answer, MODELS, now=lambda: clock[0])
+    assert asked == ["backup-model"]
+
+
+def test_a_lone_slow_model_is_still_tried_again(monkeypatch):
+    # Embeddings have no backup model: a timeout is retried as before.
+    monkeypatch.setattr(calls, "spend_gemini_call", lambda: True)
+    monkeypatch.setattr(calls, "_resting_until", {})
+    tries: list[str] = []
+
+    def slow_once(model: str) -> str:
+        tries.append(model)
+        if len(tries) == 1:
+            raise _api_error(504)
+        return "vector"
+
+    assert call_gemini(slow_once, ("embedder",), attempts=2, sleep=lambda _: None) == (
+        "vector",
+        "embedder",
+    )
+
+
+def test_the_assistant_waits_briefly_enough_for_a_backup_in_the_same_round(monkeypatch):
+    monkeypatch.delenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", raising=False)
+    get_settings.cache_clear()
+    built: list[float] = []
+
+    class RecordingLLM:
+        def __init__(self, api_key, model, timeout_seconds, *args, **kwargs) -> None:
+            built.append(timeout_seconds)
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(assistant_api, "GeminiLLM", RecordingLLM)
+    assistant_api.get_services.cache_clear()
+    try:
+        settings = get_settings()
+        # Normal answers take 1-3 s (Cloud Logging, 2026-10-27..11-01).
+        assert 5 <= settings.assistant_model_timeout_seconds <= 12
+        # Every model but the last may run out of time and the last is still asked: a new
+        # attempt only starts while the round's budget lasts.
+        slow_before_last = len(settings.gemini_fallback_models)
+        assert slow_before_last * settings.assistant_model_timeout_seconds < ROUND_BUDGET_SECONDS
+        assistant_api.get_services()
+        assert built == [settings.assistant_model_timeout_seconds]
+    finally:
+        assistant_api.get_services.cache_clear()
+        get_settings.cache_clear()
 
 
 def test_one_request_never_waits_past_the_budget(monkeypatch):

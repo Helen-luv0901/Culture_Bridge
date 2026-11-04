@@ -22,9 +22,12 @@ class Settings:
     semantic_max_distance: float
     gemini_api_key: str | None
     gemini_model: str
-    # Tried in order when GEMINI_MODEL answers 429 (its free quota is used up for now).
+    # Tried in order when GEMINI_MODEL answers 429 (free quota used up) or runs out of time.
     gemini_fallback_models: tuple[str, ...]
     gemini_timeout_seconds: float
+    # One assistant model call. Answers take 1-3 s; a model still silent after this is slow
+    # (free tier under load) and the backup model is asked in the same round instead.
+    assistant_model_timeout_seconds: float
     # How much Gemini "thinks" before the assistant and tag suggestions answer:
     # minimal | low | medium | high, or empty for the model's default (slowest).
     gemini_thinking_level: str
@@ -91,6 +94,7 @@ def get_settings() -> Settings:
             if m.strip()
         ),
         gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),
+        assistant_model_timeout_seconds=float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "8")),
         gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "low").strip().lower(),
         assistant_max_tool_rounds=int(os.getenv("ASSISTANT_MAX_TOOL_ROUNDS", "5")),
         assistant_memory_exchanges=int(os.getenv("ASSISTANT_MEMORY_EXCHANGES", "6")),
