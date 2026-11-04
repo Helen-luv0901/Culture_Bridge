@@ -1,4 +1,5 @@
 import 'package:culture_bridge/app.dart';
+import 'package:culture_bridge/ui/core/app_shell.dart' show AppIconSlot;
 import 'package:culture_bridge/ui/core/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -261,5 +262,49 @@ void main() {
     await tester.pumpWidget(build(false));
     await tester.pump(const Duration(milliseconds: 60));
     expect(scale(), 1);
+  });
+
+  testWidgets('The tab bar highlight slides to the new tab', (tester) async {
+    await mount(tester, '/', const Size(375, 812));
+    Rect highlight() => tester.getRect(find.byKey(const Key('nav-indicator')));
+    double iconCenter(int i) => tester
+        .getCenter(
+          find.descendant(
+            of: find.byKey(Key('nav-$i')),
+            matching: find.byType(AppIconSlot),
+          ),
+        )
+        .dx;
+    expect(highlight().center.dx, moreOrLessEquals(iconCenter(0), epsilon: 1));
+
+    await tester.tap(find.byKey(const Key('nav-3')));
+    await tester.pump(); // the route changes
+    await tester.pump(); // the new tab is measured
+    await tester.pump(const Duration(milliseconds: 90));
+    final midway = highlight().center.dx;
+    expect(midway, greaterThan(iconCenter(0) + 20)); // on its way
+    expect(midway, lessThan(iconCenter(3) - 5)); // not there yet
+    await tester.pumpAndSettle();
+    expect(highlight().center.dx, moreOrLessEquals(iconCenter(3), epsilon: 1));
+  });
+
+  testWidgets('With reduced motion the tab highlight jumps', (tester) async {
+    await mount(tester, '/', const Size(375, 812), reduceMotion: true);
+    await tester.tap(find.byKey(const Key('nav-3')));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    final target = tester
+        .getCenter(
+          find.descendant(
+            of: find.byKey(const Key('nav-3')),
+            matching: find.byType(AppIconSlot),
+          ),
+        )
+        .dx;
+    expect(
+      tester.getRect(find.byKey(const Key('nav-indicator'))).center.dx,
+      moreOrLessEquals(target, epsilon: 1),
+    );
   });
 }

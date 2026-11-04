@@ -732,7 +732,18 @@ class _BoardItem extends StatelessWidget {
   );
 }
 
-class _BottomTabs extends StatelessWidget {
+/// The box a tab's icon sits in; the sliding highlight lines up with it.
+class AppIconSlot extends StatelessWidget {
+  const AppIconSlot({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+    child: child,
+  );
+}
+
+class _BottomTabs extends StatefulWidget {
   const _BottomTabs({required this.index, required this.onTap});
 
   /// Low like other phone apps' tab bars; each tab is still well over 44px to tap.
@@ -740,9 +751,38 @@ class _BottomTabs extends StatelessWidget {
   final int index;
   final ValueChanged<int> onTap;
   @override
+  State<_BottomTabs> createState() => _BottomTabsState();
+}
+
+class _BottomTabsState extends State<_BottomTabs> {
+  final _bar = GlobalKey();
+  final _slots = List.generate(4, (_) => GlobalKey());
+
+  /// Where the current tab's icon is, in the bar; the highlight moves there.
+  Rect? _highlight;
+
+  /// Measure the current tab's icon after layout (large text moves it), and move the
+  /// highlight if it changed.
+  void _measure() {
+    if (!mounted) return;
+    final bar = _bar.currentContext?.findRenderObject() as RenderBox?;
+    final slot =
+        _slots[widget.index].currentContext?.findRenderObject() as RenderBox?;
+    if (bar == null || slot == null || !bar.hasSize || !slot.hasSize) return;
+    final topLeft = slot.localToGlobal(Offset.zero, ancestor: bar);
+    final rect = topLeft & slot.size;
+    if (rect != _highlight) setState(() => _highlight = rect);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    final index = widget.index;
+    final onTap = widget.onTap;
+    const height = _BottomTabs.height;
     final vm = BridgeScope.of(context);
     final labels = _navLabels(context);
+    final highlight = _highlight;
     Widget tab(int i) {
       final on = index == i;
       return Expanded(
@@ -761,16 +801,10 @@ class _BottomTabs extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // The current tab's icon sits on a pill, not only darker.
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: on ? Palette.paleMoss : Colors.transparent,
-                        borderRadius: BorderRadius.circular(Radii.pill),
-                      ),
+                    // The current tab's icon sits on a pill (drawn once, below, so it
+                    // can slide from tab to tab), not only darker.
+                    AppIconSlot(
+                      key: _slots[i],
                       child: AppIcon(
                         AppShell.icons[i],
                         size: 22,
@@ -806,37 +840,59 @@ class _BottomTabs extends StatelessWidget {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Palette.edge)),
           ),
-          child: Row(
+          child: Stack(
+            key: _bar,
             children: [
-              tab(0),
-              tab(1),
-              // Writing a post sits in the middle, like a forum app's ＋.
-              Expanded(
-                child: SizedBox(
-                  height: height,
-                  child: Center(
-                    child: Semantics(
-                      button: true,
-                      label: vm.pair('發文', 'Write a post'),
-                      child: Material(
-                        color: Palette.moss,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: InkWell(
-                          key: const Key('nav-share'),
-                          borderRadius: BorderRadius.circular(10),
-                          onTap: () => startSharing(context),
-                          child: const ExcludeSemantics(
-                            child: SizedBox(
-                              width: 52,
-                              height: 44,
-                              child: Center(
-                                child: AppIcon(
-                                  'add',
-                                  size: 22,
-                                  color: Palette.onMoss,
-                                  strokeWidth: 2.4,
+              if (highlight != null)
+                AnimatedPositioned.fromRect(
+                  rect: highlight,
+                  duration: Motion.reduced(context)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 280),
+                  curve: Motion.easeOut,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      key: const Key('nav-indicator'),
+                      decoration: BoxDecoration(
+                        color: Palette.paleMoss,
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                      ),
+                    ),
+                  ),
+                ),
+              Row(
+                children: [
+                  tab(0),
+                  tab(1),
+                  // Writing a post sits in the middle, like a forum app's ＋.
+                  Expanded(
+                    child: SizedBox(
+                      height: height,
+                      child: Center(
+                        child: Semantics(
+                          button: true,
+                          label: vm.pair('發文', 'Write a post'),
+                          child: Material(
+                            color: Palette.moss,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: InkWell(
+                              key: const Key('nav-share'),
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => startSharing(context),
+                              child: const ExcludeSemantics(
+                                child: SizedBox(
+                                  width: 52,
+                                  height: 44,
+                                  child: Center(
+                                    child: AppIcon(
+                                      'add',
+                                      size: 22,
+                                      color: Palette.onMoss,
+                                      strokeWidth: 2.4,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -845,10 +901,10 @@ class _BottomTabs extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
+                  tab(2),
+                  tab(3),
+                ],
               ),
-              tab(2),
-              tab(3),
             ],
           ),
         ),
