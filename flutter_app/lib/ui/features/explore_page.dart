@@ -12,8 +12,9 @@ import 'assistant_panel.dart';
 import 'home_page.dart';
 import 'post_cards.dart';
 
-/// Explore: search across guides and posts, category tabs, student posts by
-/// newest or most popular, and hot tags. Official guides live on /guides.
+/// Boards: a card per board first; a board shows its student posts, newest or most
+/// popular. Searching covers guides and posts, narrowed by the category tabs. Official
+/// guides live on /guides.
 class ExplorePage extends StatelessWidget {
   const ExplorePage({
     super.key,
@@ -56,20 +57,139 @@ class ExplorePage extends StatelessWidget {
             initial: query,
             category: category,
           ),
-        _CategoryTabs(
-          category: category,
-          query: query,
-          sort: sort,
-          wrap: sidebar,
-        ),
-        if (q.isEmpty) _PostFeed(category: category, sort: sort),
         if (q.isNotEmpty) ...[
+          _CategoryTabs(
+            category: category,
+            query: query,
+            sort: sort,
+            wrap: sidebar,
+          ),
           _AskAssistantRow(query: q),
           _SearchResults(query: q, category: category),
-        ],
-        if (q.isEmpty && category == 'all')
+        ] else if (category == 'all') ...[
+          _BoardCards(sort: sort),
           _PopularTags(title: vm.pair('熱門標籤', 'Popular tags')),
+        ] else ...[
+          _BoardBack(sort: sort),
+          _PostFeed(category: category, sort: sort),
+        ],
       ],
+    );
+  }
+}
+
+/// What each board is for, in both languages (zh, en).
+const _boardNotes = {
+  'life': ('辦手續、銀行、手機、看醫生', 'Errands, banks, phones, doctors'),
+  'food': ('吃什麼、去哪吃、怎麼點餐', 'What and where to eat, how to order'),
+  'housing': ('宿舍、租屋、室友與房東', 'Dorms, renting, roommates, landlords'),
+  'transit': ('捷運、公車、高鐵與騎車', 'MRT, buses, high-speed rail, scooters'),
+  'study': ('選課、上課、報告與考試', 'Courses, classes, reports, exams'),
+  'culture': ('節慶、習俗與在地活動', 'Festivals, customs, local events'),
+  'difference': ('讓你意外或還不習慣的地方', 'What surprised you or took getting used to'),
+};
+
+/// A card per board; tapping one opens its posts.
+class _BoardCards extends StatelessWidget {
+  const _BoardCards({required this.sort});
+  final String sort;
+  @override
+  Widget build(BuildContext context) {
+    // The page header (phones) or the sidebar already says 看板, so no heading here.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 12.0;
+            final columns = constraints.maxWidth < 560 ? 2 : 3;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final key in postCategories)
+                  SizedBox(
+                    width: width,
+                    child: _BoardCard(boardKey: key, sort: sort),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _BoardCard extends StatelessWidget {
+  const _BoardCard({required this.boardKey, required this.sort});
+  final String boardKey;
+  final String sort;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final note = _boardNotes[boardKey];
+    return Semantics(
+      button: true,
+      child: NoteCard(
+        key: Key('board-card-$boardKey'),
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+        onTap: () => context.go(ExplorePage.location(boardKey, '', sort)),
+        child: ConstrainedBox(
+          // Same height for every card, even when a note wraps to two lines.
+          constraints: const BoxConstraints(minHeight: 72),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      categoryName(vm, boardKey),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (note != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        vm.pair(note.$1, note.$2),
+                        style: mutedStyle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const AppIcon('chevron', size: 18, color: Palette.control),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Back from a board to the board cards.
+class _BoardBack extends StatelessWidget {
+  const _BoardBack({required this.sort});
+  final String sort;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: TextButton.icon(
+        key: const Key('board-back'),
+        onPressed: () => context.go(ExplorePage.location('all', '', sort)),
+        icon: const AppIcon('back', size: 18, color: Palette.ink),
+        label: Text(vm.pair('所有看板', 'All boards')),
+      ),
     );
   }
 }

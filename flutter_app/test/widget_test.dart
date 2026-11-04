@@ -192,35 +192,53 @@ void main() {
     expect(find.textContaining('已看過'), findsOneWidget);
   });
 
-  testWidgets('Explore: categories, search sections and popular tags', (
+  testWidgets('Boards open on a card per board, not on every post', (
     tester,
   ) async {
     await mount(tester, '/explore', const Size(375, 1600));
-    for (final label in ['全部', '生活', '美食', '住宿', '交通', '學業', '文化', '文化差異']) {
-      expect(find.text(label), findsWidgets);
+    for (final key in postCategories) {
+      expect(find.byKey(Key('board-card-$key')), findsOneWidget);
     }
-    // Official posts live on the official account's page, not in a tab here.
-    expect(find.byKey(const Key('cat-official')), findsNothing);
-    expect(find.byKey(const Key('guide-arc')), findsNothing);
-    expect(find.text('學生分享'.toUpperCase()), findsOneWidget);
-    expect(find.byKey(const Key('sort-new')), findsOneWidget);
+    // Official posts live on the guides page, not on a board card.
+    expect(find.byKey(const Key('board-card-official')), findsNothing);
+    expect(find.byType(StudentPostCard), findsNothing);
+    expect(find.byKey(const Key('sort-new')), findsNothing);
     expect(find.text('#夜市'), findsOneWidget);
 
+    await tap(tester, find.byKey(const Key('board-card-life')));
+    final router = GoRouter.of(
+      tester.element(find.byType(StudentPostCard).first),
+    );
+    expect(router.state.uri.toString(), '/explore?cat=life');
+    final shown = tester.widgetList<StudentPostCard>(
+      find.byType(StudentPostCard),
+    );
+    expect(shown, isNotEmpty);
+    expect(shown.every((card) => card.item.categoryKey == 'life'), isTrue);
+    expect(find.byKey(const Key('sort-new')), findsOneWidget);
+    expect(find.byKey(const Key('board-card-culture')), findsNothing);
+
+    await tap(tester, find.byKey(const Key('board-back')));
+    expect(find.byKey(const Key('board-card-life')), findsOneWidget);
+    expect(find.byType(StudentPostCard), findsNothing);
+  });
+
+  testWidgets('Searching from the boards narrows by category', (tester) async {
+    await mount(tester, '/explore', const Size(375, 1600));
     await tester.enterText(find.byKey(const Key('explore-search')), 'ARC');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
     expect(find.text('官方指南'.toUpperCase()), findsOneWidget);
     expect(find.byKey(const Key('guide-row-arc')), findsOneWidget);
     expect(find.byKey(const Key('ask-assistant')), findsOneWidget);
+    expect(find.byKey(const Key('board-card-food')), findsNothing);
 
     await tap(tester, find.byKey(const Key('cat-food')));
     expect(find.textContaining('找不到'), findsOneWidget);
   });
 
-  testWidgets('Explore sorts student posts by newest or popular', (
-    tester,
-  ) async {
-    await mount(tester, '/explore', const Size(1280, 3000));
+  testWidgets('A board sorts its posts by newest or popular', (tester) async {
+    await mount(tester, '/explore?cat=culture', const Size(1280, 3000));
     List<ExperienceItem> shown() => [
       for (final card in tester.widgetList<StudentPostCard>(
         find.byType(StudentPostCard),
@@ -243,9 +261,11 @@ void main() {
     for (var i = 1; i < popular.length; i++) {
       expect(heat(popular[i - 1]), greaterThanOrEqualTo(heat(popular[i])));
     }
-    // The order sticks when switching categories.
-    await tap(tester, find.byKey(const Key('cat-life')));
+    // The order sticks when going back to the boards and into another one.
+    await tap(tester, find.byKey(const Key('board-back')));
+    await tap(tester, find.byKey(const Key('board-card-life')));
     final life = shown();
+    expect(life, isNotEmpty);
     for (var i = 1; i < life.length; i++) {
       expect(heat(life[i - 1]), greaterThanOrEqualTo(heat(life[i])));
     }
