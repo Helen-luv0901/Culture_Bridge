@@ -8,6 +8,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+# Gemini refuses a request deadline under 10 s ("Manually set deadline 8s is too short",
+# 400 INVALID_ARGUMENT, production 2026-11-05), so no timeout setting goes below it.
+GEMINI_MIN_DEADLINE_SECONDS = 10.0
+
+
 @dataclass(frozen=True)
 class Settings:
     env: str
@@ -25,8 +30,8 @@ class Settings:
     # Tried in order when GEMINI_MODEL answers 429 (free quota used up) or runs out of time.
     gemini_fallback_models: tuple[str, ...]
     gemini_timeout_seconds: float
-    # One assistant model call. Answers take 1-3 s; a model still silent after this is slow
-    # (free tier under load) and the backup model is asked in the same round instead.
+    # One assistant model call (at least 10 s, Gemini's minimum). Answers take 1-3 s; a model
+    # still silent after this is slow (free tier under load) and the backup is asked instead.
     assistant_model_timeout_seconds: float
     # How much Gemini "thinks" before the assistant and tag suggestions answer:
     # minimal | low | medium | high, or empty for the model's default (slowest).
@@ -93,8 +98,13 @@ def get_settings() -> Settings:
             ).split(",")
             if m.strip()
         ),
-        gemini_timeout_seconds=float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30")),
-        assistant_model_timeout_seconds=float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "8")),
+        gemini_timeout_seconds=max(
+            GEMINI_MIN_DEADLINE_SECONDS, float(os.getenv("GEMINI_TIMEOUT_SECONDS", "30"))
+        ),
+        assistant_model_timeout_seconds=max(
+            GEMINI_MIN_DEADLINE_SECONDS,
+            float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "10")),
+        ),
         gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "low").strip().lower(),
         assistant_max_tool_rounds=int(os.getenv("ASSISTANT_MAX_TOOL_ROUNDS", "5")),
         assistant_memory_exchanges=int(os.getenv("ASSISTANT_MEMORY_EXCHANGES", "6")),

@@ -12,9 +12,10 @@ from app.ai import calls
 from app.ai.calls import GeminiBudgetReached, call_gemini
 from app.ai.experience_ai import get_experience_ai
 from app.api import assistant as assistant_api
+from app.assistant.agent import DEADLINE_SECONDS
 from app.assistant.gemini import ROUND_BUDGET_SECONDS
 from app.assistant.limits import RateLimited, UsageLimiter
-from app.core.config import get_settings
+from app.core.config import GEMINI_MIN_DEADLINE_SECONDS, get_settings
 from app.core.usage import DatabaseCounter
 from app.main import app
 from app.models import ContentEmbedding
@@ -204,8 +205,9 @@ def test_the_assistant_waits_briefly_enough_for_a_backup_in_the_same_round(monke
     assistant_api.get_services.cache_clear()
     try:
         settings = get_settings()
-        # Normal answers take 1-3 s (Cloud Logging, 2026-10-27..11-01).
-        assert 5 <= settings.assistant_model_timeout_seconds <= 12
+        # Normal answers take 1-3 s (Cloud Logging, 2026-10-27..11-01), and Gemini refuses a
+        # deadline under 10 s (400 INVALID_ARGUMENT, production 2026-11-05).
+        assert settings.assistant_model_timeout_seconds == GEMINI_MIN_DEADLINE_SECONDS == 10
         # Every model but the last may run out of time and the last is still asked: a new
         # attempt only starts while the round's budget lasts.
         slow_before_last = len(settings.gemini_fallback_models)
@@ -215,6 +217,23 @@ def test_the_assistant_waits_briefly_enough_for_a_backup_in_the_same_round(monke
     finally:
         assistant_api.get_services.cache_clear()
         get_settings.cache_clear()
+
+
+def test_an_assistant_timeout_below_geminis_minimum_is_raised_to_it(monkeypatch):
+    monkeypatch.setenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "8")
+    get_settings.cache_clear()
+    try:
+        assert get_settings().assistant_model_timeout_seconds == GEMINI_MIN_DEADLINE_SECONDS
+    finally:
+        get_settings.cache_clear()
+
+
+def test_the_slowest_assistant_message_still_ends_within_the_apps_wait():
+    settings = get_settings()
+    # A round may start just before the message deadline and then use its whole budget plus
+    # one more call's timeout; the app gives up at 120 s (lib/data/culture_repository.dart).
+    slowest = DEADLINE_SECONDS + ROUND_BUDGET_SECONDS + settings.assistant_model_timeout_seconds
+    assert slowest < 120
 
 
 def test_one_request_never_waits_past_the_budget(monkeypatch):
