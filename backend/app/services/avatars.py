@@ -10,6 +10,7 @@ unmask an anonymous post.
 
 import io
 import logging
+import threading
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import delete, select
@@ -25,11 +26,16 @@ logger = logging.getLogger(__name__)
 SIZE = 256
 QUALITY = 85
 MAX_UPLOAD_BYTES = 6_000_000
-MAX_PIXELS = 40_000_000  # refuse "decompression bombs" before decoding them
+# Refuse "decompression bombs" before decoding them. The app already shrinks a picked photo to
+# 1024px; 24 MP leaves room for other clients while keeping a full-size decode under ~100 MB.
+MAX_PIXELS = 24_000_000
 UPLOADS_PER_DAY = 20
 _FORMATS = {"JPEG", "PNG", "WEBP", "GIF", "MPO"}  # MPO: JPEGs from some phone cameras
 
 _uploads = DailyAllowance("avatar")
+# One photo at a time per process: a decoded photo and its copies take tens of MB, and a few at
+# once could run a 512 MiB instance out of memory. Each takes well under a second.
+_decoding = threading.BoundedSemaphore(1)
 
 
 def url(avatar_id: str) -> str:
@@ -41,9 +47,12 @@ def to_square_jpeg(raw: bytes) -> bytes:
     if not raw or len(raw) > MAX_UPLOAD_BYTES:
         raise ApiError(413, "avatar_too_large")
     try:
-        with Image.open(io.BytesIO(raw)) as img:
+        with _decoding, Image.open(io.BytesIO(raw)) as img:
             if img.format not in _FORMATS or img.width * img.height > MAX_PIXELS:
                 raise ApiError(422, "avatar_invalid")
+            # A large JPEG is decoded at up to 1/8 scale, still at least twice the output size:
+            # a 12 MP photo then takes about 2 MB instead of 36. Other formats ignore this.
+            img.draft("RGB", (SIZE * 2, SIZE * 2))
             img.load()
             square = ImageOps.fit(ImageOps.exif_transpose(img), (SIZE, SIZE), Image.LANCZOS)
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:

@@ -11,20 +11,43 @@ class ResourceView<T> extends StatefulWidget {
     required this.resource,
     required this.load,
     required this.builder,
+    this.watch,
+    this.retry,
   });
   final Resource<T> Function(BridgeViewModel vm) resource;
   final Future<void> Function(BridgeViewModel vm) load;
   final Widget Function(BuildContext context, T data) builder;
+
+  /// Told when this view appears (true) and goes (false), e.g. so a post list on screen
+  /// is checked for new posts.
+  final void Function(BridgeViewModel vm, bool on)? watch;
+
+  /// What the retry under shown data does (default [load]); a list asks for the page
+  /// that failed instead of starting over.
+  final Future<void> Function(BridgeViewModel vm)? retry;
 
   @override
   State<ResourceView<T>> createState() => _ResourceViewState<T>();
 }
 
 class _ResourceViewState<T> extends State<ResourceView<T>> {
+  BridgeViewModel? _watched;
+
+  @override
+  void dispose() {
+    final vm = _watched;
+    if (vm != null) widget.watch?.call(vm, false);
+    super.dispose();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final vm = BridgeScope.of(context);
+    if (_watched == null && widget.watch != null) {
+      _watched = vm;
+      widget.watch!(vm, true);
+    }
     if (widget.resource(vm).needsLoad) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && widget.resource(vm).needsLoad) widget.load(vm);
@@ -37,7 +60,42 @@ class _ResourceViewState<T> extends State<ResourceView<T>> {
     final vm = BridgeScope.of(context);
     final resource = widget.resource(vm);
     final data = resource.data;
-    if (data != null) return widget.builder(context, data);
+    if (data != null) {
+      final shown = widget.builder(context, data);
+      final error = resource.error;
+      if (error == null) return shown;
+      // Loading more or refreshing failed: keep what is there and say so, with a retry.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          shown,
+          Semantics(
+            liveRegion: true,
+            container: true,
+            child: Padding(
+              key: const Key('list-error'),
+              padding: const EdgeInsets.only(top: 12),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  Text(
+                    vm.errorText(error),
+                    style: const TextStyle(color: Palette.muted),
+                  ),
+                  TextButton(
+                    key: const Key('list-error-retry'),
+                    onPressed: () => (widget.retry ?? widget.load)(vm),
+                    child: Text(vm.t('retry')),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     if (resource.error != null) {
       if (resource.error!.status == 404) return const MissingContent();
       return ErrorPanel(

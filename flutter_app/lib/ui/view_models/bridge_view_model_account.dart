@@ -12,11 +12,35 @@ mixin _BridgeAccount
     if (signedIn) await loadProfile();
   }
 
+  /// How long to wait before asking for the profile again after a failure (a cold or
+  /// busy server); the wait grows with each try.
+  Duration profileRetryAfter = const Duration(seconds: 3);
+  static const _profileMaxTries = 4;
+  int _profileTries = 0;
+  Timer? _profileRetry;
+
+  /// Bumped on every sign-in change: a profile asked for before it belongs to someone else.
+  int _profileGeneration = 0;
+
   Future<void> loadProfile() async {
+    _profileRetry?.cancel();
+    final generation = _profileGeneration;
     try {
-      profile = await repository.me();
+      final loaded = await repository.me();
+      if (generation != _profileGeneration) return;
+      profile = loaded;
+      _profileTries = 0;
     } on ApiException catch (e) {
-      if (e.needsLogin) await auth.signOut();
+      if (generation != _profileGeneration) return;
+      if (e.needsLogin) {
+        await auth.signOut();
+      } else if (signedIn && ++_profileTries < _profileMaxTries) {
+        // Without a profile there is no name to post with and no review entry for staff.
+        _profileRetry = Timer(
+          profileRetryAfter * _profileTries,
+          () => unawaited(loadProfile()),
+        );
+      }
     }
     notifyListeners();
   }
@@ -75,7 +99,12 @@ mixin _BridgeAccount
     return null;
   }
 
-  Future<void> signOut() => auth.signOut();
+  /// The person signs out: on a shared computer the next one must not find their
+  /// unpublished post. (Being signed out by the app, e.g. an expired login, keeps it.)
+  Future<void> signOut() async {
+    _forgetDraft();
+    await auth.signOut();
+  }
 
   Future<bool> deleteAccount() async {
     try {

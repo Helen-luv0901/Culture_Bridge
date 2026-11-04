@@ -127,11 +127,9 @@ class Assistant:
         # Run the obvious searches now, so most questions need one model call instead of several.
         found = prefetch(request.message, ctx)
         timings = {"prefetch": time.monotonic() - received}
-        history.append(
-            UserTurn(
-                found.attach(build_user_message(request.message, request.screen, request.locale))
-            )
-        )
+        asked = build_user_message(request.message, request.screen, request.locale)
+        asked_at = len(history)
+        history.append(UserTurn(found.attach(asked)))
         system = build_system_prompt(request.locale, taipei_today())
         specs = self._registry.specs()
         tools_used: list[str] = []
@@ -154,7 +152,12 @@ class Assistant:
             history.append(turn)
             if not turn.tool_calls:
                 _log_timings(timings, received, tools_used)
-                return self._finish(owner, conversation_id, history, turn, ctx, tools_used, found)
+                # Remembered without the search results (up to 8,000 characters each): the
+                # answer already says what mattered, and follow-ups search again.
+                remembered = [*history[:asked_at], UserTurn(asked), *history[asked_at + 1 :]]
+                return self._finish(
+                    owner, conversation_id, remembered, turn, ctx, tools_used, found
+                )
             if round_number == self._max_tool_rounds:
                 break
             results = tuple(

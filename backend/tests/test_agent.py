@@ -319,3 +319,32 @@ def test_prompt_says_to_fetch_a_better_fitting_guide(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("hi"), None)
     assert "other_matching_procedures" in llm.calls[0]["system"]
+
+
+def test_remembered_questions_leave_out_the_search_results(make_assistant):
+    memory = ConversationStore()
+    llm = ScriptedLLM(answer("依據「申請工作證」流程卡……"), answer("大約兩週。"))
+    assistant = make_assistant(llm, memory=memory)
+    assistant.reply(ask("工作證要怎麼申請？", conversation_id="c1"), USER)
+
+    # The model got the results with the question; the memory keeps only the question.
+    assert llm.calls[0]["history"][-1].text.startswith("[Search results")
+    saved = memory.load("user:u1", "c1")
+    assert saved[0] == as_sent("工作證要怎麼申請？")
+    assert "Search results" not in str(saved)
+
+    assistant.reply(ask("要多久？", conversation_id="c1"), USER)
+    follow_up = llm.calls[1]["history"]
+    assert follow_up[:2] == [
+        as_sent("工作證要怎麼申請？"),
+        ModelTurn(text="依據「申請工作證」流程卡……"),
+    ]
+
+
+def test_memory_keeps_at_most_500_conversations_dropping_the_oldest():
+    store = ConversationStore()
+    for i in range(501):
+        store.save("o", f"c{i}", [UserTurn(f"q{i}")])
+    assert store.load("o", "c0") == []
+    assert store.load("o", "c1") == [UserTurn("q1")]
+    assert store.load("o", "c500") == [UserTurn("q500")]

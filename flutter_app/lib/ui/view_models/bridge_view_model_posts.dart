@@ -22,6 +22,21 @@ mixin _BridgePosts on _BridgeCore {
 
   Timer? _liveTimer;
 
+  /// Lists on screen now (by [_listKey], counted per view showing them). Only these are
+  /// checked for new posts, not every list opened since the app started.
+  final Map<String, int> _watching = {};
+
+  /// A view showing this list appeared ([on]) or went away.
+  void watchPosts(String? category, String sort, String? actionId, bool on) {
+    final key = _listKey(category, sort, actionId);
+    final count = (_watching[key] ?? 0) + (on ? 1 : -1);
+    if (count > 0) {
+      _watching[key] = count;
+    } else {
+      _watching.remove(key);
+    }
+  }
+
   /// Starts looking for new posts every [livePostsEvery] while the app is in view.
   void startLivePosts() {
     final every = livePostsEvery;
@@ -51,7 +66,9 @@ mixin _BridgePosts on _BridgeCore {
     try {
       final keys = [
         for (final entry in _explore.entries)
-          if (entry.key.split('|')[1] == 'new' && entry.value.data != null)
+          if (entry.key.split('|')[1] == 'new' &&
+              entry.value.data != null &&
+              _watching.containsKey(entry.key))
             entry.key,
       ];
       for (final key in keys) {
@@ -66,19 +83,17 @@ mixin _BridgePosts on _BridgeCore {
         } on ApiException {
           continue; // offline or busy: try again next time
         }
-        final current = _explore[key]?.data;
-        if (current == null) continue;
+        final resource = _explore[key];
+        final current = resource?.data;
+        if (resource == null || current == null) continue;
         final known = {for (final e in current.items) e.id};
         final fresh = [
           for (final e in page.items)
             if (!known.contains(e.id)) e,
         ];
         if (fresh.isEmpty) continue;
-        _explore[key] = Resource(
-          data: ExperiencePage([
-            ...fresh,
-            ...current.items,
-          ], current.nextOffset),
+        _explore[key] = resource.withData(
+          ExperiencePage([...fresh, ...current.items], current.nextOffset),
         );
         changed = true;
       }
@@ -109,9 +124,18 @@ mixin _BridgePosts on _BridgeCore {
           locale: locale,
           offset: more ? current?.nextOffset ?? 0 : 0,
         );
-        return more && current != null
-            ? ExperiencePage([...current.items, ...page.items], page.nextOffset)
-            : page;
+        if (!more) return page;
+        // Join with the list as it is now (a reaction or new posts may have changed it
+        // meanwhile), skipping posts already shown: a post published since the last page
+        // pushes the older ones down, so the next page starts with one we have.
+        final latest = _explore[key]?.data ?? current;
+        if (latest == null) return page;
+        final shown = {for (final e in latest.items) e.id};
+        return ExperiencePage([
+          ...latest.items,
+          for (final e in page.items)
+            if (!shown.contains(e.id)) e,
+        ], page.nextOffset);
       },
     );
   }

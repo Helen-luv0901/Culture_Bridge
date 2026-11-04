@@ -29,7 +29,15 @@ Future<void> main() async {
   AuthService? auth;
   final api = ApiClient.fromEnvironment(token: () async => auth?.idToken());
   ErrorReporter(api).install();
-  final server = await api.clientConfig();
+  // What the first screen needs, asked for at the same time rather than one after another.
+  // The server's answer waits at most 2 x 8 s (a cold start answers in a few seconds).
+  final configLoad = api.clientConfig(
+    wait: const Duration(seconds: 8),
+    attempts: 2,
+  );
+  final messagesLoad = MessageCatalog.load();
+  final preferencesLoad = SharedPreferences.getInstance();
+  final server = await configLoad;
   final firebase =
       FirebaseConfig.fromEnvironment() ??
       FirebaseConfig.fromJson(server?['firebase'] as Map<String, dynamic>?);
@@ -46,10 +54,8 @@ Future<void> main() async {
     repository: ApiCultureRepository(api),
     admin: AdminRepository(api),
     auth: auth,
-    messages: await MessageCatalog.load(),
-    preferences: LocalPreferencesRepository(
-      await SharedPreferences.getInstance(),
-    ),
+    messages: await messagesLoad,
+    preferences: LocalPreferencesRepository(await preferencesLoad),
     systemEnglish: !WidgetsBinding
         .instance
         .platformDispatcher
@@ -58,6 +64,7 @@ Future<void> main() async {
         .startsWith('zh'),
     livePostsEvery: const Duration(seconds: 20),
   );
+  // The profile first: the settings form fills its fields from it once.
   await vm.start();
   // New posts show up on their own while the app is open; no checks in the background.
   vm.startLivePosts();

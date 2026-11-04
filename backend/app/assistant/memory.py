@@ -22,7 +22,8 @@ class ConversationStore:
         self,
         max_exchanges: int = 6,
         ttl_seconds: float = 2 * 60 * 60,
-        max_conversations: int = 5000,
+        # Each holds up to six exchanges; this bounds the memory a 512 MiB instance spends.
+        max_conversations: int = 500,
     ) -> None:
         self._max_exchanges = max_exchanges
         self._ttl = ttl_seconds

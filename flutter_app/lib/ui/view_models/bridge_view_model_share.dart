@@ -7,6 +7,13 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
   ShareDraft get draft => _draft;
   Timer? _saveTimer;
 
+  /// Clears the draft here and on the device (sign-out on a shared computer).
+  void _forgetDraft() {
+    _saveTimer?.cancel();
+    _draft = const ShareDraft();
+    unawaited(preferences.saveDraft(_draft));
+  }
+
   void _storeDraft(ShareDraft value) {
     _draft = value;
     _saveTimer?.cancel();

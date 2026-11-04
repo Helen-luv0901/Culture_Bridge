@@ -7,6 +7,17 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
   final List<ChatEntry> chat = [];
   bool asking = false;
 
+  /// Bumped when the chat is cleared (or its owner signs out): a reply to a question asked
+  /// before that has nowhere to go.
+  int _chatGeneration = 0;
+
+  void _forgetChat() {
+    _chatGeneration++;
+    chat.clear();
+    conversationId = null;
+    asking = false;
+  }
+
   /// The chat window over the page; the round bubble opens and closes it.
   bool assistantOpen = false;
   void openAssistant({String? question}) {
@@ -28,7 +39,10 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
     if (message.isEmpty || asking) return;
     chat.add(ChatEntry.user(message));
     asking = true;
+    final generation = _chatGeneration;
     notifyListeners();
+    ChatEntry entry;
+    String? newConversation;
     try {
       final reply = await repository.askAssistant(
         message: message,
@@ -36,22 +50,28 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
         conversationId: conversationId,
         screen: screen,
       );
-      conversationId = reply.conversationId;
-      chat.add(ChatEntry.assistant(reply));
+      newConversation = reply.conversationId;
+      entry = ChatEntry.assistant(reply);
     } on ApiException catch (e) {
-      chat.add(
-        ChatEntry.error(e.needsLogin ? t('signInNeeded') : errorText(e)),
+      entry = ChatEntry.error(e.needsLogin ? t('signInNeeded') : errorText(e));
+    } on Object catch (error, stack) {
+      // A reply the app can't read: say so instead of thinking forever, and report it.
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stack, library: 'api'),
       );
-    } finally {
-      asking = false;
-      notifyListeners();
+      entry = ChatEntry.error(errorText(null));
     }
+    // Cleared or signed out meanwhile: the reply has nowhere to go.
+    if (generation != _chatGeneration) return;
+    if (newConversation != null) conversationId = newConversation;
+    chat.add(entry);
+    asking = false;
+    notifyListeners();
   }
 
   Future<void> clearChat() async {
     final id = conversationId;
-    chat.clear();
-    conversationId = null;
+    _forgetChat();
     notifyListeners();
     if (id != null) await _quietly(() => repository.clearConversation(id));
   }
@@ -61,6 +81,9 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
     PendingOperation operation,
     bool confirm,
   ) async {
+    // A second tap while the first is on its way would fail and hide its result.
+    if (!_resolving.add(operation.id)) return;
+    notifyListeners();
     try {
       final result = confirm
           ? await repository.confirmOperation(operation.id)
@@ -73,9 +96,16 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
     } on ApiException catch (e) {
       operationStates[operation.id] = e.code.replaceFirst('operation_', '');
       showNotice(errorText(e));
+    } finally {
+      _resolving.remove(operation.id);
     }
     notifyListeners();
   }
+
+  final Set<String> _resolving = {};
+
+  /// Whether a confirm or cancel of [id] is on its way (its buttons wait).
+  bool resolvingOperation(String id) => _resolving.contains(id);
 
   /// Latest known status of each pending operation shown in the chat.
   final Map<String, String> operationStates = {};

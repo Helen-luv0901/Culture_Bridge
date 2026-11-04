@@ -25,6 +25,9 @@ RELEVANCE_SHARE = 0.6
 # "best" match for 「學生證」: some of the words in the title, or most of them in the body.
 MIN_SCORE = 0.6
 
+# Distinct match units kept per query (the post search's word filter keeps 8 words).
+MAX_UNITS = 12
+
 
 def search_units(query: str) -> list[str]:
     """Query -> match units. CJK runs become bigrams so 「工作證怎麼辦」 still matches 「工作證」;
@@ -42,7 +45,9 @@ def search_units(query: str) -> list[str]:
             units.extend(b for b in bigrams if not _CJK_FILLER.intersection(b))
         elif token not in _STOPWORDS:
             units.append(token if len(token) <= 4 else token[: max(4, len(token) - 3)])
-    return units
+    # Each unit is several ILIKEs over every post in the public search, so a long or repeated
+    # query must not become hundreds of them; the first words of a question carry its topic.
+    return list(dict.fromkeys(units))[:MAX_UNITS]
 
 
 def _matches(unit: str, haystack: str) -> bool:

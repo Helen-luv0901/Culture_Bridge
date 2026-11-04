@@ -109,6 +109,12 @@ class _HomePageState extends State<HomePage> {
           key: ValueKey('home-$_category-$_sort'),
           resource: (vm) => vm.posts(filter, _sort),
           load: (vm) => vm.loadPosts(filter, false, _sort),
+          watch: (vm, on) => vm.watchPosts(filter, _sort, null, on),
+          retry: (vm) => vm.loadPosts(
+            filter,
+            vm.posts(filter, _sort).data?.nextOffset != null,
+            _sort,
+          ),
           builder: (context, page) => page.items.isEmpty
               ? EmptyNote(
                   title: vm.pair('這個看板還沒有貼文', 'No posts here yet'),

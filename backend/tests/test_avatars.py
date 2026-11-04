@@ -2,13 +2,17 @@
 
 import base64
 import io
+import threading
+import time
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.ai.experience_ai import get_experience_ai
+from app.core.errors import ApiError
 from app.main import app
+from app.services import avatars
 from tests.test_author_names import KAI, MEI, publish_as
 from tests.test_experiences import FakeAI
 
@@ -103,3 +107,65 @@ def test_deleting_the_account_deletes_the_photo(api):
     url = upload(api, photo()).json()["avatar_url"]
     assert api.delete("/api/me", headers=MEI).status_code == 204
     assert api.get(url).status_code == 404
+
+
+def jpeg_bytes(size, exif_orientation: int | None = None) -> bytes:
+    out = io.BytesIO()
+    img = Image.new("RGB", size, (200, 80, 40))
+    if exif_orientation:
+        data = Image.Exif()
+        data[0x0112] = exif_orientation
+        img.save(out, "JPEG", exif=data)
+    else:
+        img.save(out, "JPEG")
+    return out.getvalue()
+
+
+def test_a_large_jpeg_is_decoded_at_reduced_size(monkeypatch):
+    # A 12 MP phone photo decoded in full takes ~36 MB, and the crop copies it again; on a
+    # 512 MiB instance a few at once ran out of memory.
+    seen: list[tuple[int, int]] = []
+    transpose = ImageOps.exif_transpose
+
+    def spy(img, **kwargs):
+        seen.append(img.size)
+        return transpose(img, **kwargs)
+
+    monkeypatch.setattr(ImageOps, "exif_transpose", spy)
+    out = Image.open(io.BytesIO(avatars.to_square_jpeg(jpeg_bytes((4000, 3000), 6))))
+    assert out.size == (256, 256) and out.format == "JPEG"
+    assert max(seen[0]) <= 1000
+
+
+def test_too_many_pixels_are_refused_before_decoding():
+    out = io.BytesIO()
+    Image.new("1", (5000, 5000)).save(out, "PNG")  # 25 MP, a few KB as a file
+    with pytest.raises(ApiError) as caught:
+        avatars.to_square_jpeg(out.getvalue())
+    assert caught.value.code == "avatar_invalid"
+
+
+def test_photos_are_processed_one_at_a_time(monkeypatch):
+    running = 0
+    most = 0
+    lock = threading.Lock()
+    transpose = ImageOps.exif_transpose
+
+    def slow(img, **kwargs):
+        nonlocal running, most
+        with lock:
+            running += 1
+            most = max(most, running)
+        time.sleep(0.05)
+        with lock:
+            running -= 1
+        return transpose(img, **kwargs)
+
+    monkeypatch.setattr(ImageOps, "exif_transpose", slow)
+    raw = jpeg_bytes((800, 600))
+    threads = [threading.Thread(target=avatars.to_square_jpeg, args=(raw,)) for _ in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert most == 1

@@ -26,11 +26,24 @@ part 'bridge_view_model_share.dart';
 /// Data loaded from the API: the last value, whether a load is running, and the last error.
 @immutable
 class Resource<T> {
-  const Resource({this.data, this.error, this.loading = false});
+  const Resource({
+    this.data,
+    this.error,
+    this.loading = false,
+    this.loadId = 0,
+  });
   final T? data;
   final ApiException? error;
   final bool loading;
+
+  /// Which load this belongs to: an answer only lands while its load is still current,
+  /// even if the data was edited meanwhile (a reaction, new posts on top).
+  final int loadId;
   bool get needsLoad => data == null && !loading && error == null;
+
+  /// The same load state with other data.
+  Resource<T> withData(T value) =>
+      Resource(data: value, error: error, loading: loading, loadId: loadId);
 }
 
 /// App state for every screen: language, sign-in, cached API data and the share flow.
@@ -88,8 +101,11 @@ class BridgeViewModel extends _BridgeCore
 
   void _clearPersonalData() {
     profile = null;
-    chat.clear();
-    conversationId = null;
+    _profileGeneration++;
+    _profileTries = 0;
+    _profileRetry?.cancel();
+    // A reply still on its way belongs to the person who asked.
+    _forgetChat();
     executions = const Resource();
     mine = const Resource();
     blocks = const Resource();
@@ -109,6 +125,7 @@ class BridgeViewModel extends _BridgeCore
     _saveTimer?.cancel();
     _suggestTimer?.cancel();
     _liveTimer?.cancel();
+    _profileRetry?.cancel();
     super.dispose();
   }
 }

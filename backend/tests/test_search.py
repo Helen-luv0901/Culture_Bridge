@@ -3,8 +3,11 @@ words comes first, without guides that only mention a word somewhere in a step."
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 
 from app.core.config import get_settings
+from app.core.db import get_engine
+from app.core.text_search import MAX_UNITS
 from app.main import app
 from app.seed import seed
 
@@ -56,3 +59,20 @@ def test_words_found_nowhere_find_nothing(api, db):
     assert post_ids(api, "xyzabc") == []
     # Only question words: nothing to search for.
     assert guide_ids(api, "怎麼辦") == []
+
+
+def test_a_long_query_stays_a_small_database_query(api, db):
+    seed(db, get_settings().demo_content_path)
+    statements: list[str] = []
+
+    def capture(conn, cursor, statement, *args) -> None:
+        statements.append(statement)
+
+    event.listen(get_engine(), "before_cursor_execute", capture)
+    try:
+        found = post_ids(api, ("教授說再看看是什麼意思" * 20)[:200])
+    finally:
+        event.remove(get_engine(), "before_cursor_execute", capture)
+    assert found[0] == "professor-see"
+    # Each unit is matched against ten text columns.
+    assert max(s.lower().count("ilike") for s in statements) <= MAX_UNITS * 10

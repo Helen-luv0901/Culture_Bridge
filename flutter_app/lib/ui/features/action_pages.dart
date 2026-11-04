@@ -476,6 +476,7 @@ class _Voices extends StatelessWidget {
   Widget build(BuildContext context) => ResourceView<ExperiencePage>(
     resource: (vm) => vm.postsForAction(actionId),
     load: (vm) => vm.loadPostsForAction(actionId),
+    watch: (vm, on) => vm.watchPosts(null, 'new', actionId, on),
     builder: (context, page) {
       final vm = BridgeScope.of(context);
       if (page.items.isEmpty) return const SizedBox.shrink();
@@ -689,7 +690,7 @@ class _ProgressState extends State<_Progress> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: FilledButton(
-                      onPressed: _reason == null
+                      onPressed: _reason == null || vm.reportingStuck
                           ? null
                           : () async {
                               final ok = await vm.reportStuck(
