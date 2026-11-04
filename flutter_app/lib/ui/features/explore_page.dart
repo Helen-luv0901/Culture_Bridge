@@ -78,17 +78,6 @@ class ExplorePage extends StatelessWidget {
   }
 }
 
-/// What each board is for, in both languages (zh, en).
-const _boardNotes = {
-  'life': ('辦手續、銀行、手機、看醫生', 'Errands, banks, phones, doctors'),
-  'food': ('吃什麼、去哪吃、怎麼點餐', 'What and where to eat, how to order'),
-  'housing': ('宿舍、租屋、室友與房東', 'Dorms, renting, roommates, landlords'),
-  'transit': ('捷運、公車、高鐵與騎車', 'MRT, buses, high-speed rail, scooters'),
-  'study': ('選課、上課、報告與考試', 'Courses, classes, reports, exams'),
-  'culture': ('節慶、習俗與在地活動', 'Festivals, customs, local events'),
-  'difference': ('讓你意外或還不習慣的地方', 'What surprised you or took getting used to'),
-};
-
 /// A card per board; tapping one opens its posts.
 class _BoardCards extends StatelessWidget {
   const _BoardCards({required this.sort});
@@ -130,40 +119,17 @@ class _BoardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final note = _boardNotes[boardKey];
     return Semantics(
       button: true,
       child: NoteCard(
         key: Key('board-card-$boardKey'),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         onTap: () => context.go(ExplorePage.location(boardKey, '', sort)),
-        child: ConstrainedBox(
-          // Same height for every card, even when a note wraps to two lines.
-          constraints: const BoxConstraints(
-            minHeight: 72,
-            minWidth: double.infinity,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                categoryName(vm, boardKey),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (note != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  vm.pair(note.$1, note.$2),
-                  style: mutedStyle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ],
+        child: SizedBox(
+          width: double.infinity,
+          child: Text(
+            categoryName(vm, boardKey),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ),
       ),
