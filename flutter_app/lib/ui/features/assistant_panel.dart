@@ -226,7 +226,13 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
         ),
       );
     }
-    final top = MediaQuery.paddingOf(context).top + 72;
+    // With the keyboard up (reported as an inset, or a page shrunk to what it leaves)
+    // the sheet takes the whole height above it, so the chat stays big enough to read.
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    final top = keyboardUp(context)
+        ? media.padding.top
+        : media.padding.top + 72;
     return Positioned.fill(
       child: Stack(
         children: [
@@ -248,7 +254,7 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
             left: 0,
             right: 0,
             top: top,
-            bottom: 0,
+            bottom: keyboard,
             child: LayoutBuilder(
               builder: (context, constraints) => SlideTransition(
                 key: const Key('assistant-sheet-motion'),
@@ -396,6 +402,9 @@ class _AssistantPanelState extends State<AssistantPanel> {
     await vm.ask(text, screen: _screen());
   }
 
+  /// Whether the keyboard was up at the last build (to scroll down when it opens).
+  var _keyboard = false;
+
   void _scrollToEnd() => WidgetsBinding.instance.addPostFrameCallback((_) {
     if (_scroll.hasClients) {
       _scroll.animateTo(
@@ -414,8 +423,14 @@ class _AssistantPanelState extends State<AssistantPanel> {
       _seen = count;
       _scrollToEnd();
     }
-    // With large text the emergency line scrolls with the chat, so the input stays visible.
-    final urgentInLog = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    // With large text or the keyboard up the emergency line scrolls with the chat (at its
+    // end), so the input and the conversation keep their room.
+    final keyboard = keyboardUp(context);
+    // The keyboard just opened: show the latest message right above it.
+    if (keyboard && !_keyboard) _scrollToEnd();
+    _keyboard = keyboard;
+    final urgentInLog =
+        MediaQuery.textScalerOf(context).scale(1) > 1.3 || keyboard;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       child: Column(
@@ -459,6 +474,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
               liveRegion: true,
               // Built in full (chats are short) so scrolling to the end is exact.
               child: SingleChildScrollView(
+                key: const Key('assistant-log'),
                 controller: _scroll,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -927,4 +943,11 @@ class _PostCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Whether a phone keyboard is taking the bottom of the screen: reported as an inset, or
+/// the page itself shrunk to what the keyboard leaves (browsers do either).
+bool keyboardUp(BuildContext context) {
+  final media = MediaQuery.of(context);
+  return media.viewInsets.bottom > 0 || media.size.height < 600;
 }
