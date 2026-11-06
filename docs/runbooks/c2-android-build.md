@@ -12,7 +12,8 @@
 - 只允許 HTTPS：targetSdk 28 以上 Android 預設就擋明文 HTTP（測試時連本機後端 `http://10.0.2.2:8000` 要另外設定 network security config）
 - 登入：非網頁平台用 `signInWithProvider(GoogleAuthProvider())`（`lib/data/auth_service.dart`）
 - 設定：App 啟動時先讀 `--dart-define` 的 Firebase 設定，再讀後端 `/api/config`
-- 圖示（C-20 暫定版）：`flutter_app/tool/make_icons.py` 畫出橋與日出圖示，產生網頁、Android（含 Android 8+ 的自適應圖示）、iOS 各尺寸，以及 Play 商店用的 `docs/store/play-icon-512.png`。要改設計就改這支程式後重跑 `python3 tool/make_icons.py`（需要 Pillow）
+- 圖示：`flutter_app/tool/make_icons.py` 用官方紫色 Logo（`docs/brand/culture-bridge-mark-1024.png`，白底）產生 Android（含 Android 8+ 的自適應圖示）、iOS 各尺寸，以及 Play 商店用的 `docs/store/play-icon-512.png`；網頁圖示不受影響。換 Logo 就換那張圖後重跑 `python tool/make_icons.py`（需要 Pillow）
+- 手機試用版：`bash tool/build_android_test.sh` 用這台電腦的 debug 金鑰建出 APK（不能上傳 Play），Firebase 設定從 `android/app/google-services.json` 讀取（不進 repo）
 
 ## 1. 在 Firebase 加入 Android App
 
