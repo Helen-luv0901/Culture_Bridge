@@ -76,6 +76,14 @@ def clean_tables(database) -> Iterator[None]:
         conn.execute(text(f"TRUNCATE {names} CASCADE"))
 
 
+@pytest.fixture(autouse=True)
+def terms_accepted(request, monkeypatch) -> None:
+    """Tests post and comment as fresh dev accounts that never saw the terms. The gate has its
+    own tests (marked real_terms); everywhere else every account counts as having accepted."""
+    if request.node.get_closest_marker("real_terms") is None:
+        monkeypatch.setattr("app.core.terms.require_accepted", lambda db, user: None)
+
+
 @pytest.fixture
 def db() -> Iterator[Session]:
     with get_sessionmaker()() as session:

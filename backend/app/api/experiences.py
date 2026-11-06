@@ -1,9 +1,10 @@
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response, status
 from pydantic import BaseModel
 
 from app.ai.experience_ai import AIUnavailable, ExperienceAI, get_experience_ai
+from app.core import terms
 from app.core.auth import OptionalUser, RequiredUser
 from app.core.config import get_settings
 from app.core.db import DbSession, get_sessionmaker
@@ -57,6 +58,7 @@ def create_post(
     background: BackgroundTasks,
 ) -> svc.PublicExperience:
     """Publish a post exactly as written (title, text, category and chosen tags)."""
+    terms.require_accepted(db, user)
     post = svc.create_post(db, user, body)
     background.add_task(svc.translate_in_background, get_sessionmaker(), ai, post.id)
     background.add_task(
@@ -121,6 +123,8 @@ def publish(
     ai: AI,
     background: BackgroundTasks,
 ) -> svc.MyExperience:
+    # The older draft flow (no longer used by the app) publishes too, so it has the same gate.
+    terms.require_accepted(db, user)
     result = svc.publish(db, user, experience_id, body)
     # Translate first so the index includes both languages.
     background.add_task(svc.translate_in_background, get_sessionmaker(), ai, experience_id)
@@ -136,11 +140,22 @@ class TranslationRequest(BaseModel):
 
 @router.post("/experiences/{experience_id}/translations")
 def request_translation(
-    experience_id: str, body: TranslationRequest, db: DbSession, viewer: OptionalUser, ai: AI
+    experience_id: str,
+    body: TranslationRequest,
+    request: Request,
+    db: DbSession,
+    viewer: OptionalUser,
+    ai: AI,
 ) -> svc.ExperienceDetail:
-    """Translate now if no translation exists yet (e.g. the background job failed)."""
+    """Translate now if no translation exists yet (e.g. the background job failed).
+
+    Open to guests, so each person (or IP address) has a daily number of AI translations, and a
+    post whose translation just failed is not tried again for a while."""
+    caller = (
+        f"user:{viewer.id}" if viewer else f"ip:{request.client.host if request.client else '?'}"
+    )
     try:
-        svc.translate(db, ai, experience_id, body.locale)
+        svc.translate_on_request(db, ai, experience_id, body.locale, caller)
     except AIUnavailable as exc:
         raise ApiError(503, "ai_unavailable") from exc
     return svc.get_public(db, viewer, experience_id, body.locale)

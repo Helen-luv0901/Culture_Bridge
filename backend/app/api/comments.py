@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Response, status
 
+from app.core import terms
 from app.core.auth import OptionalUser, RequiredUser
 from app.core.db import DbSession
 from app.services import comments as svc
@@ -16,6 +17,7 @@ def list_comments(experience_id: str, db: DbSession, viewer: OptionalUser) -> li
 def add_comment(
     experience_id: str, body: svc.CommentIn, user: RequiredUser, db: DbSession
 ) -> svc.CommentOut:
+    terms.require_accepted(db, user)
     return svc.add_comment(db, user, experience_id, body)
 
 

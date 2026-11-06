@@ -12,6 +12,8 @@ import '../core/layout.dart';
 import '../core/loading.dart';
 import '../core/motion.dart';
 import '../view_models/bridge_view_model.dart';
+import 'browse_pages.dart' show showReportDialog;
+import 'legal.dart';
 import 'post_cards.dart';
 
 /// Opens the assistant. Only signed-in users may use it; guests are asked to sign in first.
@@ -19,7 +21,11 @@ Future<void> openAssistantFor(BuildContext context, {String? question}) async {
   final vm = BridgeScope.of(context);
   // Guests see the panel too: suggestions that search the guides, and a sign-in line
   // where the input would be, instead of a sign-in dialog in front of everything.
-  vm.openAssistant(question: vm.signedIn ? question : null);
+  final ask = vm.signedIn ? question : null;
+  if (ask == null || vm.aiNoticeSeen) return vm.openAssistant(question: ask);
+  // The first question waits for the AI notice.
+  vm.openAssistant();
+  if (await ensureAiNoticeSeen(context)) await vm.ask(ask);
 }
 
 /// The round chat bubble at the bottom right; it opens and closes the assistant.
@@ -226,7 +232,13 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
         ),
       );
     }
-    final top = MediaQuery.paddingOf(context).top + 72;
+    // With the keyboard up (reported as an inset, or a page shrunk to what it leaves)
+    // the sheet takes the whole height above it, so the chat stays big enough to read.
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    final top = keyboardUp(context)
+        ? media.padding.top
+        : media.padding.top + 72;
     return Positioned.fill(
       child: Stack(
         children: [
@@ -248,7 +260,7 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
             left: 0,
             right: 0,
             top: top,
-            bottom: 0,
+            bottom: keyboard,
             child: LayoutBuilder(
               builder: (context, constraints) => SlideTransition(
                 key: const Key('assistant-sheet-motion'),
@@ -392,9 +404,14 @@ class _AssistantPanelState extends State<AssistantPanel> {
   Future<void> _ask(String text) async {
     final vm = BridgeScope.of(context);
     if (text.trim().isEmpty || vm.asking) return;
+    // Before the first question: who answers (Google Gemini) and that it can be wrong.
+    if (!await ensureAiNoticeSeen(context) || !mounted) return;
     _input.clear();
     await vm.ask(text, screen: _screen());
   }
+
+  /// Whether the keyboard was up at the last build (to scroll down when it opens).
+  var _keyboard = false;
 
   void _scrollToEnd() => WidgetsBinding.instance.addPostFrameCallback((_) {
     if (_scroll.hasClients) {
@@ -414,8 +431,14 @@ class _AssistantPanelState extends State<AssistantPanel> {
       _seen = count;
       _scrollToEnd();
     }
-    // With large text the emergency line scrolls with the chat, so the input stays visible.
-    final urgentInLog = MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    // With large text or the keyboard up the emergency line scrolls with the chat (at its
+    // end), so the input and the conversation keep their room.
+    final keyboard = keyboardUp(context);
+    // The keyboard just opened: show the latest message right above it.
+    if (keyboard && !_keyboard) _scrollToEnd();
+    _keyboard = keyboard;
+    final urgentInLog =
+        MediaQuery.textScalerOf(context).scale(1) > 1.3 || keyboard;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       child: Column(
@@ -459,6 +482,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
               liveRegion: true,
               // Built in full (chats are short) so scrolling to the end is exact.
               child: SingleChildScrollView(
+                key: const Key('assistant-log'),
                 controller: _scroll,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -494,8 +518,12 @@ class _AssistantPanelState extends State<AssistantPanel> {
                           ],
                         ),
                       ),
-                    for (final entry in vm.chat)
-                      _Entry(entry: entry, onNavigate: widget.onNavigate),
+                    for (final (i, entry) in vm.chat.indexed)
+                      _Entry(
+                        entry: entry,
+                        index: i,
+                        onNavigate: widget.onNavigate,
+                      ),
                     if (vm.asking)
                       _Bubble(
                         text: vm.pair('想一下…', 'Thinking…'),
@@ -505,7 +533,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
                     if (urgentInLog)
                       const Padding(
                         padding: EdgeInsets.only(top: 8),
-                        child: _UrgentLine(),
+                        child: _Disclaimers(),
                       ),
                   ],
                 ),
@@ -514,7 +542,10 @@ class _AssistantPanelState extends State<AssistantPanel> {
           ),
           const DashedRule(color: Palette.edge),
           const SizedBox(height: 6),
-          if (!urgentInLog) ...[const _UrgentLine(), const SizedBox(height: 4)],
+          if (!urgentInLog) ...[
+            const _Disclaimers(),
+            const SizedBox(height: 4),
+          ],
           if (!vm.signedIn)
             Row(
               key: const Key('assistant-sign-in'),
@@ -572,6 +603,25 @@ class _AssistantPanelState extends State<AssistantPanel> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Always under the chat: AI answers can be wrong, and where to find a person.
+class _Disclaimers extends StatelessWidget {
+  const _Disclaimers();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          vm.pair(aiMayBeWrong.$1, aiMayBeWrong.$2),
+          style: mutedStyle.copyWith(fontSize: 12),
+        ),
+        const _UrgentLine(),
+      ],
     );
   }
 }
@@ -681,9 +731,24 @@ class _Bubble extends StatelessWidget {
   );
 }
 
+/// Reasons a student can give when reporting an assistant answer (zh, en).
+const _answerReasons = {
+  'inaccurate': ('不正確', 'Inaccurate'),
+  'offensive': ('冒犯', 'Offensive'),
+  'harmful': ('有害', 'Harmful'),
+  'other': ('其他', 'Other'),
+};
+
 class _Entry extends StatelessWidget {
-  const _Entry({required this.entry, required this.onNavigate});
+  const _Entry({
+    required this.entry,
+    required this.index,
+    required this.onNavigate,
+  });
   final ChatEntry entry;
+
+  /// Its place in the chat (keys the report button).
+  final int index;
   final void Function(String path) onNavigate;
 
   @override
@@ -709,6 +774,27 @@ class _Entry extends StatelessWidget {
           : CrossAxisAlignment.start,
       children: [
         _Bubble(text: entry.text, mine: entry.fromUser, muted: entry.failed),
+        if (reply != null)
+          Transform.translate(
+            offset: const Offset(0, -8),
+            child: TextButton(
+              key: Key('report-answer-$index'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                foregroundColor: Palette.muted,
+                textStyle: const TextStyle(fontFamily: appFont, fontSize: 12),
+              ),
+              onPressed: () => showReportDialog(
+                context,
+                (reason, details) => vm.reportAnswer(entry, reason, details),
+                reasons: _answerReasons,
+                title: ('回報這個回答', 'Report this answer'),
+                noteKey: const Key('answer-report-details'),
+              ),
+              child: Text(vm.pair('回報', 'Report')),
+            ),
+          ),
         for (final (label, path) in links)
           TextButton(
             style: TextButton.styleFrom(
@@ -822,6 +908,18 @@ class _OperationCard extends StatelessWidget {
                         : () => vm.resolveOperation(operation, false),
                     child: Text(vm.t('cancel')),
                   ),
+                  if (vm.operationRetryable(operation.id))
+                    Padding(
+                      key: Key('operation-retry-${operation.id}'),
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        vm.pair(
+                          '剛才沒有連上，還沒有辦理；可以再按一次。',
+                          "That didn't go through; nothing was done yet. Try again.",
+                        ),
+                        style: mutedStyle,
+                      ),
+                    ),
                 ],
               )
             else if (status == 'confirmed')
@@ -927,4 +1025,11 @@ class _PostCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Whether a phone keyboard is taking the bottom of the screen: reported as an inset, or
+/// the page itself shrunk to what the keyboard leaves (browsers do either).
+bool keyboardUp(BuildContext context) {
+  final media = MediaQuery.of(context);
+  return media.viewInsets.bottom > 0 || media.size.height < 600;
 }

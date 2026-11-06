@@ -5,24 +5,25 @@ expose accounts. Comments by authors the reader blocked are left out, hidden com
 seen by moderators, and a reply to a reply attaches to the top-level comment.
 """
 
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError, forbidden, not_found
 from app.models import CommentLike, Experience, ExperienceComment, User
-from app.services import avatars
+from app.services import avatars, content_filter
 from app.services.blocking import blocks_post, hides_comment
-from app.services.common import log_admin
+from app.services.common import DailyAllowance, log_admin
 
 MAX_BODY = 1000
 MAX_COMMENTS = 500  # per post, newest kept visible
-MAX_COMMENTS_PER_DAY = 100  # per commenter
-_TAIPEI = timezone(timedelta(hours=8))
+MAX_COMMENTS_PER_DAY = 100  # per commenter; deleting a comment does not give the count back
+_new_comments = DailyAllowance("comments")
 
 
 class CommentIn(BaseModel):
@@ -52,6 +53,8 @@ class CommentOut(BaseModel):
     liked: bool
     by_post_author: bool
     mine: bool
+    # The reader may remove it: their own comment, any comment on their post, or staff.
+    removable_by_me: bool = False
 
 
 def _public_post(db: Session, experience_id: str, viewer: CurrentUser | None = None) -> Experience:
@@ -115,9 +118,14 @@ def _out(
             liked=c.id in liked,
             by_post_author=c.author_id == post.author_id,
             mine=viewer is not None and c.author_id == viewer.id,
+            removable_by_me=viewer is not None and _may_remove(viewer, post, c),
         )
         for c in comments
     ]
+
+
+def _may_remove(user: CurrentUser, post: Experience, comment: ExperienceComment) -> bool:
+    return user.is_staff or user.id in (comment.author_id, post.author_id)
 
 
 def list_comments(db: Session, viewer: CurrentUser | None, experience_id: str) -> list[CommentOut]:
@@ -137,17 +145,7 @@ def list_comments(db: Session, viewer: CurrentUser | None, experience_id: str) -
 
 def add_comment(db: Session, user: CurrentUser, experience_id: str, body: CommentIn) -> CommentOut:
     post = _public_post(db, experience_id, user)
-    local_midnight = datetime.combine(datetime.now(_TAIPEI).date(), datetime.min.time(), _TAIPEI)
-    written_today = db.scalar(
-        select(func.count())
-        .select_from(ExperienceComment)
-        .where(
-            ExperienceComment.author_id == user.id,
-            ExperienceComment.created_at >= local_midnight.astimezone(UTC),
-        )
-    )
-    if (written_today or 0) >= MAX_COMMENTS_PER_DAY:
-        raise ApiError(429, "daily_limit_reached")
+    content_filter.check(body.body)
     reply_to = None
     if body.reply_to_id:
         target = db.get(ExperienceComment, body.reply_to_id)
@@ -162,6 +160,8 @@ def add_comment(db: Session, user: CurrentUser, experience_id: str, body: Commen
         account = db.get(User, user.id)
         if account is None or not account.nickname:
             raise ApiError(422, "nickname_missing")
+    if not _new_comments.take(user.id, MAX_COMMENTS_PER_DAY):
+        raise ApiError(429, "daily_limit_reached")
     comment = ExperienceComment(
         experience_id=post.id,
         author_id=user.id,
@@ -184,11 +184,19 @@ def _visible(db: Session, comment_id: str) -> ExperienceComment:
 
 def set_like(db: Session, user: CurrentUser, comment_id: str, on: bool) -> CommentOut:
     comment = _visible(db, comment_id)
-    existing = db.get(CommentLike, (comment.id, user.id))
-    if on and existing is None:
-        db.add(CommentLike(comment_id=comment.id, user_id=user.id))
-    elif not on and existing is not None:
-        db.delete(existing)
+    # Liking twice (a double tap) is not an error: the like is simply there.
+    if on:
+        db.execute(
+            insert(CommentLike)
+            .values(comment_id=comment.id, user_id=user.id)
+            .on_conflict_do_nothing()
+        )
+    else:
+        db.execute(
+            delete(CommentLike).where(
+                CommentLike.comment_id == comment.id, CommentLike.user_id == user.id
+            )
+        )
     db.commit()
     post = db.get(Experience, comment.experience_id)
     assert post is not None
@@ -196,13 +204,15 @@ def set_like(db: Session, user: CurrentUser, comment_id: str, on: bool) -> Comme
 
 
 def delete_comment(db: Session, user: CurrentUser, comment_id: str) -> None:
-    """The commenter (or staff) deletes a comment; its replies go with it."""
+    """The commenter, the post's author or staff deletes a comment; its replies go with it."""
     comment = db.get(ExperienceComment, comment_id)
     if comment is None:
         raise not_found("comment_not_found")
-    if comment.author_id != user.id and not user.is_staff:
+    post = db.get(Experience, comment.experience_id)
+    assert post is not None
+    if not _may_remove(user, post, comment):
         raise forbidden("not_comment_author")
-    if comment.author_id != user.id:
+    if comment.author_id != user.id and post.author_id != user.id:  # staff
         log_admin(db, user, "delete", "comment", comment.id, experience_id=comment.experience_id)
     thread = select(ExperienceComment.id).where(
         (ExperienceComment.id == comment.id) | (ExperienceComment.reply_to_id == comment.id)

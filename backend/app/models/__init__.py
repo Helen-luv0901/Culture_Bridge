@@ -44,6 +44,10 @@ class User(Base):
     # Optional; shown only on experiences the author chose to sign with them (migration 0007).
     nickname: Mapped[str | None] = mapped_column(Text)
     real_name: Mapped[str | None] = mapped_column(Text)
+    # The terms of use / AI notice version accepted; None: never (migration 0015).
+    terms_version: Mapped[int | None] = mapped_column(Integer)
+    # Set by an admin: the account can still read but not write (migration 0015).
+    suspended_at: Mapped[datetime | None] = mapped_column(Timestamp)
     created_at: Mapped[datetime] = _created()
 
 
@@ -332,6 +336,26 @@ class Report(Base):
     note: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, default="pending", server_default="pending")
     resolved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    resolved_at: Mapped[datetime | None] = mapped_column(Timestamp)
+    created_at: Mapped[datetime] = _created()
+
+
+class AssistantReport(Base):
+    """Someone flagged an AI assistant answer (migration 0015)."""
+
+    __tablename__ = "assistant_reports"
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)
+    reporter_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    conversation_id: Mapped[str | None] = mapped_column(Text)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    # inaccurate | offensive | harmful | other
+    reason: Mapped[str] = mapped_column(Text)
+    details: Mapped[str | None] = mapped_column(Text)
+    # open | resolved
+    status: Mapped[str] = mapped_column(Text, default="open", server_default="open")
+    resolution_note: Mapped[str | None] = mapped_column(Text)
+    resolved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     resolved_at: Mapped[datetime | None] = mapped_column(Timestamp)
     created_at: Mapped[datetime] = _created()
 

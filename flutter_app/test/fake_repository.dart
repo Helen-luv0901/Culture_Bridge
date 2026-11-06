@@ -140,8 +140,34 @@ class FakeCultureRepository implements CultureRepository {
       nickname: nickname,
       realName: realName,
       avatarUrl: avatarUrl,
+      termsVersion: acceptedTerms,
     );
   }
+
+  /// The terms version this account accepted (null: never) and the one the server wants.
+  int? acceptedTerms = 1;
+  int serverTermsVersion = 1;
+  final List<int> termsAccepted = [];
+
+  void _requireTerms() {
+    if (acceptedTerms != serverTermsVersion) {
+      throw const ApiException(403, 'terms_not_accepted');
+    }
+  }
+
+  @override
+  Future<Profile> acceptTerms(int version) async {
+    _requireLogin();
+    if (version != serverTermsVersion) {
+      throw const ApiException(422, 'terms_version_outdated');
+    }
+    termsAccepted.add(version);
+    acceptedTerms = version;
+    return me();
+  }
+
+  @override
+  String siteUrl(String path) => 'https://example.test$path';
 
   String? avatarUrl;
   final List<String> uploadedPhotos = [];
@@ -338,9 +364,23 @@ class FakeCultureRepository implements CultureRepository {
         null,
       );
 
+  /// When set, the next reaction or save fails with it (then clears).
+  ApiException? reactError;
+  ApiException? saveError;
+
+  /// How many times tag suggestions were asked for (each sends the draft to Gemini).
+  int suggestCalls = 0;
+
   @override
   Future<ExperienceItem> react(String id, String kind, bool on) async {
     _requireLogin();
+    final error = reactError;
+    if (error != null) {
+      reactError = null;
+      // A conflict means the reaction was already there: the server has it as asked.
+      if (error.status == 409) await react(id, kind, on);
+      throw error;
+    }
     final e = _experiences[id]!;
     final reactions = {...e.myReactions};
     on ? reactions.add(kind) : reactions.remove(kind);
@@ -399,6 +439,13 @@ class FakeCultureRepository implements CultureRepository {
   @override
   Future<void> setSaved(String id, bool on) async {
     _requireLogin();
+    final error = saveError;
+    if (error != null) {
+      saveError = null;
+      // A plain conflict means it already was: apply it. A full list does not.
+      if (error.code == 'conflict') await setSaved(id, on);
+      throw error;
+    }
     final e = _experiences[id];
     if (on && e == null) throw const ApiException(404, 'experience_not_found');
     saved.remove(id);
@@ -412,9 +459,15 @@ class FakeCultureRepository implements CultureRepository {
     return [for (final id in saved) ?_experiences[id]];
   }
 
+  /// When set, translations fail with it.
+  ApiException? translationError;
+
   @override
-  Future<ExperienceDetail> requestTranslation(String id, String locale) =>
-      experience(id);
+  Future<ExperienceDetail> requestTranslation(String id, String locale) {
+    final error = translationError;
+    if (error != null) throw error;
+    return experience(id);
+  }
 
   /// Keyword rules standing in for the AI that suggests tags.
   static const _tagRules = {
@@ -432,6 +485,7 @@ class FakeCultureRepository implements CultureRepository {
     String? category,
   }) async {
     _requireLogin();
+    suggestCalls++;
     if (aiDown) throw const ApiException(503, 'ai_unavailable');
     return [
       for (final rule in _tagRules.entries)
@@ -453,6 +507,7 @@ class FakeCultureRepository implements CultureRepository {
     String? actionId,
   }) async {
     _requireLogin();
+    _requireTerms();
     lastPublish = {
       'title': title,
       'voice': voice,
@@ -523,6 +578,7 @@ class FakeCultureRepository implements CultureRepository {
     String authorDisplay = 'anonymous',
   }) async {
     _requireLogin();
+    _requireTerms();
     final comment = CommentItem(
       id: 'c-${_ids++}',
       body: body,
@@ -531,6 +587,7 @@ class FakeCultureRepository implements CultureRepository {
       replyToId: replyToId,
       authorName: authorDisplay == 'nickname' ? nickname : null,
       mine: true,
+      removableByMe: true,
     );
     postComments.putIfAbsent(experienceId, () => []).add(comment);
     return comment;
@@ -553,13 +610,34 @@ class FakeCultureRepository implements CultureRepository {
         liked: on,
         byPostAuthor: c.byPostAuthor,
         mine: c.mine,
+        removableByMe: c.removableByMe,
       );
     }
     throw const ApiException(404, 'comment_not_found');
   }
 
+  /// A comment by someone else under [experienceId]; [removable] when the reader wrote the post.
+  CommentItem addOthersComment(
+    String experienceId,
+    String body, {
+    bool removable = false,
+  }) {
+    final comment = CommentItem(
+      id: 'c-${_ids++}',
+      body: body,
+      createdAt: DateTime(2026, 10, 20),
+      likeCount: 0,
+      removableByMe: removable,
+    );
+    postComments.putIfAbsent(experienceId, () => []).add(comment);
+    return comment;
+  }
+
+  final List<String> deletedComments = [];
+
   @override
   Future<void> deleteComment(String commentId) async {
+    deletedComments.add(commentId);
     for (final list in postComments.values) {
       list.removeWhere((c) => c.id == commentId || c.replyToId == commentId);
     }
@@ -599,6 +677,17 @@ class FakeCultureRepository implements CultureRepository {
     _experiences.remove(experienceId);
   }
 
+  final List<String> blockedCommenters = [];
+
+  @override
+  Future<void> blockCommenter(String commentId) async {
+    _requireLogin();
+    blockedCommenters.add(commentId);
+    for (final list in postComments.values) {
+      list.removeWhere((c) => c.id == commentId);
+    }
+  }
+
   @override
   Future<List<BlockInfo>> blocks() async => [
     for (final id in blocked) BlockInfo(id, DateTime(2026, 10, 13)),
@@ -632,10 +721,34 @@ class FakeCultureRepository implements CultureRepository {
   @override
   Future<void> clearConversation(String conversationId) async {}
 
+  final List<Map<String, Object?>> assistantReports = [];
+
+  @override
+  Future<void> reportAssistantAnswer({
+    String? conversationId,
+    required String question,
+    required String answer,
+    required String reason,
+    String? details,
+  }) async {
+    _requireLogin();
+    assistantReports.add({
+      'conversation_id': conversationId,
+      'question': question,
+      'answer': answer,
+      'reason': reason,
+      'details': details,
+    });
+  }
+
   final List<String> confirmed = [];
+
+  /// Failures the next confirmations meet, in order.
+  final List<ApiException> confirmErrors = [];
 
   @override
   Future<PendingOperation> confirmOperation(String id) async {
+    if (confirmErrors.isNotEmpty) throw confirmErrors.removeAt(0);
     confirmed.add(id);
     return PendingOperation(
       id: id,

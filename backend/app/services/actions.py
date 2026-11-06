@@ -21,7 +21,7 @@ from app.models import (
     Source,
     VerificationRecord,
 )
-from app.services.common import RECENT_WINDOW, Text2, now, text2
+from app.services.common import RECENT_WINDOW, DailyAllowance, Text2, now, text2
 from app.services.publishers import publisher_en
 
 VerificationStatus = Literal[
@@ -162,7 +162,8 @@ def _recent_successes(db: Session, action_ids: list[str]) -> dict[str, int]:
     if not action_ids:
         return {}
     rows = db.execute(
-        select(ActionVersion.action_id, func.count(Execution.id))
+        # People, not runs: finishing the same guide again doesn't count twice.
+        select(ActionVersion.action_id, func.count(func.distinct(Execution.user_id)))
         .join(Execution, Execution.action_version_id == ActionVersion.id)
         .where(
             ActionVersion.action_id.in_(action_ids),
@@ -270,7 +271,9 @@ def get_action(db: Session, action_id: str) -> ActionDetail:
     summary = _summary(action, v, _recent_successes(db, [action.id]), _last_verified(db, [v.id]))
     stuck = dict(
         db.execute(
-            select(ExecutionFeedback.step_id, func.count())
+            # People stuck at each step, however often each of them said so.
+            select(ExecutionFeedback.step_id, func.count(func.distinct(Execution.user_id)))
+            .join(Execution, Execution.id == ExecutionFeedback.execution_id)
             .where(
                 ExecutionFeedback.action_version_id == v.id,
                 ExecutionFeedback.kind == "stuck",
@@ -435,6 +438,10 @@ def finish_execution(
     return _execution_out(db, execution)
 
 
+MAX_FEEDBACK_PER_DAY = 30  # stuck / different / outdated reports per person
+_new_feedback = DailyAllowance("feedback")
+
+
 def add_feedback(
     db: Session, user: CurrentUser, execution_id: str, body: FeedbackIn
 ) -> FeedbackOut:
@@ -445,6 +452,8 @@ def add_feedback(
         step = db.get(ActionStep, body.step_id)
         if step is None or step.action_version_id != execution.action_version_id:
             raise not_found("step_not_found")
+    if not _new_feedback.take(user.id, MAX_FEEDBACK_PER_DAY):
+        raise ApiError(429, "daily_limit_reached")
     voice = (body.original_voice or "").strip() or None
     feedback = ExecutionFeedback(
         execution_id=execution.id,

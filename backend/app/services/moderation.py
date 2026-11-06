@@ -33,7 +33,7 @@ from app.models import (
     VerificationRecord,
 )
 from app.rag.index import remove_content
-from app.services.blocking import Persona, experience_persona, find_block
+from app.services.blocking import Persona, comment_persona, experience_persona, find_block
 from app.services.common import DailyAllowance, log_admin, now
 from app.services.experiences import delete_experiences
 from app.services.metrics import forget_activity
@@ -86,6 +86,9 @@ class ReportedItem(BaseModel):
     notes: list[str]
     report_count: int
     first_reported_at: datetime
+    # Staff only: the account that wrote the reported content (None once it is deleted), for
+    # suspending it. Opaque to the app.
+    author_ref: str | None = None
 
 
 class ResolveIn(BaseModel):
@@ -205,7 +208,7 @@ def report_queue(db: Session, status: str) -> list[ReportedItem]:
         grouped.setdefault((r.target_type, r.target_id), []).append(r)
     items = []
     for (target_type, target_id), group in grouped.items():
-        target_status, text = _target_state(db, target_type, target_id)
+        target_status, text, author = _target_state(db, target_type, target_id)
         reasons: dict[str, int] = {}
         for r in group:
             reasons[r.reason] = reasons.get(r.reason, 0) + 1
@@ -220,22 +223,26 @@ def report_queue(db: Session, status: str) -> list[ReportedItem]:
                 notes=[r.note for r in group if r.note],
                 report_count=len(group),
                 first_reported_at=group[0].created_at,
+                author_ref=author,
             )
         )
     return items
 
 
-def _target_state(db: Session, target_type: str, target_id: str) -> tuple[str | None, str | None]:
-    """Status (as published/hidden) and text of a reported post or comment."""
+def _target_state(
+    db: Session, target_type: str, target_id: str
+) -> tuple[str | None, str | None, str | None]:
+    """Status (as published/hidden), text and author of a reported post or comment."""
     if target_type == "comment":
         comment = db.get(ExperienceComment, target_id)
         if comment is None:
-            return None, None
-        return ("hidden" if comment.status == "hidden" else "published"), comment.body
+            return None, None, None
+        status = "hidden" if comment.status == "hidden" else "published"
+        return status, comment.body, comment.author_id
     experience = db.get(Experience, target_id)
     if experience is None:
-        return None, None
-    return experience.status, experience.original_voice
+        return None, None, None
+    return experience.status, experience.original_voice, experience.author_id
 
 
 def resolve_report(db: Session, actor: CurrentUser, report_id: str, body: ResolveIn) -> str:
@@ -298,22 +305,34 @@ def block_author(db: Session, user: CurrentUser, experience_id: str) -> BlockOut
     experience = db.get(Experience, experience_id)
     if experience is None or experience.status == "draft":
         raise not_found("experience_not_found")
-    if experience.author_id == user.id:
+    return _block(db, user, experience.author_id, experience_persona(experience.author_display))
+
+
+def block_commenter(db: Session, user: CurrentUser, comment_id: str) -> BlockOut:
+    """Block the author of a comment, in the persona the comment shows (as for posts)."""
+    comment = db.get(ExperienceComment, comment_id)
+    post = db.get(Experience, comment.experience_id) if comment is not None else None
+    if comment is None or post is None:
+        raise not_found("comment_not_found")
+    return _block(db, user, comment.author_id, comment_persona(post, comment))
+
+
+def _block(db: Session, user: CurrentUser, author_id: str, persona: Persona) -> BlockOut:
+    if author_id == user.id:
         raise ApiError(422, "cannot_block_self")
-    persona = experience_persona(experience.author_display)
-    block = find_block(db, user.id, experience.author_id, persona)
+    block = find_block(db, user.id, author_id, persona)
     if block is not None:
         return _block_out(block)
     # Counts every new block, so unblocking and blocking again still uses the allowance.
     if not _new_blocks.take(user.id, MAX_BLOCKS_PER_DAY):
         raise ApiError(429, "daily_limit_reached")
-    block = UserBlock(blocker_id=user.id, blocked_id=experience.author_id, persona=persona)
+    block = UserBlock(blocker_id=user.id, blocked_id=author_id, persona=persona)
     db.add(block)
     try:
         db.commit()
     except IntegrityError:  # the same block sent twice at once
         db.rollback()
-        block = find_block(db, user.id, experience.author_id, persona)
+        block = find_block(db, user.id, author_id, persona)
         if block is None:
             raise
     return _block_out(block)
@@ -359,6 +378,35 @@ def set_role(db: Session, actor: CurrentUser, user_id: str, body: RoleIn) -> Non
     target.role = body.role
     log_admin(db, actor, "set_role", "user", user_id, role=body.role)
     db.commit()
+
+
+# ---------- suspension ----------
+
+
+def set_suspended(db: Session, actor: CurrentUser, user_id: str, suspended: bool) -> None:
+    """An admin stops an account from writing (or lets it again); it can still read and delete
+    itself. Reviewers and admins are never suspended: change their role first."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise not_found("user_not_found")
+    if target.role in ("reviewer", "admin"):
+        raise ApiError(422, "cannot_suspend_staff")
+    if suspended and target.suspended_at is None:
+        target.suspended_at = now()
+    elif not suspended:
+        target.suspended_at = None
+    log_admin(db, actor, "suspend" if suspended else "unsuspend", "user", user_id)
+    db.commit()
+
+
+def suspend_report_author(db: Session, actor: CurrentUser, report_id: str) -> None:
+    report = db.get(Report, report_id)
+    if report is None:
+        raise not_found("report_not_found")
+    _, _, author = _target_state(db, report.target_type, report.target_id)
+    if author is None:
+        raise not_found("user_not_found")
+    set_suspended(db, actor, author, True)
 
 
 # ---------- account deletion (B-17) ----------

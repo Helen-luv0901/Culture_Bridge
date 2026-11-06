@@ -8,9 +8,13 @@ import 'api_client.dart';
 /// Sends errors the app didn't handle to the server log (`POST /api/client-errors`), so a
 /// crash on someone's phone shows up in Cloud Logging instead of nowhere.
 class ErrorReporter {
-  ErrorReporter(this.api, {this.limit = 20});
+  ErrorReporter(this.api, {this.limit = 20, String Function()? route})
+    : route = route ?? (() => '');
 
   final ApiClient api;
+
+  /// The screen the person is on (the router's location; an app has no page address).
+  final String Function() route;
 
   /// Reports per app session; a broken screen that rebuilds shouldn't send hundreds.
   final int limit;
@@ -39,11 +43,19 @@ class ErrorReporter {
       await api.post('/client-errors', {
         'message': _clip('$error', 1000),
         'stack': ?(stack == null ? null : _clip('$stack', 4000)),
-        'route': _clip(Uri.base.path, 300),
+        'route': _clip(_route(), 300),
         'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
       });
     } on Exception {
       // Offline or the server is down: the error stays in the device log only.
+    }
+  }
+
+  String _route() {
+    try {
+      return route();
+    } on Object {
+      return '';
     }
   }
 

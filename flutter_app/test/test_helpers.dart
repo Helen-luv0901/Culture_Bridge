@@ -38,6 +38,14 @@ class MemoryPreferences implements PreferencesRepository {
     savedGuides = {...ids};
   }
 
+  /// Seen by default, so tests that ask the assistant aren't stopped by the notice.
+  @override
+  bool aiNoticeSeen = true;
+  @override
+  Future<void> saveAiNoticeSeen() async {
+    aiNoticeSeen = true;
+  }
+
   @override
   bool settled = false;
   @override

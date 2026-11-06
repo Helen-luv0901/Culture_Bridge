@@ -31,6 +31,7 @@ package = false
 testpaths = ["tests"]
 pythonpath = ["."]
 filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
+markers = ["real_terms: run with the real terms-of-use gate (other tests skip it)"]
 
 [tool.ruff]
 line-length = 100

@@ -23,7 +23,8 @@ from app.models import (
     User,
 )
 from app.rag.index import remove_content
-from app.services.common import now
+from app.services import content_filter
+from app.services.common import DailyAllowance, now
 from app.services.experiences.queries import (
     _category,
     _counts,
@@ -97,6 +98,7 @@ def _next_summary_number(db: Session, experience_id: str) -> int:
 
 
 def create_draft(db: Session, user: CurrentUser, body: DraftIn) -> MyExperience:
+    content_filter.check(body.original_voice)
     if body.different_from_id:
         _require_public(db, body.different_from_id)
     experience = Experience(
@@ -124,6 +126,7 @@ def create_draft(db: Session, user: CurrentUser, body: DraftIn) -> MyExperience:
 def update_draft(
     db: Session, user: CurrentUser, experience_id: str, body: DraftUpdate
 ) -> MyExperience:
+    content_filter.check(body.original_voice)
     experience = _own_draft(db, user, experience_id)
     for field in ("topic_id", "identity_type", "original_voice", "source_locale"):
         value = getattr(body, field)
@@ -213,6 +216,8 @@ def publish(db: Session, user: CurrentUser, experience_id: str, body: PublishIn)
         account = db.get(User, user.id)
         if account is None or not getattr(account, body.author_display):
             raise ApiError(422, f"{body.author_display}_missing")
+    content_filter.check(summary.situation, summary.feeling_or_attempt, summary.reminder)
+    _count_post(user)
     experience.author_display = body.author_display
     summary.confirmed_by = user.id
     summary.confirmed_at = now()
@@ -225,30 +230,19 @@ def publish(db: Session, user: CurrentUser, experience_id: str, body: PublishIn)
 
 
 MAX_POSTS_PER_DAY = 20
+# Counted when a post is published; deleting it does not give the count back.
+_new_posts = DailyAllowance("posts")
 
 
-def _posts_today(db: Session, user: CurrentUser) -> int:
-    local_midnight = datetime.combine(
-        now().astimezone(_TAIPEI).date(), datetime.min.time(), _TAIPEI
-    )
-    return (
-        db.scalar(
-            select(func.count())
-            .select_from(Experience)
-            .where(
-                Experience.author_id == user.id,
-                Experience.created_at >= local_midnight.astimezone(UTC),
-            )
-        )
-        or 0
-    )
+def _count_post(user: CurrentUser) -> None:
+    """Called once a post is valid, so a mistaken one doesn't use up the day's allowance."""
+    if not _new_posts.take(user.id, MAX_POSTS_PER_DAY):
+        raise ApiError(429, "daily_limit_reached")
 
 
 def create_post(db: Session, user: CurrentUser, body: PostIn) -> PublicExperience:
     """Publish a post exactly as written; the author confirms their own words."""
-    # Each post is translated and indexed by the AI in the background, so cap them.
-    if _posts_today(db, user) >= MAX_POSTS_PER_DAY:
-        raise ApiError(429, "daily_limit_reached")
+    content_filter.check(body.title, body.original_voice, *body.tags)
     if body.different_from_id:
         _require_public(db, body.different_from_id)
     if body.action_id:
@@ -259,6 +253,8 @@ def create_post(db: Session, user: CurrentUser, body: PostIn) -> PublicExperienc
         account = db.get(User, user.id)
         if account is None or not getattr(account, body.author_display):
             raise ApiError(422, f"{body.author_display}_missing")
+    # Each post is translated and indexed by the AI in the background, so cap them.
+    _count_post(user)
     experience = Experience(
         author_id=user.id,
         topic_id=topic_for(body.category),

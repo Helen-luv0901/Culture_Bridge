@@ -203,7 +203,7 @@ void main() {
     expect(find.byKey(const Key('board-card-official')), findsNothing);
     expect(find.byType(StudentPostCard), findsNothing);
     expect(find.byKey(const Key('sort-new')), findsNothing);
-    expect(find.text('#夜市'), findsOneWidget);
+    expect(find.text('#夜市'), findsNothing); // no popular tags under the boards
 
     await tap(tester, find.byKey(const Key('board-card-life')));
     final router = GoRouter.of(

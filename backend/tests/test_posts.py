@@ -186,7 +186,7 @@ def test_comments_replies_likes_and_deletion(api):
     assert listed[0]["mine"] is False
     assert api.get(f"/api/experiences/{item['id']}").json()["comment_count"] == 3
 
-    assert api.delete(f"/api/comments/{first['id']}", headers=MEI).status_code == 403
+    assert api.delete(f"/api/comments/{first['id']}", headers=LIN).status_code == 403
     assert api.delete(f"/api/comments/{first['id']}", headers=KAI).status_code == 204
     assert api.get(url).json() == []  # its replies went with it
 

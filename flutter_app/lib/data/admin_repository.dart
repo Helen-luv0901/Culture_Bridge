@@ -89,6 +89,20 @@ class AdminRepository {
   Future<void> resolveReport(String reportId, String action) =>
       api.post('/admin/reports/$reportId/resolve', {'action': action});
 
+  /// Suspends the author of the reported content (admins only).
+  Future<void> suspendReportAuthor(String reportId) =>
+      api.post('/admin/reports/$reportId/suspend-author');
+
+  /// Reports about assistant answers, newest first; [status] is 'open' or 'resolved'.
+  Future<List<AssistantReportItem>> assistantReports(String status) async => [
+    for (final r in await api.get('/admin/assistant-reports', {
+      'status': status,
+    }) as List)
+      AssistantReportItem.fromJson(r as Json),
+  ];
+  Future<void> resolveAssistantReport(String id, {String? note}) =>
+      api.post('/admin/assistant-reports/$id/resolve', {'note': note});
+
   Future<UsageStats> stats(int days) async =>
       UsageStats(await api.get('/admin/stats', {'days': '$days'}) as Json);
   Future<List<StaffMember>> staff() async => [

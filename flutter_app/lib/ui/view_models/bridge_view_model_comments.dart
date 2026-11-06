@@ -35,6 +35,7 @@ mixin _BridgeComments on _BridgeCore {
       showNotice(pair('已留言', 'Comment posted'));
       return null;
     } on ApiException catch (e) {
+      _noteTerms(e);
       return errorText(e);
     }
   }
@@ -57,6 +58,8 @@ mixin _BridgeComments on _BridgeCore {
       );
       notifyListeners();
     } on ApiException catch (e) {
+      // 409: already liked (or not), as asked: show the list as the server has it.
+      if (e.status == 409) return loadComments(experienceId);
       showNotice(errorText(e));
     }
   }

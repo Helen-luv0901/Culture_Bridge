@@ -10,6 +10,7 @@ The app is large (main.dart.js, CanvasKit, fonts), so two things keep it quick t
   a file they already have is answered with 304 Not Modified instead of being sent again.
 """
 
+import html
 import mimetypes
 import os
 from pathlib import Path, PurePosixPath
@@ -17,16 +18,42 @@ from pathlib import Path, PurePosixPath
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
+from app.core.config import get_settings
+
 STATIC = Path(__file__).with_name("static")
 _NO_CACHE = {"Cache-Control": "no-cache"}
 GZIP_SUFFIX = ".gz"
+NO_SUPPORT_EMAIL = ("［客服信箱待設定］", "[support email not set yet]")
+
+
+def legal_page(name: str) -> HTMLResponse:
+    """A static page with the support email (SUPPORT_EMAIL) filled in."""
+    email = get_settings().support_email
+    if email:
+        link = f'<a href="mailto:{html.escape(email)}">{html.escape(email)}</a>'
+        zh = en = link
+    else:
+        zh, en = NO_SUPPORT_EMAIL
+    page = (STATIC / name).read_text(encoding="utf-8")
+    return HTMLResponse(
+        page.replace("{{SUPPORT_EMAIL_ZH}}", zh).replace("{{SUPPORT_EMAIL_EN}}", en)
+    )
 
 
 def mount_web_app(app: FastAPI, web_dir: Path | None) -> None:
+    # Public pages the app stores require (B-17): how to delete an account and its data, the
+    # privacy policy, and the terms of use with the community guidelines and AI notice.
     @app.get("/account-deletion", include_in_schema=False)
     def account_deletion() -> HTMLResponse:
-        # Public page Google Play requires: how to delete an account and its data (B-17).
-        return HTMLResponse((STATIC / "account-deletion.html").read_text(encoding="utf-8"))
+        return legal_page("account-deletion.html")
+
+    @app.get("/privacy", include_in_schema=False)
+    def privacy() -> HTMLResponse:
+        return legal_page("privacy.html")
+
+    @app.get("/terms", include_in_schema=False)
+    def terms() -> HTMLResponse:
+        return legal_page("terms.html")
 
     if web_dir is None or not (web_dir / "index.html").is_file():
         return

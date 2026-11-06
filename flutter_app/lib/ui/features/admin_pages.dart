@@ -22,6 +22,7 @@ class AdminPage extends StatelessWidget {
     'actions',
     'feedback',
     'reports',
+    'assistant',
     'documents',
     'stats',
     'accounts',
@@ -48,6 +49,7 @@ class AdminPage extends StatelessWidget {
                     'actions' => vm.pair('流程', 'Procedures'),
                     'feedback' => vm.pair('回報審查', 'Reports from students'),
                     'reports' => vm.pair('檢舉', 'Content reports'),
+                    'assistant' => vm.pair('AI 回答回報', 'AI answer reports'),
                     'accounts' => vm.pair('權限', 'Access'),
                     'stats' => vm.pair('數據', 'Numbers'),
                     _ => vm.pair('官方文件', 'Official documents'),
@@ -61,6 +63,7 @@ class AdminPage extends StatelessWidget {
         switch (tab) {
           'feedback' => _FeedbackQueue(admin: admin),
           'reports' => _ReportQueue(admin: admin),
+          'assistant' => _AssistantReportQueue(admin: admin),
           'documents' => _Documents(admin: admin),
           'accounts' when vm.isAdmin => _Accounts(admin: admin),
           'stats' => _Stats(admin: admin),
@@ -83,7 +86,10 @@ class _Loaded<T> extends StatefulWidget {
 
 class _LoadedState<T> extends State<_Loaded<T>> {
   late Future<T> _future = widget.load();
-  void _reload() => setState(() => _future = widget.load());
+  // A block body: setState must not be handed the Future the assignment returns.
+  void _reload() => setState(() {
+    _future = widget.load();
+  });
   @override
   Widget build(BuildContext context) => FutureBuilder<T>(
     future: _future,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/api_models.dart';
 import '../core/design_system.dart';
 import '../core/loading.dart';
+import 'legal.dart';
 import 'post_cards.dart';
 
 /// Share: one page. Title and text are required, one category, AI-suggested tags.
@@ -69,9 +70,20 @@ class _ShareFormState extends State<_ShareForm> {
     if (_voiceError != null) return _voiceFocus.requestFocus();
     if (_categoryError != null) return;
     if (!ensureSignedIn(context)) return;
-    final (error, item) = await vm.publishDraft();
+    if (!await ensureTermsAccepted(context) || !mounted) return;
+    var (error, item) = await vm.publishDraft();
     if (!mounted) return;
-    if (error != null || item == null) {
+    // The server wants the current terms first (they changed, or another device).
+    if (error != null && vm.needsTerms) {
+      if (!await ensureTermsAccepted(context) || !mounted) {
+        setState(() => _publishError = error);
+        return;
+      }
+      (error, item) = await vm.publishDraft();
+      if (!mounted) return;
+    }
+    final published = item;
+    if (error != null || published == null) {
       setState(() => _publishError = error);
       return;
     }
@@ -81,7 +93,7 @@ class _ShareFormState extends State<_ShareForm> {
     final router = GoRouter.of(context);
     router.go('/profile');
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => router.push('/experiences/${item.id}'),
+      (_) => router.push('/experiences/${published.id}'),
     );
   }
 

@@ -16,6 +16,12 @@ abstract class CultureRepository {
   /// A server path such as /api/avatars/… as a URL the app can load.
   String imageUrl(String path);
 
+  /// A page on the server (such as /terms) as a full URL, on the web and in the apps.
+  String siteUrl(String path);
+
+  /// Accept the terms of use [version]; answers with the updated profile.
+  Future<Profile> acceptTerms(int version);
+
   Future<List<ActionSummary>> actions();
   Future<ActionDetail> action(String id);
   Future<Execution> startExecution(String actionId, String identityType);
@@ -80,6 +86,9 @@ abstract class CultureRepository {
 
   Future<void> report(String experienceId, String reason, String? note);
   Future<void> blockAuthor(String experienceId);
+
+  /// Blocks the author of a comment, the same way as a post's author.
+  Future<void> blockCommenter(String commentId);
   Future<List<BlockInfo>> blocks();
   Future<void> unblock(String blockId);
 
@@ -90,6 +99,15 @@ abstract class CultureRepository {
     Map<String, String>? screen,
   });
   Future<void> clearConversation(String conversationId);
+
+  /// Report an assistant answer (wrong, offensive, harmful…) for staff to look at.
+  Future<void> reportAssistantAnswer({
+    String? conversationId,
+    required String question,
+    required String answer,
+    required String reason,
+    String? details,
+  });
   Future<PendingOperation> confirmOperation(String id);
   Future<PendingOperation> cancelOperation(String id);
 }
@@ -125,6 +143,11 @@ class ApiCultureRepository implements CultureRepository {
   Future<void> deleteAvatar() => api.delete('/me/avatar');
   @override
   String imageUrl(String path) => '${api.baseUrl}$path';
+  @override
+  String siteUrl(String path) => '${api.baseUrl}$path';
+  @override
+  Future<Profile> acceptTerms(int version) async =>
+      Profile.fromJson(await api.post('/me/terms', {'version': version}));
 
   @override
   Future<List<ActionSummary>> actions() async => [
@@ -325,6 +348,9 @@ class ApiCultureRepository implements CultureRepository {
   Future<void> blockAuthor(String experienceId) =>
       api.post('/blocks', {'experience_id': experienceId});
   @override
+  Future<void> blockCommenter(String commentId) =>
+      api.post('/blocks', {'comment_id': commentId});
+  @override
   Future<List<BlockInfo>> blocks() async => [
     for (final item in await api.get('/me/blocks') as List)
       BlockInfo.fromJson(item as Json),
@@ -349,6 +375,26 @@ class ApiCultureRepository implements CultureRepository {
   @override
   Future<void> clearConversation(String conversationId) =>
       api.delete('/assistant/conversations/$conversationId');
+  @override
+  Future<void> reportAssistantAnswer({
+    String? conversationId,
+    required String question,
+    required String answer,
+    required String reason,
+    String? details,
+  }) {
+    String clip(String text, int max) =>
+        text.length <= max ? text : text.substring(0, max);
+    final note = details?.trim() ?? '';
+    return api.post('/assistant/reports', {
+      'conversation_id': conversationId,
+      'question': clip(question, 1000),
+      'answer': clip(answer, 4000),
+      'reason': reason,
+      'details': note.isEmpty ? null : clip(note, 1000),
+    });
+  }
+
   @override
   Future<PendingOperation> confirmOperation(String id) async =>
       PendingOperation.fromJson(

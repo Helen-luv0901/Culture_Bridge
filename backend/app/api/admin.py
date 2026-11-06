@@ -16,7 +16,7 @@ from app.models import KbChunk, KbDocument
 from app.rag.embedder import EmbeddingUnavailable, get_embedder
 from app.rag.index import add_document, sync_in_background
 from app.services import admin_actions as svc
-from app.services import metrics, moderation
+from app.services import assistant_reports, metrics, moderation
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -152,6 +152,32 @@ def report_queue(
     return moderation.report_queue(db, status)
 
 
+@router.post("/reports/{report_id}/suspend-author", status_code=204)
+def suspend_report_author(report_id: str, user: AdminUser, db: DbSession) -> Response:
+    """Suspend whoever wrote the reported post or comment (they can still read)."""
+    moderation.suspend_report_author(db, user, report_id)
+    return Response(status_code=204)
+
+
+@router.get("/assistant-reports")
+def assistant_report_queue(
+    _: StaffUser, db: DbSession, status: assistant_reports.Status = "open"
+) -> list[assistant_reports.AssistantReportItem]:
+    """Reports on AI assistant answers, newest first."""
+    return assistant_reports.queue(db, status)
+
+
+@router.post("/assistant-reports/{report_id}/resolve", status_code=204)
+def resolve_assistant_report(
+    report_id: str,
+    body: assistant_reports.ResolveAssistantReport,
+    user: StaffUser,
+    db: DbSession,
+) -> Response:
+    assistant_reports.resolve(db, user, report_id, body)
+    return Response(status_code=204)
+
+
 def _reindex(background: BackgroundTasks, experience_id: str) -> None:
     background.add_task(
         sync_in_background, get_sessionmaker(), get_embedder(), "experience", experience_id
@@ -204,6 +230,19 @@ def list_staff(_: AdminUser, db: DbSession) -> list[moderation.StaffMember]:
 @router.put("/users/{user_id}/role", status_code=204)
 def set_role(user_id: str, body: moderation.RoleIn, user: AdminUser, db: DbSession) -> Response:
     moderation.set_role(db, user, user_id, body)
+    return Response(status_code=204)
+
+
+@router.post("/users/{user_id}/suspend", status_code=204)
+def suspend(user_id: str, user: AdminUser, db: DbSession) -> Response:
+    """The account can still read and delete itself, but not post, comment, react or save."""
+    moderation.set_suspended(db, user, user_id, True)
+    return Response(status_code=204)
+
+
+@router.post("/users/{user_id}/unsuspend", status_code=204)
+def unsuspend(user_id: str, user: AdminUser, db: DbSession) -> Response:
+    moderation.set_suspended(db, user, user_id, False)
     return Response(status_code=204)
 
 

@@ -10,6 +10,7 @@ abstract class _BridgeCore extends ChangeNotifier {
     required this.preferences,
     this.admin,
     this.livePostsEvery,
+    this.config = const ClientConfig(),
   });
 
   final CultureRepository repository;
@@ -22,6 +23,19 @@ abstract class _BridgeCore extends ChangeNotifier {
 
   /// How often to look for newly published posts while the app is open; null turns it off.
   final Duration? livePostsEvery;
+
+  /// The server's public settings (terms version, legal pages, support email).
+  ClientConfig config;
+
+  /// A page on the server (privacy policy, terms) as a link that works in the apps too.
+  Uri siteUri(String path) => Uri.parse(repository.siteUrl(path));
+
+  /// The server refused a post or comment because the current terms aren't accepted.
+  bool _termsRefused = false;
+
+  void _noteTerms(ApiException e) {
+    if (e.code == 'terms_not_accepted') _termsRefused = true;
+  }
 
   // ---------- language ----------
 
@@ -46,14 +60,56 @@ abstract class _BridgeCore extends ChangeNotifier {
     return switch (code) {
       'network_error' => t('networkError'),
       'login_required' || 'invalid_token' => t('signInNeeded'),
+      'auth_unavailable' => pair(
+        '登入服務暫時無法使用，請稍後再試',
+        'Sign-in is unavailable right now. Please try again later',
+      ),
       'ai_unavailable' => t('aiUnavailable'),
       'ai_daily_limit_reached' => t('aiDailyLimit'),
       'anonymous_post_author' => pair(
         '這篇是匿名發的，作者留言也只能匿名',
         'This post is anonymous, so its author comments anonymously too',
       ),
-      'rate_limited' || 'daily_limit_reached' => t('rateLimited'),
+      'terms_not_accepted' => pair(
+        '發文或留言前，請先同意使用條款',
+        'Please accept the terms of use before posting or commenting',
+      ),
+      'content_not_allowed' => pair(
+        '內容有不允許的字詞，請修改後再送出',
+        "This contains words that aren't allowed. Please edit it and try again",
+      ),
+      'cannot_suspend_staff' => pair(
+        '不能停權工作人員的帳號',
+        "Staff accounts can't be suspended",
+      ),
+      'terms_version_outdated' => pair(
+        '條款剛更新了，請重新開啟 App 後再同意一次',
+        'The terms were just updated. Reopen the app and accept them again',
+      ),
+      'account_suspended' => pair(
+        '你的帳號已被停權，暫時不能發文或互動',
+        'Your account is suspended, so you cannot post or interact for now',
+      ),
+      'daily_limit_reached' => pair(
+        '今天的次數用完了，明天再試',
+        "You've reached today's limit. Try again tomorrow",
+      ),
+      'rate_limited' => t('rateLimited'),
       'already_reported' => t('alreadyReported'),
+      'too_many_saved' => pair(
+        '收藏太多了，先移除一些再收藏',
+        'You have saved too many. Remove some first',
+      ),
+      'experience_not_found' ||
+      'comment_not_found' => pair('這則內容已經不在了', 'This is no longer here'),
+      'internal_error' ||
+      'http_500' ||
+      'http_502' ||
+      'http_503' ||
+      'http_504' => pair(
+        '伺服器忙碌，請稍後再試',
+        'The server is busy. Please try again later',
+      ),
       'avatar_invalid' => pair(
         '這個檔案不是照片，請選 JPG、PNG 或 WebP',
         "That file isn't a photo. Choose a JPG, PNG or WebP",
@@ -79,6 +135,9 @@ abstract class _BridgeCore extends ChangeNotifier {
   }
 
   bool get signedIn => auth.signedIn;
+
+  /// Whether this account still has to accept the current terms (see the account mixin).
+  bool get needsTerms;
 
   // ---------- loading helpers ----------
 

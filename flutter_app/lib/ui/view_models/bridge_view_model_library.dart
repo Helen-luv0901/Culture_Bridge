@@ -67,8 +67,12 @@ mixin _BridgeLibrary on _BridgeCore {
     try {
       await repository.setSaved(item.id, on);
     } on ApiException catch (e) {
-      showNotice(errorText(e));
-      return;
+      // A plain conflict: it was already saved (or removed), as asked: done. Any other
+      // error, including a full list (409 too_many_saved), is shown.
+      if (e.code != 'conflict') {
+        showNotice(errorText(e));
+        return;
+      }
     }
     final list = saved.data;
     saved = on || list == null
@@ -109,7 +113,7 @@ mixin _BridgeLibrary on _BridgeCore {
         _updateItem(detail.item);
         _flipped.remove(item.id);
       } on ApiException catch (e) {
-        showNotice(errorText(e));
+        showNotice(_translationError(e));
       }
       return;
     }
@@ -118,4 +122,14 @@ mixin _BridgeLibrary on _BridgeCore {
         : _flipped.add(item.id);
     notifyListeners();
   }
+
+  /// Why a translation didn't come: offline and today's limit say so; anything else is
+  /// a failed translation (not the "draft saved" text of the AI organizing step).
+  String _translationError(ApiException e) => switch (e.code) {
+    'network_error' ||
+    'daily_limit_reached' ||
+    'rate_limited' ||
+    'experience_not_found' => errorText(e),
+    _ => pair('翻譯失敗，請稍後再試', 'Translation failed. Please try again later'),
+  };
 }

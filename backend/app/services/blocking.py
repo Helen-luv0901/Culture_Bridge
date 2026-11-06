@@ -21,6 +21,13 @@ def experience_persona(author_display: str) -> Persona:
     return "anonymous" if author_display == "anonymous" else "named"
 
 
+def comment_persona(post: Experience, comment: ExperienceComment) -> Persona:
+    """The persona a comment shows; matches _comment_persona_sql."""
+    if comment.author_id == post.author_id:
+        return experience_persona(post.author_display)
+    return "named" if comment.author_display == "nickname" else "anonymous"
+
+
 def _experience_persona_sql() -> ColumnElement[str]:
     return case((Experience.author_display == "anonymous", "anonymous"), else_="named")
 
