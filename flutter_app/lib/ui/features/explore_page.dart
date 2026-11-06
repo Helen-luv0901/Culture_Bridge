@@ -44,7 +44,6 @@ class ExplorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
     final q = query.trim();
     final sidebar = AppLayout.of(context) != AppLayout.phone;
     return FlowBody(
@@ -68,7 +67,6 @@ class ExplorePage extends StatelessWidget {
           _SearchResults(query: q, category: category),
         ] else if (category == 'all') ...[
           _BoardCards(sort: sort),
-          _PopularTags(title: vm.pair('熱門標籤', 'Popular tags')),
         ] else ...[
           _BoardBack(sort: sort),
           _PostFeed(category: category, sort: sort),
