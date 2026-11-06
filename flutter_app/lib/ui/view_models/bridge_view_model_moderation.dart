@@ -14,9 +14,16 @@ mixin _BridgeModeration on _BridgeCore, _BridgeLibrary, _BridgeComments {
     }
   }
 
-  Future<bool> blockAuthor(String experienceId) async {
+  Future<bool> blockAuthor(String experienceId) =>
+      _block(() => repository.blockAuthor(experienceId));
+
+  /// Block whoever wrote a comment; their posts and comments disappear like a post author's.
+  Future<bool> blockCommenter(String commentId) =>
+      _block(() => repository.blockCommenter(commentId));
+
+  Future<bool> _block(Future<void> Function() send) async {
     try {
-      await repository.blockAuthor(experienceId);
+      await send();
     } on ApiException catch (e) {
       showNotice(errorText(e));
       return false;

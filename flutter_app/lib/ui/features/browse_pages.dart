@@ -60,32 +60,48 @@ class ModerationMenu extends StatelessWidget {
   }
 }
 
-/// Asks for a reason, then sends the report with [send] (a post or a comment).
+/// Asks for a reason, then sends the report with [send] (a post, a comment, or with
+/// [reasons] and [title] of its own, an assistant answer).
 Future<void> showReportDialog(
   BuildContext context,
-  Future<bool> Function(String reason, String? note) send,
-) {
+  Future<bool> Function(String reason, String? note) send, {
+  Map<String, (String, String)>? reasons,
+  (String, String)? title,
+  Key? noteKey,
+}) {
   final vm = BridgeScope.of(context);
   return showDialog<void>(
     context: context,
     builder: (_) => BridgeScope(
       viewModel: vm,
-      child: ReportDialog(send: send),
+      child: ReportDialog(
+        send: send,
+        reasons: reasons ?? ReportDialog.contentReasons,
+        title: title,
+        noteKey: noteKey,
+      ),
     ),
   );
 }
 
 class ReportDialog extends StatefulWidget {
-  const ReportDialog({super.key, required this.send});
+  const ReportDialog({
+    super.key,
+    required this.send,
+    this.reasons = contentReasons,
+    this.title,
+    this.noteKey,
+  });
   final Future<bool> Function(String reason, String? note) send;
-  @override
-  State<ReportDialog> createState() => _ReportDialogState();
-}
 
-class _ReportDialogState extends State<ReportDialog> {
-  String? _reason;
-  final _note = TextEditingController();
-  static const reasons = {
+  /// Reason code to its label (zh, en).
+  final Map<String, (String, String)> reasons;
+
+  /// Defaults to "Report this experience".
+  final (String, String)? title;
+  final Key? noteKey;
+
+  static const contentReasons = {
     'spam': ('垃圾訊息或廣告', 'Spam or advertising'),
     'harassment': ('騷擾或霸凌', 'Harassment or bullying'),
     'hate': ('仇恨或歧視', 'Hate or discrimination'),
@@ -94,6 +110,14 @@ class _ReportDialogState extends State<ReportDialog> {
     'misinformation': ('錯誤或誤導的資訊', 'False or misleading information'),
     'other': ('其他', 'Other'),
   };
+
+  @override
+  State<ReportDialog> createState() => _ReportDialogState();
+}
+
+class _ReportDialogState extends State<ReportDialog> {
+  String? _reason;
+  final _note = TextEditingController();
 
   @override
   void dispose() {
@@ -105,7 +129,12 @@ class _ReportDialogState extends State<ReportDialog> {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     return AlertDialog(
-      title: Text(vm.t('reportTitle'), style: displayStyle(18)),
+      title: Text(
+        widget.title == null
+            ? vm.t('reportTitle')
+            : vm.pair(widget.title!.$1, widget.title!.$2),
+        style: displayStyle(18),
+      ),
       content: SingleChildScrollView(
         child: RadioGroup<String>(
           groupValue: _reason,
@@ -113,13 +142,14 @@ class _ReportDialogState extends State<ReportDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (final entry in reasons.entries)
+              for (final entry in widget.reasons.entries)
                 RadioListTile<String>(
                   value: entry.key,
                   activeColor: Palette.moss,
                   title: Text(vm.pair(entry.value.$1, entry.value.$2)),
                 ),
               TextField(
+                key: widget.noteKey,
                 controller: _note,
                 maxLength: 1000,
                 decoration: InputDecoration(labelText: vm.t('tellMore')),

@@ -105,6 +105,18 @@ class _AppShellState extends State<AppShell> {
     context.go(AppShell.tabs[_index]);
   }
 
+  /// Android's back button or gesture when no page is stacked to go back to: a tab goes
+  /// Home and any other page does what the header's back arrow does. Home closes the app.
+  void _systemBack(BuildContext context) {
+    final path = widget.uri.path;
+    if (path == '/') return;
+    if (_isTabRoot) {
+      context.go('/');
+      return;
+    }
+    _back(context);
+  }
+
   void _goTab(BuildContext context, int i) => context.go(AppShell.tabs[i]);
 
   void _showNotice(BuildContext context) {
@@ -170,22 +182,28 @@ class _AppShellState extends State<AppShell> {
                 Expanded(
                   child: phone
                       ? content
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Semantics(
-                              role: SemanticsRole.navigation,
-                              container: true,
-                              label: navLabel,
-                              child: _Sidebar(
-                                compact: layout == AppLayout.tablet,
-                                index: _index,
-                                onTap: (i) => _goTab(context, i),
-                                uri: widget.uri,
+                      // A phone on its side (tablet layout) keeps the menu and the page
+                      // clear of the notch and the rounded corners.
+                      : SafeArea(
+                          top: false,
+                          bottom: false,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Semantics(
+                                role: SemanticsRole.navigation,
+                                container: true,
+                                label: navLabel,
+                                child: _Sidebar(
+                                  compact: layout == AppLayout.tablet,
+                                  index: _index,
+                                  onTap: (i) => _goTab(context, i),
+                                  uri: widget.uri,
+                                ),
                               ),
-                            ),
-                            Expanded(child: content),
-                          ],
+                              Expanded(child: content),
+                            ],
+                          ),
                         ),
                 ),
               ],
@@ -216,10 +234,13 @@ class _AppShellState extends State<AppShell> {
           : null,
     );
     // The assistant sits above everything, the phone's tab bar included; back closes it.
+    // With nothing stacked to go back to, back leaves the app only from Home.
     return PopScope(
-      canPop: !vm.assistantOpen,
+      canPop: !vm.assistantOpen && widget.uri.path == '/',
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && vm.assistantOpen) vm.closeAssistant();
+        if (didPop) return;
+        if (vm.assistantOpen) return vm.closeAssistant();
+        _systemBack(context);
       },
       child: Stack(
         children: [

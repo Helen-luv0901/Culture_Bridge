@@ -1,5 +1,6 @@
-import 'dart:typed_data';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +11,7 @@ import '../core/loading.dart';
 import 'account_pages.dart';
 import 'browse_pages.dart';
 import 'home_page.dart' show welcomeTitle;
+import 'legal.dart';
 import 'post_cards.dart';
 
 /// 我的: who I am, my posts and what I saved. Settings are one tap away.
@@ -265,11 +267,10 @@ class _MyPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
+    // Cut by characters, so an emoji is never split in half.
     final title = item.title.trim().isNotEmpty
         ? item.title.trim()
-        : item.originalVoice.length > 24
-        ? '${item.originalVoice.substring(0, 24)}…'
-        : item.originalVoice;
+        : clipText(item.originalVoice, 24);
     final parts = [
       switch (item.status) {
         'draft' => vm.pair('草稿，點標題繼續編輯', 'Draft. Tap the title to continue'),
@@ -475,6 +476,11 @@ class SettingsPage extends StatelessWidget {
             onPressed: () => ensureSignedIn(context),
             child: Text(vm.t('signIn')),
           ),
+        SectionLabel(vm.pair('條款與聯絡', 'Terms and contact')),
+        const NoteCard(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: LegalLinks(),
+        ),
       ],
     );
   }
@@ -610,9 +616,41 @@ Future<Uint8List?> Function() pickAvatarPhoto = () async {
   return file?.readAsBytes();
 };
 
+/// On Android the system may close the app while the photo picker is open; the photo picked
+/// then comes back here when the app starts again. Tests replace it.
+Future<Uint8List?> Function() recoverLostAvatarPhoto = () async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+  try {
+    final lost = await ImagePicker().retrieveLostData();
+    if (lost.isEmpty) return null;
+    return await lost.file?.readAsBytes();
+  } on Exception {
+    return null;
+  }
+};
+
 /// The profile photo: change or remove it.
-class _PhotoSetting extends StatelessWidget {
+class _PhotoSetting extends StatefulWidget {
   const _PhotoSetting();
+  @override
+  State<_PhotoSetting> createState() => _PhotoSettingState();
+}
+
+class _PhotoSettingState extends State<_PhotoSetting> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_recover());
+  }
+
+  /// A photo picked just before Android restarted the app is uploaded now.
+  Future<void> _recover() async {
+    final bytes = await recoverLostAvatarPhoto();
+    if (bytes == null || !mounted) return;
+    final vm = BridgeScope.of(context);
+    final error = await vm.setAvatar(bytes);
+    vm.showNotice(error ?? vm.pair('大頭貼已更新', 'Photo updated'));
+  }
 
   Future<void> _change(BuildContext context) async {
     final vm = BridgeScope.of(context);

@@ -170,6 +170,35 @@ class _FeedbackSummaryDialog extends StatelessWidget {
 class _ReportQueue extends StatelessWidget {
   const _ReportQueue({required this.admin});
   final AdminRepository admin;
+
+  /// Admins only: the author can no longer post, comment or react (reading still works).
+  Future<void> _suspendAuthor(
+    BuildContext context,
+    ReportedItem r,
+    VoidCallback reload,
+  ) async {
+    final vm = BridgeScope.of(context);
+    if (!await confirmDialog(
+          context,
+          vm.pair('停權這位作者？', 'Suspend this author?'),
+          vm.pair(
+            '對方將不能再發文、留言、按讚或使用助理，但仍可瀏覽。內容是否隱藏請另外處理。',
+            'They can no longer post, comment, react or use the assistant, but can still '
+                'read. Hide the content separately.',
+          ),
+          confirm: vm.pair('停權', 'Suspend'),
+          danger: true,
+        ) ||
+        !context.mounted) {
+      return;
+    }
+    await _guard(context, () async {
+      await admin.suspendReportAuthor(r.reportId);
+      vm.showNotice(vm.pair('已停權這位作者', 'Author suspended'));
+      reload();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
@@ -217,7 +246,95 @@ class _ReportQueue extends StatelessWidget {
                           }),
                           child: Text(vm.pair('檢舉不成立', 'Dismiss')),
                         ),
+                        if (vm.isAdmin && r.authorRef != null)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Palette.danger,
+                            ),
+                            onPressed: () => _suspendAuthor(context, r, reload),
+                            child: Text(vm.pair('停權作者', 'Suspend author')),
+                          ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Students' reports about assistant answers (wrong, offensive, harmful), newest first;
+/// 「已處理」 once someone has looked at it.
+class _AssistantReportQueue extends StatelessWidget {
+  const _AssistantReportQueue({required this.admin});
+  final AdminRepository admin;
+
+  static const _reasons = {
+    'inaccurate': ('不正確', 'Inaccurate'),
+    'offensive': ('冒犯', 'Offensive'),
+    'harmful': ('有害', 'Harmful'),
+    'other': ('其他', 'Other'),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    const muted = TextStyle(fontSize: 13, color: Palette.muted);
+    return _Loaded<List<AssistantReportItem>>(
+      load: () => admin.assistantReports('open'),
+      builder: (context, items, reload) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (items.isEmpty)
+            Text(
+              vm.pair('沒有待處理的 AI 回答回報。', 'No open reports about AI answers.'),
+            ),
+          for (final r in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PaperCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      [
+                        switch (_reasons[r.reason]) {
+                          final (String, String) label => vm.pair(
+                            label.$1,
+                            label.$2,
+                          ),
+                          null => r.reason,
+                        },
+                        formatDate(r.createdAt),
+                      ].join(' · '),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(vm.pair('問題', 'Question'), style: muted),
+                    Text(r.question),
+                    const SizedBox(height: 6),
+                    Text(
+                      vm.pair('助理的回答', "The assistant's answer"),
+                      style: muted,
+                    ),
+                    Text('「${r.answer}」'),
+                    if ((r.details ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(vm.pair('補充說明', 'Details'), style: muted),
+                      Text(r.details!),
+                    ],
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton(
+                        onPressed: () => _guard(context, () async {
+                          await admin.resolveAssistantReport(r.id);
+                          reload();
+                        }),
+                        child: Text(vm.pair('已處理', 'Handled')),
+                      ),
                     ),
                   ],
                 ),

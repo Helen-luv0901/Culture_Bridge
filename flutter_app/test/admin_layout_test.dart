@@ -110,6 +110,20 @@ Object? _respond(http.Request request) {
         'reasons': {'misinformation': 2, 'personal_info': 1},
         'notes': ['這裡寫了別人的電話號碼'],
         'report_count': 3,
+        'author_ref': 'user-with-a-long-identifier-0001',
+      },
+    ],
+    '/admin/assistant-reports' => [
+      {
+        'id': 'a1',
+        'question': '居留證延期要準備哪些文件？我下個月就到期了，還來得及嗎？' * 2,
+        'answer':
+            'A long answer from the assistant that a student reported. ' * 6,
+        'reason': 'inaccurate',
+        'details': '少了在學證明這一項。',
+        'created_at': '2026-11-01T00:00:00Z',
+        'status': 'open',
+        'conversation_id': 'conversation-with-a-long-identifier-0001',
       },
     ],
     '/admin/kb/documents' => [
@@ -156,6 +170,7 @@ void main() {
     '/admin?tab=actions',
     '/admin?tab=feedback',
     '/admin?tab=reports',
+    '/admin?tab=assistant',
     '/admin?tab=documents',
     '/admin?tab=stats',
     '/admin?tab=accounts',

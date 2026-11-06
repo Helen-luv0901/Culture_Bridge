@@ -45,6 +45,12 @@ class Settings:
     # Every Gemini request (assistant, summaries, translations, tags, embeddings) counts here.
     gemini_daily_calls: int
     demo_content_path: Path
+    # Shown on /privacy, /terms and /account-deletion and handed to the app; None until set.
+    support_email: str | None
+    # Firebase sign-in methods accepted (claim firebase.sign_in_provider): the app offers only
+    # Google and Apple, so anonymous or email/password logins made with the public web API key
+    # are refused.
+    allowed_sign_in_providers: tuple[str, ...]
 
     @property
     def is_development(self) -> bool:
@@ -123,5 +129,11 @@ def get_settings() -> Settings:
                 "DEMO_CONTENT_PATH",
                 str(REPO_ROOT / "flutter_app" / "assets" / "data" / "content.json"),
             )
+        ),
+        support_email=os.getenv("SUPPORT_EMAIL", "").strip() or None,
+        allowed_sign_in_providers=tuple(
+            p.strip()
+            for p in os.getenv("ALLOWED_SIGN_IN_PROVIDERS", "google.com,apple.com").split(",")
+            if p.strip()
         ),
     )

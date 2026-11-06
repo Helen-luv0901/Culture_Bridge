@@ -25,11 +25,28 @@ class CultureBridgeApp extends StatefulWidget {
   });
   final BridgeViewModel viewModel;
   final String? initialLocation;
+
+  static _CultureBridgeAppState? _shown;
+
+  /// The path of the screen on show (for error reports; an app has no page address).
+  static String? get location {
+    final router = _shown?.router;
+    if (router == null) return null;
+    final matches = router.routerDelegate.currentConfiguration;
+    return matches.isEmpty ? null : matches.uri.path;
+  }
+
   @override
   State<CultureBridgeApp> createState() => _CultureBridgeAppState();
 }
 
 class _CultureBridgeAppState extends State<CultureBridgeApp> {
+  @override
+  void initState() {
+    super.initState();
+    CultureBridgeApp._shown = this;
+  }
+
   late final GoRouter router = GoRouter(
     initialLocation: widget.initialLocation,
     // The old "review the AI summary" step is gone: posts publish as written.
@@ -125,6 +142,7 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
 
   @override
   void dispose() {
+    if (CultureBridgeApp._shown == this) CultureBridgeApp._shown = null;
     router.dispose();
     language.dispose();
     super.dispose();

@@ -89,7 +89,11 @@ def test_firebase_verifier_checks_issuer(monkeypatch):
         verifier.verify("t")
     monkeypatch.setattr(
         "app.core.auth.jwt.decode",
-        lambda *a, **k: {"iss": "https://securetoken.google.com/culture-bridge", "sub": "uid1"},
+        lambda *a, **k: {
+            "iss": "https://securetoken.google.com/culture-bridge",
+            "sub": "uid1",
+            "firebase": {"sign_in_provider": "google.com"},
+        },
     )
     assert verifier.verify("t").subject == "firebase:uid1"
 
@@ -117,7 +121,11 @@ def test_firebase_keys_are_fetched_again_when_google_rotates_them(monkeypatch):
     def decode(token, certs, **_):
         if "new-key" not in certs:
             raise ValueError("unknown key id")
-        return {"iss": "https://securetoken.google.com/culture-bridge", "sub": "uid1"}
+        return {
+            "iss": "https://securetoken.google.com/culture-bridge",
+            "sub": "uid1",
+            "firebase": {"sign_in_provider": "google.com"},
+        }
 
     monkeypatch.setattr("app.core.auth.requests.get", get)
     monkeypatch.setattr("app.core.auth.jwt.decode", decode)

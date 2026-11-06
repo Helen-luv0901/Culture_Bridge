@@ -17,6 +17,7 @@ from app.api import (
     me,
     moderation,
 )
+from app.core import terms
 from app.core.body_limit import BodyLimitMiddleware
 from app.core.config import get_settings
 from app.core.db import get_engine
@@ -94,7 +95,18 @@ api.include_router(client_errors.router)
 def client_config() -> dict:
     """Public settings the app reads at startup (so one build works in every environment)."""
     settings = get_settings()
-    return {"environment": settings.env, "firebase": settings.firebase_web}
+    return {
+        "environment": settings.env,
+        "firebase": settings.firebase_web,
+        # The app asks people to accept the terms again when this is above Profile.terms_version.
+        "terms_version": terms.TERMS_VERSION,
+        "legal": {
+            "privacy": "/privacy",
+            "terms": "/terms",
+            "account_deletion": "/account-deletion",
+        },
+        "support_email": settings.support_email,
+    }
 
 
 app.include_router(api)

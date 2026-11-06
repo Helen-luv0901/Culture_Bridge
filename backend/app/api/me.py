@@ -6,11 +6,12 @@ from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
+from app.core import terms
 from app.core.auth import RequiredUser
 from app.core.db import DbSession
 from app.core.errors import ApiError
 from app.models import User
-from app.services import avatars, moderation
+from app.services import avatars, content_filter, moderation
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -23,6 +24,12 @@ class Profile(BaseModel):
     nickname: str | None
     real_name: str | None
     avatar_url: str | None = None
+    # The terms of use / AI notice version accepted; None: never. Compare with /api/config.
+    terms_version: int | None = None
+
+
+class TermsAcceptance(BaseModel):
+    version: int
 
 
 class AvatarUpload(BaseModel):
@@ -56,6 +63,7 @@ def _profile(row: User, db: Session) -> Profile:
         nickname=row.nickname,
         real_name=row.real_name,
         avatar_url=avatars.url_for(db, row.id),
+        terms_version=row.terms_version,
     )
 
 
@@ -68,6 +76,7 @@ def get_me(user: RequiredUser, db: DbSession) -> Profile:
 
 @router.patch("")
 def update_me(body: ProfileUpdate, user: RequiredUser, db: DbSession) -> Profile:
+    content_filter.check(body.nickname, body.real_name)
     row = db.get(User, user.id)
     assert row is not None
     for field in body.model_fields_set:
@@ -75,6 +84,18 @@ def update_me(body: ProfileUpdate, user: RequiredUser, db: DbSession) -> Profile
         if field == "preferred_locale" and value is None:
             continue
         setattr(row, field, value)
+    db.commit()
+    return _profile(row, db)
+
+
+@router.post("/terms")
+def accept_terms(body: TermsAcceptance, user: RequiredUser, db: DbSession) -> Profile:
+    """Accept the current terms of use and AI notice (needed before posting or commenting)."""
+    if body.version != terms.TERMS_VERSION:
+        raise ApiError(422, "terms_version_outdated")
+    row = db.get(User, user.id)
+    assert row is not None
+    row.terms_version = body.version
     db.commit()
     return _profile(row, db)
 

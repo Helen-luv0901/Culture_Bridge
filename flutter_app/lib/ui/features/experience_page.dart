@@ -8,6 +8,7 @@ import '../view_models/bridge_view_model.dart';
 import 'browse_pages.dart';
 import 'guide_stages.dart';
 import 'home_page.dart' show GuideList;
+import 'legal.dart';
 import 'post_cards.dart';
 
 /// A student post: the author's own words, reactions and comments.
@@ -347,17 +348,25 @@ class _CommentsState extends State<_Comments> {
   Future<void> _send() async {
     final vm = BridgeScope.of(context);
     if (!ensureSignedIn(context)) return;
+    final hasText = _text.text.trim().isNotEmpty;
+    if (hasText && (!await ensureTermsAccepted(context) || !mounted)) return;
     setState(() {
       _sending = true;
       _error = null;
     });
-    final error = await vm.addComment(
+    Future<String?> send() => vm.addComment(
       widget.post.id,
       _text.text,
       replyToId: _replyTo?.id,
       signed: _signed,
     );
+    var error = await send();
     if (!mounted) return;
+    // The server wants the current terms first (they changed, or another device).
+    if (error != null && vm.needsTerms) {
+      if (await ensureTermsAccepted(context) && mounted) error = await send();
+      if (!mounted) return;
+    }
     setState(() {
       _sending = false;
       _error = error;
@@ -549,6 +558,74 @@ class _CommentsState extends State<_Comments> {
   ];
 }
 
+/// Report or block the person who wrote a comment; the post's author may also remove it.
+class _CommentMenu extends StatelessWidget {
+  const _CommentMenu({required this.comment, required this.postId});
+  final CommentItem comment;
+  final String postId;
+
+  Future<void> _choose(BuildContext context, String choice) async {
+    final vm = BridgeScope.of(context);
+    final c = comment;
+    if (!ensureSignedIn(context)) return;
+    switch (choice) {
+      case 'report':
+        await showReportDialog(
+          context,
+          (reason, note) => vm.reportComment(c.id, reason, note),
+        );
+      case 'block':
+        if (await confirmDialog(
+          context,
+          vm.pair('封鎖這位留言者？', 'Block this commenter?'),
+          vm.pair(
+            '你將不會再看到這個人的貼文和留言。可以在「設定」解除封鎖。',
+            "You won't see this person's posts or comments. You can unblock them in Settings.",
+          ),
+        )) {
+          await vm.blockCommenter(c.id);
+        }
+      case 'remove':
+        if (await confirmDialog(
+          context,
+          vm.pair('移除這則留言？', 'Remove this comment?'),
+          vm.pair(
+            '留言和底下的回覆都會從你的貼文移除。',
+            'The comment and its replies are removed from your post.',
+          ),
+          confirm: vm.pair('移除', 'Remove'),
+          danger: true,
+        )) {
+          await vm.deleteComment(postId, c);
+        }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return PopupMenuButton<String>(
+      key: Key('comment-menu-${comment.id}'),
+      tooltip: vm.pair('檢舉或封鎖', 'Report or block'),
+      icon: const AppIcon('more', size: 18, color: Palette.muted),
+      color: Palette.high,
+      onSelected: (choice) => _choose(context, choice),
+      itemBuilder: (_) => [
+        PopupMenuItem(value: 'report', child: Text(vm.t('report'))),
+        PopupMenuItem(
+          value: 'block',
+          child: Text(vm.pair('封鎖這位留言者', 'Block this commenter')),
+        ),
+        if (comment.removableByMe)
+          PopupMenuItem(
+            value: 'remove',
+            child: Text(vm.pair('移除留言', 'Remove comment')),
+          ),
+      ],
+    );
+  }
+}
+
 String _commenter(BridgeViewModel vm, CommentItem c) =>
     c.authorName ?? vm.pair('匿名學生', 'Anonymous student');
 
@@ -661,18 +738,7 @@ class _CommentTile extends StatelessWidget {
                           child: Text(vm.t('delete')),
                         )
                       else
-                        TextButton(
-                          style: small,
-                          onPressed: () {
-                            if (!ensureSignedIn(context)) return;
-                            showReportDialog(
-                              context,
-                              (reason, note) =>
-                                  vm.reportComment(c.id, reason, note),
-                            );
-                          },
-                          child: Text(vm.t('report')),
-                        ),
+                        _CommentMenu(comment: c, postId: postId),
                     ],
                   ),
                 ),

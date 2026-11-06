@@ -61,7 +61,11 @@ from app.services.experiences.schemas import (
     clean_tags,
     topic_for,
 )
-from app.services.experiences.translations import translate, translate_in_background
+from app.services.experiences.translations import (
+    translate,
+    translate_in_background,
+    translate_on_request,
+)
 
 __all__ = [
     "MAX_POSTS_PER_DAY",
@@ -110,5 +114,6 @@ __all__ = [
     "topic_for",
     "translate",
     "translate_in_background",
+    "translate_on_request",
     "update_draft",
 ]

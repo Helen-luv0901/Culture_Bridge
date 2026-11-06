@@ -8,6 +8,30 @@ mixin _BridgeAccount
   bool get isStaff => profile?.isStaff ?? false;
   bool get isAdmin => profile?.isAdmin ?? false;
 
+  // ---------- terms of use ----------
+
+  /// The current terms must be accepted before the next post or comment: this account
+  /// accepted none or an older version, or the server just refused for that reason.
+  @override
+  bool get needsTerms {
+    if (!signedIn) return false;
+    if (_termsRefused) return true;
+    final accepted = profile;
+    return accepted != null && accepted.termsVersion != config.termsVersion;
+  }
+
+  /// Accept the current terms. Returns an error message, or null.
+  Future<String?> acceptTerms() async {
+    try {
+      profile = await repository.acceptTerms(config.termsVersion);
+      _termsRefused = false;
+    } on ApiException catch (e) {
+      return errorText(e);
+    }
+    notifyListeners();
+    return null;
+  }
+
   Future<void> start() async {
     if (signedIn) await loadProfile();
   }

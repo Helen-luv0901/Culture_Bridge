@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/auth_service.dart';
 import '../core/design_system.dart';
 import '../core/loading.dart';
+import 'legal.dart';
 
 /// Optional nickname and real name (on My, and once after the first sign-in).
 class NamesForm extends StatefulWidget {
@@ -161,6 +162,8 @@ class _SignInPageState extends State<SignInPage> {
       context.go(
         unnamed ? '/welcome?next=${Uri.encodeComponent(_next)}' : _next,
       );
+    } on SignInCancelled {
+      // Closed Google's sheet: nothing went wrong, the page just stays.
     } catch (_) {
       if (mounted) {
         setState(() => _error = BridgeScope.of(context).t('genericError'));
@@ -213,6 +216,18 @@ class _SignInPageState extends State<SignInPage> {
             label: Text(vm.t('signInWithGoogle')),
           ),
         if (_error != null) ErrorPanel(message: _error!),
+        // As wide as its words, so it is measured against the paper it sits on.
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            vm.pair(
+              '登入即表示你同意使用條款與隱私權政策',
+              'By signing in you agree to the terms of use and the privacy policy',
+            ),
+            style: mutedStyle,
+          ),
+        ),
+        const LegalLinks(dense: true),
       ],
     );
   }

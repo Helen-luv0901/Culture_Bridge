@@ -21,6 +21,10 @@ abstract class PreferencesRepository {
   /// The reader has lived in Taiwan a while, so Home skips the first-month checklist.
   bool get settled;
   Future<void> saveSettled(bool value);
+
+  /// The short "answers come from Google Gemini and can be wrong" notice was shown.
+  bool get aiNoticeSeen;
+  Future<void> saveAiNoticeSeen();
 }
 
 class LocalPreferencesRepository implements PreferencesRepository {
@@ -79,5 +83,12 @@ class LocalPreferencesRepository implements PreferencesRepository {
   @override
   Future<void> saveSettled(bool value) async {
     await preferences.setBool('settled', value);
+  }
+
+  @override
+  bool get aiNoticeSeen => preferences.getBool('aiNoticeSeen') ?? false;
+  @override
+  Future<void> saveAiNoticeSeen() async {
+    await preferences.setBool('aiNoticeSeen', true);
   }
 }

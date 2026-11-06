@@ -1,6 +1,11 @@
-"""Reader reactions (B-14) and experiences saved for later."""
+"""Reader reactions (B-14) and experiences saved for later.
 
-from sqlalchemy import func, select
+Reacting or saving twice (a double tap, a retried request) is not an error: the second request
+answers 200 with the current state, never 409.
+"""
+
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser
@@ -21,11 +26,20 @@ def set_reaction(
     db: Session, user: CurrentUser, experience_id: str, kind: str, on: bool
 ) -> PublicExperience:
     experience = _require_public(db, experience_id)
-    existing = db.get(ExperienceReaction, (experience.id, user.id, kind))
-    if on and existing is None:
-        db.add(ExperienceReaction(experience_id=experience.id, user_id=user.id, kind=kind))
-    elif not on and existing is not None:
-        db.delete(existing)
+    if on:
+        db.execute(
+            insert(ExperienceReaction)
+            .values(experience_id=experience.id, user_id=user.id, kind=kind)
+            .on_conflict_do_nothing()
+        )
+    else:
+        db.execute(
+            delete(ExperienceReaction).where(
+                ExperienceReaction.experience_id == experience.id,
+                ExperienceReaction.user_id == user.id,
+                ExperienceReaction.kind == kind,
+            )
+        )
     db.commit()
     return get_public(db, user, experience_id, None)
 
@@ -50,7 +64,11 @@ def set_saved(
             )
             if (count or 0) >= MAX_SAVED:
                 raise conflict("too_many_saved")
-            db.add(SavedExperience(user_id=user.id, experience_id=experience_id))
+            db.execute(
+                insert(SavedExperience)
+                .values(user_id=user.id, experience_id=experience_id)
+                .on_conflict_do_nothing()
+            )
     elif existing is not None:
         db.delete(existing)
     db.commit()

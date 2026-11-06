@@ -141,7 +141,8 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
     final title = _draft.title.trim();
     final text = _draft.voice.trim();
     final key = '$title\n$text';
-    if (key == _suggestedFor || !signedIn) return;
+    // The terms tell people their drafts go to Gemini; nothing is sent before they agree.
+    if (key == _suggestedFor || !signedIn || needsTerms) return;
     if ((title + text).length < _minSuggestLength) {
       _suggestedFor = key;
       tagSuggestions = const [];
@@ -243,6 +244,7 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
       );
       return (null, item);
     } on ApiException catch (e) {
+      _noteTerms(e);
       return (errorText(e), null);
     } finally {
       publishing = false;

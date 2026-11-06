@@ -76,7 +76,17 @@ def test_account_deletion_page_and_config():
     client = TestClient(main_app)
     page = client.get("/account-deletion")
     assert page.status_code == 200 and "刪除帳號" in page.text and "Delete account" in page.text
-    assert client.get("/api/config").json() == {"environment": "development", "firebase": None}
+    assert client.get("/api/config").json() == {
+        "environment": "development",
+        "firebase": None,
+        "terms_version": 1,
+        "legal": {
+            "privacy": "/privacy",
+            "terms": "/terms",
+            "account_deletion": "/account-deletion",
+        },
+        "support_email": None,
+    }
 
 
 def test_health_routes():

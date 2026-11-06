@@ -68,6 +68,7 @@ class BridgeViewModel extends _BridgeCore
     super.admin,
     bool systemEnglish = false,
     super.livePostsEvery,
+    super.config,
   }) {
     _english = preferences.english ?? systemEnglish;
     _draft = preferences.draft;
@@ -101,6 +102,7 @@ class BridgeViewModel extends _BridgeCore
 
   void _clearPersonalData() {
     profile = null;
+    _termsRefused = false;
     _profileGeneration++;
     _profileTries = 0;
     _profileRetry?.cancel();

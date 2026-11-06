@@ -14,11 +14,12 @@ from app.assistant.operations import OperationError
 from app.assistant.pg_data import PostgresAssistantData
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
 from app.assistant.tools import default_registry
-from app.core.auth import OptionalUser
+from app.core.auth import OptionalUser, RequiredUser
 from app.core.config import get_settings
 from app.core.db import DbSession
 from app.core.errors import ApiError
 from app.core.usage import DatabaseCounter
+from app.services import assistant_reports
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -87,6 +88,14 @@ def post_message(
     return services.assistant.reply(
         body, user, data=PostgresAssistantData(db, user), operations=DbOperationService(db)
     )
+
+
+@router.post("/reports", status_code=status.HTTP_201_CREATED)
+def report_answer(
+    body: assistant_reports.AssistantReportIn, user: RequiredUser, db: DbSession
+) -> assistant_reports.AssistantReportCreated:
+    """Flag an assistant answer as inaccurate, offensive or harmful; staff review it."""
+    return assistant_reports.report_answer(db, user, body)
 
 
 @router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)

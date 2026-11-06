@@ -19,26 +19,102 @@ abstract class AuthService extends ChangeNotifier {
   Future<void> deleteLogin();
 }
 
-/// Firebase web settings: from --dart-define (FIREBASE_API_KEY, FIREBASE_APP_ID,
-/// FIREBASE_PROJECT_ID, FIREBASE_AUTH_DOMAIN, FIREBASE_MESSAGING_SENDER_ID) or, on the web,
-/// from the server's /api/config. They identify the project; they are not secrets.
+/// The person closed the Google sign-in sheet without choosing an account: not an error.
+class SignInCancelled implements Exception {
+  const SignInCancelled();
+}
+
+/// The app was built without the Firebase settings this platform needs.
+class FirebaseSetupError implements Exception {
+  const FirebaseSetupError(this.missing);
+
+  /// The --dart-define that is missing, e.g. FIREBASE_ANDROID_APP_ID.
+  final String missing;
+  @override
+  String toString() =>
+      'Firebase is not set up for this platform: build with --dart-define=$missing=…';
+}
+
+/// Firebase settings. On the web they come from --dart-define (FIREBASE_API_KEY,
+/// FIREBASE_APP_ID, FIREBASE_PROJECT_ID, FIREBASE_AUTH_DOMAIN, FIREBASE_MESSAGING_SENDER_ID)
+/// or the server's /api/config. The Android and iOS apps need their own app id
+/// (FIREBASE_ANDROID_APP_ID / FIREBASE_IOS_APP_ID, or FIREBASE_APP_ID): the server's is the
+/// web app's. They identify the project; they are not secrets.
 class FirebaseConfig {
   const FirebaseConfig(this.options);
   final FirebaseOptions options;
 
-  static FirebaseConfig? fromEnvironment() {
-    const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
-    const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+  /// The --dart-define values this build was made with ('' when not given).
+  static const defines = {
+    'FIREBASE_API_KEY': String.fromEnvironment('FIREBASE_API_KEY'),
+    'FIREBASE_PROJECT_ID': String.fromEnvironment('FIREBASE_PROJECT_ID'),
+    'FIREBASE_APP_ID': String.fromEnvironment('FIREBASE_APP_ID'),
+    'FIREBASE_ANDROID_APP_ID': String.fromEnvironment(
+      'FIREBASE_ANDROID_APP_ID',
+    ),
+    'FIREBASE_IOS_APP_ID': String.fromEnvironment('FIREBASE_IOS_APP_ID'),
+    'FIREBASE_IOS_BUNDLE_ID': String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID'),
+    'FIREBASE_AUTH_DOMAIN': String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
+    'FIREBASE_MESSAGING_SENDER_ID': String.fromEnvironment(
+      'FIREBASE_MESSAGING_SENDER_ID',
+    ),
+  };
+
+  /// The settings for this platform, or null when Firebase isn't set up at all (development
+  /// logins). Throws [FirebaseSetupError] when an app lacks its own Firebase app id.
+  static FirebaseConfig? resolve({
+    required bool web,
+    required TargetPlatform platform,
+    required Map<String, String> defines,
+    Map<String, dynamic>? server,
+  }) {
+    String define(String key) => (defines[key] ?? '').trim();
+    String fromServer(String key) => (server?[key] as String? ?? '').trim();
+    if (web) {
+      final apiKey = define('FIREBASE_API_KEY');
+      final projectId = define('FIREBASE_PROJECT_ID');
+      if (apiKey.isNotEmpty && projectId.isNotEmpty) {
+        return FirebaseConfig(
+          FirebaseOptions(
+            apiKey: apiKey,
+            appId: define('FIREBASE_APP_ID'),
+            projectId: projectId,
+            authDomain: define('FIREBASE_AUTH_DOMAIN'),
+            messagingSenderId: define('FIREBASE_MESSAGING_SENDER_ID'),
+          ),
+        );
+      }
+      return fromJson(server);
+    }
+    String either(String key, String serverKey) {
+      final own = define(key);
+      return own.isNotEmpty ? own : fromServer(serverKey);
+    }
+
+    final apiKey = either('FIREBASE_API_KEY', 'apiKey');
+    final projectId = either('FIREBASE_PROJECT_ID', 'projectId');
     if (apiKey.isEmpty || projectId.isEmpty) return null;
-    return const FirebaseConfig(
+    final platformKey = switch (platform) {
+      TargetPlatform.iOS || TargetPlatform.macOS => 'FIREBASE_IOS_APP_ID',
+      _ => 'FIREBASE_ANDROID_APP_ID',
+    };
+    final appId = define(platformKey).isNotEmpty
+        ? define(platformKey)
+        : define('FIREBASE_APP_ID');
+    if (appId.isEmpty) throw FirebaseSetupError(platformKey);
+    final authDomain = either('FIREBASE_AUTH_DOMAIN', 'authDomain');
+    final bundleId = define('FIREBASE_IOS_BUNDLE_ID');
+    return FirebaseConfig(
       FirebaseOptions(
         apiKey: apiKey,
-        appId: String.fromEnvironment('FIREBASE_APP_ID'),
+        appId: appId,
         projectId: projectId,
-        authDomain: String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
-        messagingSenderId: String.fromEnvironment(
+        messagingSenderId: either(
           'FIREBASE_MESSAGING_SENDER_ID',
+          'messagingSenderId',
         ),
+        authDomain: authDomain.isEmpty ? null : authDomain,
+        iosBundleId: bundleId.isEmpty ? null : bundleId,
       ),
     );
   }
@@ -65,7 +141,10 @@ class FirebaseAuthService extends AuthService {
   }
 
   static Future<FirebaseAuthService> initialize(FirebaseConfig config) async {
-    await Firebase.initializeApp(options: config.options);
+    // A retry after a failed start may find it already set up.
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: config.options);
+    }
     return FirebaseAuthService._(fb.FirebaseAuth.instance);
   }
 
@@ -78,14 +157,23 @@ class FirebaseAuthService extends AuthService {
   @override
   Future<String?> idToken() async => _auth.currentUser?.getIdToken();
 
+  /// Firebase error codes for a sign-in the person cancelled (closed the popup or sheet).
+  static bool isCancelled(String code) =>
+      code == 'popup-closed-by-user' || code.contains('cancel');
+
   @override
   Future<void> signInWithGoogle() async {
     final provider = fb.GoogleAuthProvider()
       ..setCustomParameters({'prompt': 'select_account'});
-    if (kIsWeb) {
-      await _auth.signInWithPopup(provider);
-    } else {
-      await _auth.signInWithProvider(provider);
+    try {
+      if (kIsWeb) {
+        await _auth.signInWithPopup(provider);
+      } else {
+        await _auth.signInWithProvider(provider);
+      }
+    } on fb.FirebaseAuthException catch (e) {
+      if (isCancelled(e.code)) throw const SignInCancelled();
+      rethrow;
     }
   }
 

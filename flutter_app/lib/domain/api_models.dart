@@ -1,5 +1,7 @@
 // Immutable mirrors of the backend's JSON (backend/app/services/*.py). Field names follow the API.
 
+import 'package:flutter/widgets.dart' show StringCharacters;
+
 typedef Json = Map<String, dynamic>;
 
 DateTime? _date(Object? value) =>
@@ -27,6 +29,7 @@ class Profile {
     this.nickname,
     this.realName,
     this.avatarUrl,
+    this.termsVersion,
   });
   factory Profile.fromJson(Json json) => Profile(
     id: json['id'] as String,
@@ -35,6 +38,7 @@ class Profile {
     nickname: json['nickname'] as String?,
     realName: json['real_name'] as String?,
     avatarUrl: json['avatar_url'] as String?,
+    termsVersion: json['terms_version'] as int?,
   );
   final String id;
   final String role;
@@ -46,8 +50,52 @@ class Profile {
 
   /// Server path of the profile photo, if any.
   final String? avatarUrl;
+
+  /// The terms of use version this account accepted; null if never.
+  final int? termsVersion;
   bool get isStaff => role == 'reviewer' || role == 'admin';
   bool get isAdmin => role == 'admin';
+}
+
+/// The terms version this app was written for, used when the server's config is missing.
+const currentTermsVersion = 1;
+
+/// Public settings from `GET /api/config` the screens use: which terms version to accept,
+/// where the legal pages are, and how to reach support.
+class ClientConfig {
+  const ClientConfig({
+    this.termsVersion = currentTermsVersion,
+    this.privacyPath = '/privacy',
+    this.termsPath = '/terms',
+    this.accountDeletionPath = '/account-deletion',
+    this.supportEmail,
+  });
+
+  /// Defaults stand in for anything missing (the server could not be reached).
+  factory ClientConfig.fromJson(Json? json) {
+    final legal = json?['legal'] as Json? ?? const {};
+    final email = (json?['support_email'] as String? ?? '').trim();
+    return ClientConfig(
+      termsVersion: json?['terms_version'] as int? ?? currentTermsVersion,
+      privacyPath: legal['privacy'] as String? ?? '/privacy',
+      termsPath: legal['terms'] as String? ?? '/terms',
+      accountDeletionPath:
+          legal['account_deletion'] as String? ?? '/account-deletion',
+      supportEmail: email.isEmpty ? null : email,
+    );
+  }
+
+  final int termsVersion;
+  final String privacyPath;
+  final String termsPath;
+  final String accountDeletionPath;
+  final String? supportEmail;
+}
+
+/// The first [count] characters of [text] (whole emoji), with … when it was longer.
+String clipText(String text, int count) {
+  final chars = text.characters;
+  return chars.length > count ? '${chars.take(count)}…' : text;
 }
 
 // ---------- procedures ----------
@@ -413,7 +461,7 @@ class ExperienceItem {
     final own = (translated ? translation?.title : null) ?? title;
     if (own.trim().isNotEmpty) return own.trim();
     final text = voice(translated).trim().replaceAll(RegExp(r'\s+'), ' ');
-    return text.length > 24 ? '${text.substring(0, 24)}…' : text;
+    return clipText(text, 24);
   }
 }
 
@@ -463,6 +511,7 @@ class CommentItem {
     this.liked = false,
     this.byPostAuthor = false,
     this.mine = false,
+    this.removableByMe = false,
   });
   factory CommentItem.fromJson(Json json) => CommentItem(
     id: json['id'] as String,
@@ -475,6 +524,7 @@ class CommentItem {
     liked: json['liked'] as bool? ?? false,
     byPostAuthor: json['by_post_author'] as bool? ?? false,
     mine: json['mine'] as bool? ?? false,
+    removableByMe: json['removable_by_me'] as bool? ?? false,
   );
   final String id;
   final String body;
@@ -490,6 +540,9 @@ class CommentItem {
   final bool liked;
   final bool byPostAuthor;
   final bool mine;
+
+  /// The reader may remove it: they wrote it, wrote the post, or are staff.
+  final bool removableByMe;
 }
 
 class SummaryDraftInfo {

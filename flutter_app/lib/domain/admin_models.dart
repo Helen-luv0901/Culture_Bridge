@@ -194,6 +194,7 @@ class ReportedItem {
     required this.reasons,
     required this.notes,
     required this.count,
+    this.authorRef,
   });
   factory ReportedItem.fromJson(Json json) => ReportedItem(
     targetType: json['target_type'] as String? ?? 'experience',
@@ -204,6 +205,7 @@ class ReportedItem {
     reasons: Map<String, int>.from(json['reasons'] as Map),
     notes: List<String>.from(json['notes'] as List),
     count: json['report_count'] as int,
+    authorRef: json['author_ref'] as String?,
   );
 
   /// 'experience' (a post) or 'comment'.
@@ -215,6 +217,45 @@ class ReportedItem {
   final Map<String, int> reasons;
   final List<String> notes;
   final int count;
+
+  /// Staff-only id of the reported content's author (null when unknown), for suspending.
+  final String? authorRef;
+}
+
+/// A student's report about an assistant answer (`/api/admin/assistant-reports`).
+class AssistantReportItem {
+  const AssistantReportItem({
+    required this.id,
+    required this.question,
+    required this.answer,
+    required this.reason,
+    required this.createdAt,
+    required this.status,
+    this.details,
+    this.conversationId,
+  });
+  factory AssistantReportItem.fromJson(Json json) => AssistantReportItem(
+    id: json['id'] as String,
+    question: json['question'] as String,
+    answer: json['answer'] as String,
+    reason: json['reason'] as String,
+    details: json['details'] as String?,
+    createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+    status: json['status'] as String,
+    conversationId: json['conversation_id'] as String?,
+  );
+  final String id;
+  final String question;
+  final String answer;
+
+  /// 'inaccurate', 'offensive', 'harmful' or 'other'.
+  final String reason;
+  final String? details;
+  final DateTime createdAt;
+
+  /// 'open' or 'resolved'.
+  final String status;
+  final String? conversationId;
 }
 
 class KbDocument {

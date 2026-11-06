@@ -170,7 +170,15 @@ mixin _BridgePosts on _BridgeCore {
     try {
       _updateItem(await repository.react(item.id, kind, !reacted(item, kind)));
     } on ApiException catch (e) {
-      showNotice(errorText(e));
+      if (e.status != 409) return showNotice(errorText(e));
+      // Already reacted (a double tap, another device): done; show the server's counts.
+      try {
+        _updateItem(
+          (await repository.experience(item.id, locale: locale)).item,
+        );
+      } on ApiException {
+        // The reaction is in; the counts catch up on the next load.
+      }
     }
   }
 }

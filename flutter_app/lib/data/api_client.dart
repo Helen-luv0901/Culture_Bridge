@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 /// Error body from the backend: {"detail": {"code": "...", "message": "..."}}.
@@ -29,11 +30,35 @@ class ApiClient {
     this.timeout = const Duration(seconds: 30),
   }) : _http = client ?? http.Client();
 
-  /// `--dart-define=API_BASE_URL=https://…` overrides the default (the page's own origin).
-  factory ApiClient.fromEnvironment({required TokenProvider token}) {
-    const configured = String.fromEnvironment('API_BASE_URL');
-    final base = configured.isNotEmpty ? configured : Uri.base.origin;
-    return ApiClient(baseUrl: base, token: token);
+  /// `--dart-define=API_BASE_URL=https://…` overrides the default: the page's own origin
+  /// on the web, the production server in the Android and iOS apps.
+  factory ApiClient.fromEnvironment({required TokenProvider token}) =>
+      ApiClient(
+        baseUrl: resolveBaseUrl(
+          configured: const String.fromEnvironment('API_BASE_URL'),
+          web: kIsWeb,
+          pageOrigin: () => Uri.base.origin,
+        ),
+        token: token,
+      );
+
+  /// The production server, used by the apps when no API_BASE_URL is given.
+  static const productionBaseUrl =
+      'https://culture-bridge-z7gcp33vjq-de.a.run.app';
+
+  /// Where the API is. [pageOrigin] is only asked on the web: an app has no page, and
+  /// `Uri.base.origin` throws there.
+  static String resolveBaseUrl({
+    required String configured,
+    required bool web,
+    required String Function() pageOrigin,
+  }) {
+    final base = configured.trim().isNotEmpty
+        ? configured.trim()
+        : web
+        ? pageOrigin()
+        : productionBaseUrl;
+    return base.endsWith('/') ? base.substring(0, base.length - 1) : base;
   }
 
   final String baseUrl;
