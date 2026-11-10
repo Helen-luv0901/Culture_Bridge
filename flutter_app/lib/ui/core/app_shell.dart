@@ -356,10 +356,6 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
               ],
-              if (phone && uri.path == '/') ...[
-                const _BrandMark(),
-                const SizedBox(width: 10),
-              ],
               if (showBack)
                 IconButton(
                   key: const Key('back'),
@@ -443,23 +439,16 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The app's mark: the bridge in a moss circle.
+/// The team's official logo mark (the purple people and bridge), beside the name.
 class _BrandMark extends StatelessWidget {
   const _BrandMark();
   @override
-  Widget build(BuildContext context) => Container(
-    width: 30,
-    height: 30,
-    alignment: Alignment.center,
-    decoration: const BoxDecoration(
-      color: Palette.moss,
-      shape: BoxShape.circle,
-    ),
-    child: const AppIcon(
-      'bridge',
-      size: 19,
-      color: Palette.onMoss,
-      strokeWidth: 2,
+  Widget build(BuildContext context) => const ExcludeSemantics(
+    child: Image(
+      image: AssetImage('assets/images/logo-mark.png'),
+      width: 30,
+      height: 30,
+      fit: BoxFit.contain,
     ),
   );
 }
