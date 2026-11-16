@@ -19,8 +19,8 @@ void main() {
     '/profile',
     '/signin',
     '/experiences/first-rental',
-    '/actions/arc',
-    '/actions/arc/progress',
+    '/faqs',
+    '/faqs/nisa-1070',
     '/profile/settings',
     '/official',
     '/assistant',
@@ -39,7 +39,6 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         final app = TestApp();
         addTearDown(app.vm.dispose);
-        await app.vm.startAction('arc');
         await app.vm.loadProfile();
         await tester.pumpWidget(
           CultureBridgeApp(viewModel: app.vm, initialLocation: route),

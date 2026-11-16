@@ -56,6 +56,24 @@ class ActionRecord:
 
 
 @dataclass(frozen=True)
+class FaqRecord:
+    """An official question answered by a government agency (MOE NISA site, migration 0016).
+    Texts fall back to the other language when the site has only one."""
+
+    id: str
+    category: Localized
+    question: Localized
+    answer: Localized
+    agency: Localized
+    source: Localized
+    posted_on: str | None
+    url: str
+    identities: tuple[str, ...] = ()
+    # False: the English texts are the Chinese original (the site has no English version).
+    has_english: bool = True
+
+
+@dataclass(frozen=True)
 class ExperienceRecord:
     """Public projection of a published experience (public_experiences): no author fields."""
 
@@ -90,6 +108,10 @@ class ProgressRecord:
 
 
 class AssistantDataSource(Protocol):
+    def search_faqs(self, query: str, limit: int) -> list[FaqRecord]: ...
+
+    def get_faq(self, faq_id: str) -> FaqRecord | None: ...
+
     def search_actions(self, query: str, limit: int) -> list[ActionRecord]: ...
 
     def get_action(self, action_id: str) -> ActionRecord | None: ...
@@ -139,18 +161,29 @@ _DEMO_IDENTITY: dict[str, IdentityType] = {
 }
 
 
+FAQ_PATH = Path(__file__).resolve().parents[1] / "content" / "nisa_faq.json"
+
+
 @dataclass
 class DemoDataSource:
     actions: dict[str, ActionRecord]
     experiences: dict[str, ExperienceRecord]
     progress: dict[str, list[ProgressRecord]] = field(default_factory=dict)
+    faqs: dict[str, FaqRecord] = field(default_factory=dict)
 
     @classmethod
-    def from_file(cls, path: Path) -> "DemoDataSource":
+    def from_file(cls, path: Path, faq_path: Path | None = FAQ_PATH) -> "DemoDataSource":
         raw = json.loads(path.read_text(encoding="utf-8-sig"))
         actions = {card["id"]: _demo_action(card) for card in raw["actionCards"]}
         experiences = {item["id"]: _demo_experience(item) for item in raw["experiences"]}
-        return cls(actions=actions, experiences=experiences)
+        faqs = faq_records(json.loads(faq_path.read_text(encoding="utf-8"))) if faq_path else {}
+        return cls(actions=actions, experiences=experiences, faqs=faqs)
+
+    def search_faqs(self, query: str, limit: int) -> list[FaqRecord]:
+        return rank([(f, *faq_text(f)) for f in self.faqs.values()], query, limit)
+
+    def get_faq(self, faq_id: str) -> FaqRecord | None:
+        return self.faqs.get(faq_id)
 
     def search_actions(self, query: str, limit: int) -> list[ActionRecord]:
         return rank(
@@ -191,6 +224,39 @@ class DemoDataSource:
 
     def prepare_semantic(self, query: str) -> None:
         pass
+
+
+def both(zh: str, en: str) -> Localized:
+    """Either language may be missing; use the other one rather than nothing."""
+    return Localized(zh=zh or en, en=en or zh)
+
+
+def faq_records(raw: dict) -> dict[str, FaqRecord]:
+    """The content file (app/content/nisa_faq.json) as records, for the demo source."""
+    categories = {c["id"]: Localized(c["zh"], c["en"]) for c in raw["categories"]}
+    return {
+        f["id"]: FaqRecord(
+            id=f["id"],
+            category=categories[f["category"]],
+            question=both(f["question_zh"], f["question_en"]),
+            answer=both(f["answer_zh"], f["answer_en"]),
+            agency=both(f["agency_zh"], f["agency_en"]),
+            source=both(f["source_zh"], f["source_en"]),
+            posted_on=f.get("posted_on"),
+            url=f["url"],
+            identities=tuple(f["identities"]),
+            has_english=bool(f["question_en"] and f["answer_en"]),
+        )
+        for f in raw["faqs"]
+    }
+
+
+def faq_text(faq: FaqRecord) -> tuple[str, str]:
+    """(heading, body) for keyword ranking: the question and category weigh double."""
+    return (
+        f"{_both(faq.question)} {_both(faq.category)}".lower(),
+        _both(faq.answer).lower(),
+    )
 
 
 def _localized(zh: str, en: str | None) -> Localized:

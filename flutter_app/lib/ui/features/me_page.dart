@@ -10,7 +10,7 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import 'account_pages.dart';
 import 'browse_pages.dart';
-import 'home_page.dart' show welcomeTitle;
+import 'faq_pages.dart';
 import 'legal.dart';
 import 'post_cards.dart';
 
@@ -29,8 +29,8 @@ class ProfilePage extends StatelessWidget {
         ?.where((e) => e.status == 'published')
         .length;
     final savedCount = vm.signedIn
-        ? (vm.saved.data?.length ?? 0) + vm.savedGuideIds.length
-        : vm.savedGuideIds.length;
+        ? (vm.saved.data?.length ?? 0) + vm.savedFaqIds.length
+        : vm.savedFaqIds.length;
     return FlowBody(
       children: [
         Row(
@@ -88,7 +88,7 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-/// A guest's 我的: what an account is for, then the guides they saved on this device.
+/// A guest's 我的: what an account is for.
 class _GuestProfile extends StatelessWidget {
   const _GuestProfile();
   @override
@@ -112,9 +112,9 @@ class _GuestProfile extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 vm.pair(
-                  '你分享的經驗、收藏的貼文、辦到哪一步，都會記在這裡；也能直接問 AI 助理。',
-                  'Your posts, saved posts and how far you got with each guide are kept '
-                      'here, and you can ask the AI assistant.',
+                  '你分享的經驗和收藏的貼文都會記在這裡；也能直接問 AI 助理。',
+                  'Your posts and saved posts are kept here, and you can ask the AI '
+                      'assistant.',
                 ),
                 style: const TextStyle(fontSize: 15, height: 1.7),
               ),
@@ -375,20 +375,19 @@ class _Saved extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final guideIds = vm.savedGuideIds;
-    final guides = guideIds.isEmpty
+    final faqIds = vm.savedFaqIds;
+    final faqs = faqIds.isEmpty
         ? const <Widget>[]
         : [
-            ResourceView<List<ActionSummary>>(
-              resource: (vm) => vm.actions,
-              load: (vm) => vm.loadActions(),
-              builder: (context, actions) => CardList(
-                children: [
-                  for (final id in guideIds)
-                    if (id == welcomeGuideId || actions.any((a) => a.id == id))
-                      _SavedGuide(id: id, actions: actions),
-                ],
-              ),
+            ResourceView<FaqCatalog>(
+              resource: (vm) => vm.faqs,
+              load: (vm) => vm.loadFaqs(),
+              builder: (context, catalog) {
+                final items = [for (final id in faqIds) ?catalog.item(id)];
+                return items.isEmpty
+                    ? const SizedBox.shrink()
+                    : FaqList(items: items, catalog: catalog);
+              },
             ),
           ];
     final posts = !vm.signedIn
@@ -401,39 +400,20 @@ class _Saved extends StatelessWidget {
             ),
           ];
     final nothing =
-        guideIds.isEmpty && (!vm.signedIn || (vm.saved.data?.isEmpty ?? false));
+        faqIds.isEmpty && (!vm.signedIn || (vm.saved.data?.isEmpty ?? false));
     if (nothing) {
       return EmptyNote(
         title: vm.pair('還沒有收藏', 'Nothing saved yet'),
         body: vm.pair(
-          '看到有用的貼文，按書籤就會存在這裡。',
-          'Tap the bookmark on a useful post to keep it here.',
+          '看到有用的貼文或官方問答，按書籤就會存在這裡。',
+          'Tap the bookmark on a useful post or official answer to keep it here.',
         ),
         action: vm.pair('去首頁看看', 'Go to Home'),
         primary: false,
         onAction: () => context.go('/'),
       );
     }
-    return CardList(children: [...guides, ...posts]);
-  }
-}
-
-class _SavedGuide extends StatelessWidget {
-  const _SavedGuide({required this.id, required this.actions});
-  final String id;
-  final List<ActionSummary> actions;
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    final action = actions.where((a) => a.id == id).firstOrNull;
-    return OfficialPostCard(
-      id: id,
-      pinned: id == welcomeGuideId,
-      title:
-          action?.title.of(vm.english) ??
-          vm.pair(welcomeTitle.$1, welcomeTitle.$2),
-      publishedAt: action?.publishedAt,
-    );
+    return CardList(children: [...faqs, ...posts]);
   }
 }
 

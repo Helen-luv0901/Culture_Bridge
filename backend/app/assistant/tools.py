@@ -13,22 +13,27 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.assistant.data import (
-    ActionRecord,
     AssistantDataSource,
     ExperienceRecord,
+    FaqRecord,
     IdentityType,
     Locale,
     TopicId,
 )
 from app.assistant.knowledge import default_knowledge_base
 from app.assistant.llm import ToolCall, ToolResult, ToolSpec
-from app.assistant.operations import OPERATION_TTL, OperationStore, PendingOperation
-from app.assistant.schemas import ActionCard, Card, ExperienceCard, ScreenAction, ScreenActionType
+from app.assistant.operations import OperationStore, PendingOperation
+from app.assistant.schemas import Card, ExperienceCard, FaqCard, ScreenAction, ScreenActionType
 from app.core.auth import CurrentUser
 
 logger = logging.getLogger(__name__)
 
 EXPERIENCE_NOTICE = "Personal student experience, not verified fact."
+FAQ_NOTICE = (
+    "Official answers from government agencies, published on the Ministry of Education NISA "
+    "site. Cite the answering agency and date. Questions were asked by school staff, so some "
+    "answers talk about what schools must do."
+)
 
 
 @dataclass
@@ -117,28 +122,27 @@ class ToolRegistry:
 # ---------- serializers: locale-resolved, never include author fields ----------
 
 
-def _action_summary(action: ActionRecord, locale: Locale) -> dict[str, Any]:
+def _faq_brief(faq: FaqRecord, locale: Locale) -> dict[str, Any]:
     return {
-        "action_id": action.id,
-        "title": action.title.get(locale),
-        "verification_status": action.verification_status,
-        "last_verified_at": action.last_verified_at,
-        "recent_success_count": action.recent_success_count,
+        "faq_id": faq.id,
+        "question": faq.question.get(locale),
+        "category": faq.category.get(locale),
+        "posted_on": faq.posted_on,
     }
 
 
-def _action_detail(action: ActionRecord, locale: Locale) -> dict[str, Any]:
-    return {
-        **_action_summary(action, locale),
-        "description": action.description.get(locale),
-        "applicable_to": action.applicable_to.get(locale),
-        "location": action.location.get(locale),
-        "steps": [{"position": i, "title": s.get(locale)} for i, s in enumerate(action.steps, 1)],
-        "sources": [
-            {"title": s.title.get(locale), "url": s.url, "publisher": s.publisher, "kind": s.kind}
-            for s in action.sources
-        ],
+def faq_detail(faq: FaqRecord, locale: Locale) -> dict[str, Any]:
+    detail = {
+        **_faq_brief(faq, locale),
+        "answer": faq.answer.get(locale),
+        "answering_agency": faq.agency.get(locale),
+        "source": faq.source.get(locale),
+        "url": faq.url,
+        "applies_to": list(faq.identities),
     }
+    if locale == "en" and not faq.has_english:
+        detail["note"] = "Only the Chinese original exists; translate it in your answer."
+    return detail
 
 
 def _experience_summary(experience: ExperienceRecord, locale: Locale) -> dict[str, Any]:
@@ -172,41 +176,41 @@ def experience_card(experience: ExperienceRecord, locale: Locale) -> ExperienceC
     )
 
 
-def _action_card(action: ActionRecord, locale: Locale) -> ActionCard:
-    return ActionCard(
-        action_id=action.id,
-        title=action.title.get(locale),
-        verification_status=action.verification_status,
-        last_verified_at=action.last_verified_at,
-        recent_success_count=action.recent_success_count,
-        sources=[s.title.get(locale) for s in action.sources],
-        excerpt=_excerpt(action.description.get(locale)),
+def faq_card(faq: FaqRecord, locale: Locale) -> FaqCard:
+    return FaqCard(
+        faq_id=faq.id,
+        question=faq.question.get(locale),
+        category=faq.category.get(locale),
+        answering_agency=faq.agency.get(locale),
+        posted_on=faq.posted_on,
+        excerpt=_excerpt(faq.answer.get(locale)),
+        url=faq.url,
     )
 
 
 # ---------- tools ----------
 
 
-class SearchActionsArgs(ToolArgs):
-    query: str = Field(min_length=1, max_length=200, description="Keywords, e.g. 工作證 or bank")
+class SearchFaqArgs(ToolArgs):
+    query: str = Field(min_length=1, max_length=200, description="Keywords, e.g. 工讀 or ARC")
     limit: int = Field(default=5, ge=1, le=10)
 
 
-def search_actions(args: SearchActionsArgs, ctx: ToolContext) -> dict[str, Any]:
-    found = ctx.data.search_actions(args.query, args.limit)
-    return {"count": len(found), "results": [_action_summary(a, ctx.locale) for a in found]}
+def search_official_faq(args: SearchFaqArgs, ctx: ToolContext) -> dict[str, Any]:
+    found = ctx.data.search_faqs(args.query, args.limit)
+    return {"count": len(found), "results": [_faq_brief(f, ctx.locale) for f in found]}
 
 
-class GetActionArgs(ToolArgs):
-    action_id: str = Field(min_length=1, max_length=100)
+class GetFaqArgs(ToolArgs):
+    faq_id: str = Field(min_length=1, max_length=100)
 
 
-def get_action(args: GetActionArgs, ctx: ToolContext) -> dict[str, Any]:
-    action = ctx.data.get_action(args.action_id)
-    if action is None:
-        return {"found": False, "action_id": args.action_id}
-    ctx.cards[f"action:{action.id}"] = _action_card(action, ctx.locale)
-    return {"found": True, "action": _action_detail(action, ctx.locale)}
+def get_official_faq(args: GetFaqArgs, ctx: ToolContext) -> dict[str, Any]:
+    faq = ctx.data.get_faq(args.faq_id)
+    if faq is None:
+        return {"found": False, "faq_id": args.faq_id}
+    ctx.cards[f"faq:{faq.id}"] = faq_card(faq, ctx.locale)
+    return {"found": True, "notice": FAQ_NOTICE, "faq": faq_detail(faq, ctx.locale)}
 
 
 class SearchExperiencesArgs(ToolArgs):
@@ -248,46 +252,22 @@ def get_experience(args: GetExperienceArgs, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
-class GetMyProgressArgs(ToolArgs):
-    pass
-
-
-def get_my_progress(_: GetMyProgressArgs, ctx: ToolContext) -> dict[str, Any]:
-    if ctx.user is None:
-        return {"requires_login": True, "results": []}
-    records = ctx.data.get_in_progress(ctx.user.id)
-    return {
-        "count": len(records),
-        "results": [
-            {
-                "execution_id": r.execution_id,
-                "action_id": r.action_id,
-                "title": r.action_title.get(ctx.locale),
-                "started_at": r.started_at,
-                "steps": [
-                    {"position": s.position, "title": s.title.get(ctx.locale), "state": s.state}
-                    for s in r.steps
-                ],
-            }
-            for r in records
-        ],
-    }
-
-
 class OpenScreenArgs(ToolArgs):
     screen: ScreenActionType
     target_id: str | None = Field(
         default=None,
         max_length=100,
-        description="action_id for open_action/open_progress, experience_id for open_experience",
+        description="faq_id for open_faq, experience_id for open_experience",
     )
     topic: TopicId | None = Field(default=None, description="Optional filter for open_explore")
 
 
 def open_screen(args: OpenScreenArgs, ctx: ToolContext) -> dict[str, Any]:
     if args.screen in ("open_action", "open_progress"):
-        if not args.target_id or ctx.data.get_action(args.target_id) is None:
-            raise ToolError(f"{args.screen} needs an existing action_id from search_actions")
+        raise ToolError("Procedure guides were replaced by the official Q&A; use open_faq")
+    if args.screen == "open_faq":
+        if not args.target_id or ctx.data.get_faq(args.target_id) is None:
+            raise ToolError("open_faq needs an existing faq_id from search_official_faq")
     elif args.screen == "open_experience":
         if not args.target_id or ctx.data.get_experience(args.target_id) is None:
             raise ToolError("open_experience needs an existing experience_id")
@@ -312,10 +292,10 @@ def semantic_search(args: SemanticSearchArgs, ctx: ToolContext) -> dict[str, Any
         raise ToolError("Semantic search is unavailable right now; use the keyword tools.")
     return {
         **found,
-        "notice": "Official passages: cite title, publisher and date. Student content is "
-        "unverified personal experience, ranked after procedures and official passages; if it "
-        "disagrees with a verified procedure, follow the procedure and suggest checking with "
-        "the school.",
+        "notice": "official_faqs are government answers: cite the answering agency and date. "
+        "Official passages: cite title, publisher and date. Student content is unverified "
+        "personal experience, ranked after the official answers; if it disagrees with them, "
+        "follow the official answer and suggest checking with the school.",
     }
 
 
@@ -334,45 +314,20 @@ def search_app_help(args: SearchAppHelpArgs, ctx: ToolContext) -> dict[str, Any]
     }
 
 
-class ProposeStartActionArgs(ToolArgs):
-    action_id: str = Field(min_length=1, max_length=100)
-
-
-def propose_start_action(args: ProposeStartActionArgs, ctx: ToolContext) -> dict[str, Any]:
-    if ctx.user is None:
-        return {"requires_login": True}
-    if ctx.operations is None:
-        raise ToolError("Starting procedures from the assistant is not available.")
-    action = ctx.data.get_action(args.action_id)
-    if action is None:
-        raise ToolError("Unknown action_id; find it with search_actions first")
-    title = action.title.get(ctx.locale)
-    summary = f"開始辦理「{title}」" if ctx.locale == "zh-Hant" else f"Start “{title}”"
-    operation = ctx.operations.propose_start_action(ctx.user, action.id, summary)
-    ctx.proposed_operations.append(operation)
-    return {
-        "status": "awaiting_user_confirmation",
-        "operation_id": operation.id,
-        "summary": summary,
-        "expires_in_minutes": int(OPERATION_TTL.total_seconds() // 60),
-        "note": "Nothing has been written yet. Ask the user to tap confirm in the app.",
-    }
-
-
 TOOLS: list[Tool] = [
     Tool(
-        "search_actions",
-        "Find official procedures (action cards) such as work permit, ARC, health insurance or "
-        "bank account by keyword. Returns verification status and recent successful completions.",
-        SearchActionsArgs,
-        search_actions,
+        "search_official_faq",
+        "Find official questions and answers from the Ministry of Education NISA site by keyword "
+        "(visa and ARC, part-time work permits, health insurance, scholarships, working in Taiwan "
+        "after graduation...). Answered by government agencies.",
+        SearchFaqArgs,
+        search_official_faq,
     ),
     Tool(
-        "get_action",
-        "Read one procedure: who it applies to, steps, sources, verification status, last "
-        "verified date and successful completions in the last 30 days.",
-        GetActionArgs,
-        get_action,
+        "get_official_faq",
+        "Read one official question in full: the answer, answering agency, date, source and link.",
+        GetFaqArgs,
+        get_official_faq,
     ),
     Tool(
         "search_experiences",
@@ -389,39 +344,26 @@ TOOLS: list[Tool] = [
         get_experience,
     ),
     Tool(
-        "get_my_progress",
-        "Read the signed-in user's procedures in progress and their step states.",
-        GetMyProgressArgs,
-        get_my_progress,
-    ),
-    Tool(
         "open_screen",
-        "Ask the app to navigate after your answer. Only use when the user wants to go somewhere "
-        "or start something; ids must come from earlier tool results.",
+        "Ask the app to navigate after your answer. Only use when the user wants to go somewhere; "
+        "ids must come from earlier tool results.",
         OpenScreenArgs,
         open_screen,
     ),
     Tool(
         "semantic_search",
-        "Search by meaning across official source documents and public student content, for "
-        "questions the procedure cards and keyword search don't cover. Returns citations.",
+        "Search by meaning across the official Q&A, official source documents and public student "
+        "content, for questions keyword search misses. Returns citations.",
         SemanticSearchArgs,
         semantic_search,
     ),
     Tool(
         "search_app_help",
         "Explain how to use the Culture Bridge app: tabs, screens, buttons, sharing, privacy, "
-        "what verification statuses mean, what the assistant can do. Never use it for procedure "
-        "facts such as steps, documents, fees or dates.",
+        "what the assistant can do. Never use it for facts about visas, work, insurance or other "
+        "rules.",
         SearchAppHelpArgs,
         search_app_help,
-    ),
-    Tool(
-        "propose_start_action",
-        "When the user asks to start a procedure, prepare it for their confirmation. This does "
-        "not start anything: the app shows a confirm card and the user decides.",
-        ProposeStartActionArgs,
-        propose_start_action,
     ),
 ]
 

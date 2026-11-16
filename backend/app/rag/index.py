@@ -28,6 +28,7 @@ from app.models import (
     ExperienceTranslation,
     KbChunk,
     KbDocument,
+    OfficialFaq,
 )
 from app.rag.embedder import Embedder, EmbeddingUnavailable
 from app.services.blocking import hides_experience
@@ -246,6 +247,12 @@ def add_document(
 
 # ---------- search (A-22) ----------
 
+ANSWER_CHARS = 1200  # official answers can run long; the assistant needs the substance only
+
+
+def _clip(text: str) -> str:
+    return text if len(text) <= ANSWER_CHARS else text[:ANSWER_CHARS].rstrip() + "…"
+
 
 def semantic_search(
     db: Session,
@@ -295,7 +302,35 @@ def semantic_search(
         .limit(limit)
     ).all()
 
+    # The official Q&A (migration 0016): government answers, ranked with the official passages.
+    faq_distance = ContentEmbedding.embedding.cosine_distance(vector)
+    faqs = db.execute(
+        select(OfficialFaq, faq_distance.label("d"))
+        .join(
+            ContentEmbedding,
+            (ContentEmbedding.content_type == "official_faq")
+            & (ContentEmbedding.content_id == OfficialFaq.id),
+        )
+        .where(OfficialFaq.active.is_(True), faq_distance < cutoff)
+        .order_by(faq_distance)
+        .limit(limit)
+    ).all()
+
     return {
+        "official_faqs": [
+            {
+                "faq_id": faq.id,
+                "question": faq.question_zh or faq.question_en,
+                "question_en": faq.question_en or None,
+                "answer": _clip(faq.answer_zh or faq.answer_en),
+                "answer_en": _clip(faq.answer_en) if faq.answer_en else None,
+                "answering_agency": faq.agency_zh or faq.agency_en,
+                "posted_on": faq.posted_on.isoformat() if faq.posted_on else None,
+                "url": faq.url,
+                "distance": round(float(d), 4),
+            }
+            for faq, d in faqs
+        ],
         "official_passages": [
             {
                 "document_title": doc.title,

@@ -90,17 +90,15 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
     ..._draft.customTags,
   ].take(BridgeViewModel.maxTags).toList();
 
-  ShareDraft _relinked({String? differentFromId, String? actionId}) =>
-      ShareDraft(
-        title: _draft.title,
-        voice: _draft.voice,
-        category: _draft.category,
-        chosenTags: _draft.chosenTags,
-        customTags: _draft.customTags,
-        authorDisplay: _draft.authorDisplay,
-        differentFromId: differentFromId,
-        actionId: actionId,
-      );
+  ShareDraft _relinked({String? differentFromId}) => ShareDraft(
+    title: _draft.title,
+    voice: _draft.voice,
+    category: _draft.category,
+    chosenTags: _draft.chosenTags,
+    customTags: _draft.customTags,
+    authorDisplay: _draft.authorDisplay,
+    differentFromId: differentFromId,
+  );
 
   /// Start a post that answers [experienceId] ("my experience was different").
   void startDifferentExperience(String experienceId, {String? category}) {
@@ -112,12 +110,8 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
     );
   }
 
-  /// Start a post that also shows under the official guide [actionId].
-  void startPostForAction(String actionId) =>
-      _storeDraft(_relinked(actionId: actionId));
-
-  void unlinkDraft({bool post = false, bool guide = false}) =>
-      _storeDraft(_draft.unlinked(post: post, guide: guide));
+  /// Drop the link to the post this draft answers.
+  void unlinkDraft() => _storeDraft(_draft.unlinked());
 
   // AI tag suggestions follow the text, a moment after typing stops.
   List<String> tagSuggestions = const [];
@@ -213,7 +207,6 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
             : 'en',
         authorDisplay: _draft.authorDisplay,
         differentFromId: _draft.differentFromId,
-        actionId: _draft.actionId,
       );
       final replaced = _draft.resumesId;
       if (replaced != null) {
@@ -235,12 +228,10 @@ mixin _BridgeSharing on _BridgeCore, _BridgePosts, _BridgeModeration {
       mine = const Resource();
       final label = categoryLabels[category];
       showNotice(
-        item.actionId != null
-            ? pair('已發布，也貼在官方指南底下', 'Published, also under the guide')
-            : pair(
-                '已發布，首頁和「${label?.$1}」看得到',
-                'Published. It shows on Home and in ${label?.$2}.',
-              ),
+        pair(
+          '已發布，首頁和「${label?.$1}」看得到',
+          'Published. It shows on Home and in ${label?.$2}.',
+        ),
       );
       return (null, item);
     } on ApiException catch (e) {

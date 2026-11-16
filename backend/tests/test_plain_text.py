@@ -28,8 +28,8 @@ def test_bold_never_pairs_across_lines():
 
 def test_the_assistant_never_shows_markdown(make_assistant):
     llm = ScriptedLLM(
-        answer("## 居留證\n1. **首次申請**：入境後 30 天內。\n**RELATED:** action:arc")
+        answer("## 居留證\n1. **首次申請**：入境後 30 天內。\n**RELATED:** faq:nisa-934")
     )
     reply = make_assistant(llm).reply(ask("居留證要準備什麼？"), USER)
     assert reply.text == "居留證\n1. 首次申請：入境後 30 天內。"
-    assert [c.type for c in reply.cards] == ["action"]  # a bolded RELATED line still counts
+    assert [c.type for c in reply.cards] == ["faq"]  # a bolded RELATED line still counts

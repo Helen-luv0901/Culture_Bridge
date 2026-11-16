@@ -457,11 +457,11 @@ step_monitoring() {
   note "到 Monitoring → Alerting 為這個 uptime check 建立 Email 通知（主控台約一分鐘）。"
 }
 
-# ---------- 7. official procedure drafts (D-8) ----------
+# ---------- 7. official Q&A (MOE NISA) ----------
 
 step_import() {
-  bold "7. 匯入官方流程卡草稿（D-8）"
-  note "只建立未發布的草稿與來源；審查者在網頁版後台核對來源、修正後才發布。"
+  bold "7. 匯入官方問答（教育部 NISA）"
+  note "官方問答直接上線，並建立 AI 搜尋用的向量（需要 Gemini 金鑰）。"
   need_instance
   local conn="${PROJECT}:${REGION}:${INSTANCE}" job=culture-bridge-import image
   SA="culture-bridge-run@${PROJECT}.iam.gserviceaccount.com"
@@ -472,15 +472,17 @@ step_import() {
   [[ -n "${image}" ]] || die "找不到 culture-bridge-migrate，請先完成步驟 5（部署）。"
   note "映像檔：${image}"
   if gcloud run jobs describe "${job}" --region="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then
-    run gcloud run jobs update "${job}" --image="${image}" --region="${REGION}" --project="${PROJECT}"
+    run gcloud run jobs update "${job}" --image="${image}" --region="${REGION}" --project="${PROJECT}" \
+      --command=python --args=-m,app.official_faq \
+      --update-secrets=GEMINI_API_KEY=gemini-api-key:latest
   else
     run gcloud run jobs create "${job}" --image="${image}" --region="${REGION}" \
       --project="${PROJECT}" --service-account="${SA}" --set-cloudsql-instances="${conn}" \
-      --set-secrets=DATABASE_URL=database-url:latest \
-      --command=python --args=-m,app.official_content
+      --set-secrets=DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest \
+      --command=python --args=-m,app.official_faq
   fi
   run gcloud run jobs execute "${job}" --region="${REGION}" --project="${PROJECT}" --wait
-  note "完成後到網頁版「管理 → 流程」審查草稿；說明見 docs/content/d8-official-procedures.md"
+  note "完成後 app 的「官方問答」分頁就會顯示；內容來源見 backend/app/content/nisa_faq.json"
 }
 
 # ---------- menu ----------
@@ -564,7 +566,7 @@ Culture Bridge — Google Cloud 設定（專案 ${PROJECT}，區域 ${REGION}）
   4) Firebase 登入
   5) 部署網頁版與後端（A-7）
   6) 監控（A-8）
-  7) 匯入官方流程卡草稿（D-8，部署後）
+  7) 匯入官方問答（教育部 NISA，部署後）
   8) 合併到 main 後自動部署（設定一次）
   9) 刪除舊的試用執行個體（確認新資料庫正常後）
   10) 備份與時間點還原（PITR）

@@ -13,41 +13,21 @@ mixin _BridgeLibrary on _BridgeCore {
     // Lists rebuild when the reader comes back, so no notify is needed here.
   }
 
-  late bool _settled;
+  /// Official questions bookmarked on this device (no account needed), newest last.
+  late final Set<String> _savedFaqs;
+  bool faqSaved(String id) => _savedFaqs.contains(id);
 
-  /// Lived in Taiwan a while: Home shows the guides for later instead of the
-  /// first-month checklist. Kept on this device.
-  bool get settled => _settled;
-  void setSettled(bool value) {
-    if (_settled == value) return;
-    _settled = value;
-    unawaited(preferences.saveSettled(value));
-    notifyListeners();
-  }
-
-  late final Set<String> _savedGuides;
-  bool guideSaved(String actionId) => _savedGuides.contains(actionId);
-  List<String> get savedGuideIds => _savedGuides.toList().reversed.toList();
-  void toggleSavedGuide(String actionId) {
-    final on = _savedGuides.add(actionId);
-    if (!on) _savedGuides.remove(actionId);
-    unawaited(preferences.saveSavedGuides(_savedGuides));
+  /// Newest first.
+  List<String> get savedFaqIds => _savedFaqs.toList().reversed.toList();
+  void toggleSavedFaq(String id) {
+    final on = _savedFaqs.add(id);
+    if (!on) _savedFaqs.remove(id);
+    unawaited(preferences.saveSavedFaqs(_savedFaqs));
     showNotice(
       on
           ? pair('已收藏，在「我的 › 收藏」找得到', 'Saved. Find it under My › Saved.')
           : pair('已取消收藏', 'Removed from saved'),
     );
-  }
-
-  /// Ticked items of a guide's "what to bring" list (kept while the app is open).
-  final Map<String, Set<int>> _documents = {};
-  bool documentReady(String actionId, int index) =>
-      _documents[actionId]?.contains(index) ?? false;
-  int documentsReady(String actionId) => _documents[actionId]?.length ?? 0;
-  void toggleDocument(String actionId, int index) {
-    final ready = _documents.putIfAbsent(actionId, () => {});
-    if (!ready.remove(index)) ready.add(index);
-    notifyListeners();
   }
 
   // ---------- saved for later ----------

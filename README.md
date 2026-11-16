@@ -1,6 +1,6 @@
 # Culture Bridge
 
-幫國際生在台灣辦事、生活的 App：**官方流程卡**告訴你步驟和依據，**學生經驗**讓你知道別人遇過什麼，**AI 助理**依真實資料回答並標明依據與驗證狀態。
+幫國際生在台灣辦事、生活的 App：**官方問答**收錄教育部 NISA 網站上由政府機關回覆的問題，**學生經驗**讓你知道別人遇過什麼，**AI 助理**依官方問答回答、標明回復機關與日期，並推薦相關的學生貼文。
 
 > 目前是 MVP 開發中：網頁版先上線（Google Cloud Run），Android 版之後上架 Google Play。
 
@@ -8,7 +8,7 @@
 
 | 功能 | 說明 |
 |---|---|
-| 制度流程 | 工作證、居留證、健保、開戶等流程卡；每個版本有官方來源、驗證狀態與最後驗證日；可「開始辦理」記錄步驟進度、回報卡關或「流程不同」 |
+| 官方問答 | 教育部 NISA 常見問答（`backend/app/content/nisa_faq.json`，約 227 題、16 類，部分有官方英文版）；依分類、身分篩選與搜尋，每題附回復機關、日期與原文連結，下方列出意思相近的學生貼文 |
 | 學生經驗 | 用一句話分享經驗 → AI 整理成情境／感受／提醒 → 作者確認後才匿名發布；中英 AI 翻譯、「有幫助」「我也遇過」、「我的經驗不同」 |
 | AI 助理 | 浮動在每一頁的小助手；每次回答都透過工具查流程與經驗（含語意搜尋），沒有資料就直說；會寫入資料的要求先產生待確認操作 |
 | 審查後台 | 流程編輯與版本發布、來源與驗證紀錄、回報審查（含 AI 整理）、檢舉處理、官方文件、權限與成效數據 |
@@ -74,7 +74,7 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 
 在 [Google Cloud Shell](https://shell.cloud.google.com) 執行 `bash scripts/gcp-setup.sh`，依選單完成專案、資料庫、Gemini 金鑰、Firebase、部署與監控。
 
-之後每次更新：`bash scripts/deploy.sh`（拉最新 `main`、建置、更新資料表、部署、必要時重新匯入流程卡，不會問問題）。設定 `bash scripts/gcp-setup.sh 8` 並把 GitHub 變數 `AUTO_DEPLOY` 設成 `true` 後，合併到 `main` 且 CI 通過就會自動部署（`.github/workflows/deploy.yml`）。
+之後每次更新：`bash scripts/deploy.sh`（拉最新 `main`、建置、更新資料表、部署、官方問答檔案有變更時重新匯入並建立 AI 向量，不會問問題）。設定 `bash scripts/gcp-setup.sh 8` 並把 GitHub 變數 `AUTO_DEPLOY` 設成 `true` 後，合併到 `main` 且 CI 通過就會自動部署（`.github/workflows/deploy.yml`）。
 
 - [退回上一版與還原資料庫](docs/runbooks/rollback-and-restore.md)：部署會先檢查新版本的 `/health`（含資料庫）才切流量，失敗自動退回
 - [A-3 Cloud SQL 搬遷](docs/runbooks/a3-cloud-sql-migration.md)
@@ -90,7 +90,7 @@ flutter run -d chrome --web-port 5174 --dart-define=API_BASE_URL=http://localhos
 完整目錄見 [docs/README.md](docs/README.md)。常用的：
 
 - [工作分配表](docs/team/work-assignment.md)、[技術架構](docs/engineering/tech-architecture.md)、[開發環境安裝](docs/engineering/dev-setup.md)
-- [D-8 官方流程卡（18 張，待審查）](docs/content/d8-official-procedures.md)
+- [D-8 官方流程卡（已由官方問答取代，保留作紀錄）](docs/content/d8-official-procedures.md)
 - [上架草稿](docs/drafts/)（隱私權政策、服務條款、商店頁、Play 表單）與[商店素材](docs/store/)
 
 ## 協作規則

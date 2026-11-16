@@ -17,9 +17,9 @@ void main() {
     '/profile',
     '/signin',
     '/experiences/first-rental',
-    '/actions/arc',
-    '/actions/arc/progress',
-    '/actions/arc/complete',
+    '/faqs',
+    '/faqs/nisa-1070',
+    '/faqs/nisa-900',
     '/welcome',
     '/profile/settings',
     '/profile?tab=saved',
@@ -41,7 +41,7 @@ void main() {
           addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
           final app = TestApp();
           if (english) app.vm.setEnglish(true);
-          await app.vm.startAction('arc');
+          app.vm.toggleSavedFaq('nisa-1070');
           await app.repository.setSaved('first-rental', true);
           app.repository
             ..nickname = 'A rather long nickname, 30 ch'
@@ -82,7 +82,10 @@ void main() {
           await tester.tap(find.byKey(const Key('assistant-send')));
           await tester.pumpAndSettle();
           expect(app.repository.assistantMessages, hasLength(1));
-          expect(find.byKey(const Key('confirm-op1')), findsOneWidget);
+          expect(
+            find.byKey(const Key('assistant-post-nisa-1070')),
+            findsOneWidget,
+          );
           expect(tester.takeException(), isNull);
         },
       );
@@ -93,40 +96,27 @@ void main() {
 AssistantReply _longReply() => AssistantReply(
   conversationId: 'c1',
   text:
-      'According to the procedure card "Extending your Alien Resident '
-      'Certificate", apply online within three months before it expires.',
+      'According to the official answer from the National Immigration Agency, '
+      'apply within thirty days before your Alien Resident Certificate expires.',
   cards: const [
     AssistantCard(
-      type: 'action',
-      id: 'arc',
-      title: 'Extending your Alien Resident Certificate (ARC) as a student',
-      verificationStatus: 'community_supported',
-      lastVerifiedAt: '2026-08-14',
-      recentSuccessCount: 12,
-      sources: ['National Immigration Agency, Ministry of the Interior'],
-      reminder: 'Bring your enrollment certificate issued within one month.',
+      type: 'faq',
+      id: 'nisa-1070',
+      title:
+          'How early before my Alien Resident Certificate (ARC) expires can I '
+          'apply to extend it as a degree student?',
+      excerpt: 'Apply within 30 days before it expires, with your passport.',
+      category: 'Visas, residence permits and Alien Resident Certificates',
+      agency: 'National Immigration Agency, Ministry of the Interior',
+      postedOn: '2026-08-03',
     ),
     AssistantCard(
       type: 'experience',
       id: 'first-rental',
-      title: null,
-      verificationStatus: null,
-      lastVerifiedAt: null,
-      recentSuccessCount: 0,
-      sources: [],
+      title: '',
       reminder: 'Read every clause with a friend before signing.',
     ),
   ],
-  screenActions: const [ScreenAction('open_progress', 'arc', null)],
-  pendingOperations: [
-    PendingOperation(
-      id: 'op1',
-      summary: 'Start "Extending your Alien Resident Certificate (ARC)"',
-      status: 'pending',
-      expiresAt: DateTime.now().add(const Duration(minutes: 5)),
-      targetId: 'arc',
-      result: null,
-    ),
-  ],
+  screenActions: const [ScreenAction('open_faq', 'nisa-1070', null)],
   fallback: false,
 );

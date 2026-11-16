@@ -7,77 +7,12 @@ import 'package:culture_bridge/data/auth_service.dart';
 import 'package:culture_bridge/data/culture_repository.dart';
 import 'package:culture_bridge/domain/api_models.dart';
 
-/// The production slugs of the sample guides, so the home page can put them in stages.
-const _slugs = {
-  'arc': 'arc-first',
-  'insurance': 'nhi',
-  'bank': 'bank-account',
-  'certificate': 'enrollment-certificate',
-};
-
-/// An in-memory backend built from assets/data/content.json, behaving like the real API for the
-/// flows the screens use.
+/// An in-memory backend: student posts from assets/data/content.json and a few official
+/// questions, behaving like the real API for the flows the screens use.
 class FakeCultureRepository implements CultureRepository {
   FakeCultureRepository(this.auth) {
     final raw =
         jsonDecode(File('assets/data/content.json').readAsStringSync()) as Json;
-    for (final card in raw['actionCards'] as List) {
-      final c = card as Json;
-      final en = (c['translations'] as Json)['en'] as Json;
-      final steps = List<String>.from(c['steps'] as List);
-      final enSteps = List<String>.from(en['steps'] as List);
-      _actions[c['id'] as String] = ActionDetail(
-        summary: ActionSummary(
-          id: c['id'] as String,
-          slug: _slugs[c['id']] ?? c['id'] as String,
-          versionNumber: 1,
-          title: Text2(c['title'] as String, en['title'] as String),
-          description: Text2(
-            c['description'] as String,
-            en['description'] as String,
-          ),
-          applicableTo: Text2(
-            c['applicableTo'] as String,
-            en['applicableTo'] as String,
-          ),
-          location: Text2(c['location'] as String, en['location'] as String),
-          verificationStatus: switch (c['status']) {
-            'Needs Review' => 'needs_review',
-            'Community Supported' => 'community_supported',
-            _ => 'verified',
-          },
-          lastVerifiedAt: DateTime.parse(c['verifiedAt'] as String),
-          publishedAt: DateTime.parse(c['verifiedAt'] as String),
-          recentSuccessCount: c['recentCompletions'] as int,
-        ),
-        documents: const [
-          Text2('護照正本', 'Passport'),
-          Text2('在學證明', 'Certificate of enrollment'),
-        ],
-        steps: [
-          for (final (i, title) in steps.indexed)
-            ActionStepInfo(
-              id: '${c['id']}-step-$i',
-              position: i + 1,
-              title: Text2(title, enSteps[i]),
-              notes: i == 0 ? '先線上預約。' : null,
-              notesEn: i == 0 ? 'Book online first.' : null,
-              recentStuckCount: 0,
-            ),
-        ],
-        sources: [
-          for (final title in c['sources'] as List)
-            SourceInfo(
-              title: title as String,
-              url: 'https://example.gov.tw/${c['id']}',
-              publisher: title,
-              publisherEn: 'Example Agency',
-              kind: 'official',
-              evidenceNote: 'demo',
-            ),
-        ],
-      );
-    }
     for (final item in raw['experiences'] as List) {
       final e = item as Json;
       final en = (e['translations'] as Json)['en'] as Json;
@@ -115,9 +50,7 @@ class FakeCultureRepository implements CultureRepository {
   }
 
   final AuthService auth;
-  final Map<String, ActionDetail> _actions = {};
   final Map<String, ExperienceItem> _experiences = {};
-  final List<Execution> executions = [];
   final Map<String, MyExperience> mine = {};
   final List<String> reports = [];
   final List<Map<String, Object?>> feedback = [];
@@ -205,122 +138,125 @@ class FakeCultureRepository implements CultureRepository {
   @override
   Future<void> deleteAccount() async {
     _requireLogin();
-    executions.clear();
     mine.clear();
   }
 
-  @override
-  Future<List<ActionSummary>> actions() async => [
-    for (final a in _actions.values) a.summary,
+  /// Official questions, newest first (like the API).
+  static final faqItems = [for (final d in faqDetails.values) d.summary];
+
+  static const _categories = [
+    FaqCategory('visa-arc', Text2('簽證與居留', 'Visas & residence'), 1),
+    FaqCategory('work', Text2('工作', 'Work'), 1),
+    FaqCategory('insurance', Text2('健保', 'Health insurance'), 1),
   ];
 
-  @override
-  Future<ActionDetail> action(String id) async =>
-      _actions[id] ?? (throw const ApiException(404, 'action_not_found'));
+  static const _identities = [
+    FaqIdentity('foreign', Text2('外國學生', 'International students')),
+    FaqIdentity('overseas-chinese', Text2('僑生', 'Overseas Chinese students')),
+    FaqIdentity('hong-kong-macao', Text2('港澳生', 'Hong Kong & Macao students')),
+    FaqIdentity('mainland', Text2('陸生', 'Mainland Chinese students')),
+  ];
 
-  Execution _execution(String id, String actionId, Map<String, String> states) {
-    final detail = _actions[actionId]!;
-    return Execution(
-      id: id,
-      actionId: actionId,
-      versionNumber: 1,
-      title: detail.summary.title,
-      startedAt: DateTime(2026, 10, 13),
-      finishedAt: null,
-      outcome: null,
-      steps: [
-        for (final s in detail.steps)
-          ExecutionStepState(
-            stepId: s.id,
-            position: s.position,
-            title: s.title,
-            state: states[s.id] ?? 'pending',
-          ),
-      ],
-      newerVersionAvailable: false,
-    );
-  }
+  static const _publisher = Text2(
+    '教育部 NISA 計畫辦公室',
+    'Ministry of Education NISA Office',
+  );
+
+  static const faqDetails = {
+    'nisa-1070': FaqDetail(
+      summary: FaqSummary(
+        id: 'nisa-1070',
+        categoryId: 'visa-arc',
+        identities: ['foreign'],
+        question: Text2('居留證到期前多久可以申請延期？', 'How early can I renew my ARC?'),
+        excerpt: Text2(
+          '居留期限屆滿前 30 日內申請。',
+          'Apply within 30 days before it expires.',
+        ),
+        postedOn: '2026-08-03',
+      ),
+      category: Text2('簽證與居留', 'Visas & residence'),
+      answer: Text2(
+        '居留期限屆滿前 30 日內，向移民署申請延期。\n請攜帶護照、居留證及在學證明。',
+        'Apply to the immigration agency within 30 days before it expires.\nBring your passport, ARC and enrollment certificate.',
+      ),
+      source: Text2('115 年境外生輔導人員研習', '2026 adviser training course'),
+      agency: Text2('內政部移民署', 'National Immigration Agency'),
+      publisher: _publisher,
+      url: 'https://www.nisa.moe.gov.tw/faq.new/view/sn/1070/menu_sn/13',
+    ),
+    'nisa-1001': FaqDetail(
+      summary: FaqSummary(
+        id: 'nisa-1001',
+        categoryId: 'work',
+        identities: ['foreign', 'overseas-chinese'],
+        question: Text2('在學期間可以打工嗎？', 'Can I work part-time while studying?'),
+        excerpt: Text2('須先申請工作許可。', 'You need a work permit first.'),
+        postedOn: '2026-07-01',
+      ),
+      category: Text2('工作', 'Work'),
+      answer: Text2(
+        '須先向勞動部申請工作許可。',
+        'Apply to the Ministry of Labor for a work permit first.',
+      ),
+      source: Text2('', ''),
+      agency: Text2('勞動部', 'Ministry of Labor'),
+      publisher: _publisher,
+      url: 'https://www.nisa.moe.gov.tw/faq.new/view/sn/1001/menu_sn/13',
+    ),
+    'nisa-900': FaqDetail(
+      summary: FaqSummary(
+        id: 'nisa-900',
+        categoryId: 'insurance',
+        identities: ['mainland'],
+        question: Text2('陸生可以加入全民健保嗎？', '陸生可以加入全民健保嗎？'),
+        excerpt: Text2('居留滿 6 個月可加保。', '居留滿 6 個月可加保。'),
+        postedOn: '2026-05-02',
+        hasEnglish: false,
+      ),
+      category: Text2('健保', 'Health insurance'),
+      answer: Text2('在台居留滿 6 個月後，應加入全民健保。', '在台居留滿 6 個月後，應加入全民健保。'),
+      source: Text2('', ''),
+      agency: Text2('衛生福利部中央健康保險署', 'National Health Insurance Administration'),
+      publisher: _publisher,
+      url: 'https://www.nisa.moe.gov.tw/faq.new/view/sn/900/menu_sn/13',
+    ),
+  };
+
+  /// Student posts the server would suggest under each question.
+  final Map<String, List<String>> faqPosts = {
+    'nisa-1070': ['professor-see'],
+  };
 
   @override
-  Future<Execution> startExecution(String actionId, String identityType) async {
-    _requireLogin();
-    final existing = executions
-        .where((e) => e.actionId == actionId)
-        .firstOrNull;
-    if (existing != null) return existing;
-    final execution = _execution('exec-${_ids++}', actionId, const {});
-    executions.add(execution);
-    return execution;
-  }
+  Future<FaqCatalog> faqs() async =>
+      FaqCatalog(_categories, _identities, faqItems);
 
   @override
-  Future<List<Execution>> myExecutions({bool includeFinished = false}) async {
-    _requireLogin();
-    return [...executions];
-  }
+  Future<FaqDetail> faq(String id) async =>
+      faqDetails[id] ?? (throw const ApiException(404, 'faq_not_found'));
 
   @override
-  Future<Execution> setStep(
-    String executionId,
-    String stepId,
-    String state,
-  ) async {
-    final index = executions.indexWhere((e) => e.id == executionId);
-    final old = executions[index];
-    final states = {
-      for (final s in old.steps) s.stepId: s.state,
-      stepId: state,
-    };
-    return executions[index] = _execution(old.id, old.actionId, states);
-  }
-
-  @override
-  Future<Execution> finishExecution(String executionId, String outcome) async {
-    final old = executions.firstWhere((e) => e.id == executionId);
-    executions.remove(old);
-    return Execution(
-      id: old.id,
-      actionId: old.actionId,
-      versionNumber: 1,
-      title: old.title,
-      startedAt: old.startedAt,
-      finishedAt: DateTime(2026, 10, 14),
-      outcome: outcome,
-      steps: old.steps,
-      newerVersionAvailable: false,
-    );
-  }
-
-  @override
-  Future<void> sendFeedback(
-    String executionId, {
-    required String kind,
-    String? stepId,
-    String? category,
-    String? text,
-  }) async {
-    feedback.add({
-      'kind': kind,
-      'step': stepId,
-      'category': category,
-      'text': text,
-    });
-    if (kind == 'stuck') await setStep(executionId, stepId!, 'stuck');
-  }
+  Future<List<ExperienceItem>> faqRelatedPosts(
+    String id, {
+    String? locale,
+    int limit = 3,
+  }) async => [
+    for (final postId in faqPosts[id] ?? const <String>[])
+      ?_experiences[postId],
+  ].take(limit).toList();
 
   @override
   Future<ExperiencePage> explore({
     String? category,
     String? query,
     String? locale,
-    String? actionId,
     String sort = 'new',
     int offset = 0,
   }) async {
     final items = [
       for (final e in _experiences.values)
         if ((category == null || e.categoryKey == category) &&
-            (actionId == null || e.actionId == actionId) &&
             (query == null || query.isEmpty || _matches(e, query)))
           e,
     ]..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
@@ -339,10 +275,8 @@ class FakeCultureRepository implements CultureRepository {
   @override
   Future<SearchResults> search(String query, {String? locale}) async =>
       SearchResults([
-        for (final a in _actions.values)
-          if (a.summary.title.zh.contains(query.trim()) ||
-              a.summary.title.en.toLowerCase().contains(query.toLowerCase()))
-            a.summary,
+        for (final f in faqItems)
+          if (f.matches(query)) f,
       ], (await explore(query: query)).items);
 
   @override
@@ -426,7 +360,6 @@ class FakeCultureRepository implements CultureRepository {
     tags: e.tags,
     commentCount: e.commentCount,
     mine: e.mine,
-    actionId: e.actionId,
   );
 
   /// Make an experience show [name] as its author (what the API does for signed posts).
@@ -504,7 +437,6 @@ class FakeCultureRepository implements CultureRepository {
     required String sourceLocale,
     String authorDisplay = 'anonymous',
     String? differentFromId,
-    String? actionId,
   }) async {
     _requireLogin();
     _requireTerms();
@@ -515,7 +447,6 @@ class FakeCultureRepository implements CultureRepository {
       'tags': tags,
       'author_display': authorDisplay,
       'different_from_id': differentFromId,
-      'action_id': actionId,
     };
     final id = 'post-${_ids++}';
     final item = ExperienceItem(
@@ -544,7 +475,6 @@ class FakeCultureRepository implements CultureRepository {
       category: category,
       tags: tags,
       mine: true,
-      actionId: actionId,
     );
     _experiences[id] = item;
     mine[id] = MyExperience(
@@ -699,6 +629,9 @@ class FakeCultureRepository implements CultureRepository {
   final List<String> assistantMessages = [];
   AssistantReply Function(String message)? assistantReply;
 
+  /// Told what screen each message was asked from.
+  void Function(Map<String, String>? screen)? onAsk;
+
   @override
   Future<AssistantReply> askAssistant({
     required String message,
@@ -707,13 +640,13 @@ class FakeCultureRepository implements CultureRepository {
     Map<String, String>? screen,
   }) async {
     assistantMessages.add(message);
+    onAsk?.call(screen);
     return assistantReply?.call(message) ??
         AssistantReply(
           conversationId: conversationId ?? 'conv-1',
-          text: '依據「申請工作證」流程卡（已驗證）。',
+          text: '依據官方問答「在學期間可以打工嗎？」（勞動部回覆）。',
           cards: const [],
           screenActions: const [],
-          pendingOperations: const [],
           fallback: false,
         );
   }
@@ -740,33 +673,4 @@ class FakeCultureRepository implements CultureRepository {
       'details': details,
     });
   }
-
-  final List<String> confirmed = [];
-
-  /// Failures the next confirmations meet, in order.
-  final List<ApiException> confirmErrors = [];
-
-  @override
-  Future<PendingOperation> confirmOperation(String id) async {
-    if (confirmErrors.isNotEmpty) throw confirmErrors.removeAt(0);
-    confirmed.add(id);
-    return PendingOperation(
-      id: id,
-      summary: '',
-      status: 'confirmed',
-      expiresAt: DateTime(2030),
-      targetId: 'arc',
-      result: const {'execution_id': 'exec-x'},
-    );
-  }
-
-  @override
-  Future<PendingOperation> cancelOperation(String id) async => PendingOperation(
-    id: id,
-    summary: '',
-    status: 'cancelled',
-    expiresAt: DateTime(2030),
-    targetId: 'arc',
-    result: null,
-  );
 }

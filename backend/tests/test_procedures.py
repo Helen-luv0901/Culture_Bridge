@@ -23,8 +23,9 @@ def seeded(db):
 
 
 def test_seed_is_idempotent(db, seeded):
-    assert seeded == {"actions": 6, "experiences": 3}
-    assert seed(db, get_settings().demo_content_path) == {"actions": 0, "experiences": 0}
+    assert seeded["actions"] == 6 and seeded["experiences"] == 3 and seeded["faqs"] > 200
+    again = seed(db, get_settings().demo_content_path)
+    assert again == {"actions": 0, "experiences": 0, "faqs": 0}
 
 
 def test_public_list_and_detail(api, seeded):

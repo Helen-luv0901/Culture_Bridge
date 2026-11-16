@@ -7,28 +7,10 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 
-/// The old pinned welcome post; saved copies of it now open the official guides.
-const welcomeGuideId = 'welcome';
-
 /// Opens a student post and remembers it was read.
 void openPost(BuildContext context, String id) {
   BridgeScope.of(context).markRead(id);
   context.push('/experiences/$id');
-}
-
-/// Opens an official guide and remembers it was read.
-void openGuide(BuildContext context, String id) {
-  BridgeScope.of(context).markRead('guide:$id');
-  if (id == welcomeGuideId) {
-    context.go('/guides');
-  } else {
-    context.push('/actions/$id');
-  }
-}
-
-/// Every official guide (the official avatar links there).
-void showOfficial(BuildContext context) {
-  if (GoRouterState.of(context).uri.path != '/guides') context.go('/guides');
 }
 
 /// Writing a post; guests are asked to sign in first.
@@ -47,51 +29,6 @@ void searchTag(BuildContext context, String tag) =>
 String categoryName(BridgeViewModel vm, String key) {
   final label = categoryLabels[key];
   return label == null ? key : vm.pair(label.$1, label.$2);
-}
-
-/// "Culture Bridge" with the official seal, and when it was posted.
-class OfficialByline extends StatelessWidget {
-  const OfficialByline({super.key, required this.when, this.trailing});
-  final String when;
-  final Widget? trailing;
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    return Row(
-      children: [
-        Tooltip(
-          message: vm.pair('看全部官方指南', 'See all official guides'),
-          child: InkResponse(
-            onTap: () => showOfficial(context),
-            radius: 24,
-            child: const SizedBox(
-              width: 44,
-              height: 44,
-              child: Center(child: Avatar()),
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Culture Bridge',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
-                ),
-              ),
-              Text(when, style: mutedStyle.copyWith(fontSize: 12)),
-            ],
-          ),
-        ),
-        ?trailing,
-      ],
-    );
-  }
 }
 
 /// "1 comment", "3 comments".
@@ -134,74 +71,6 @@ class CardTitle extends StatelessWidget {
   );
 }
 
-/// A plain, straight strip of tape on the pinned card.
-class _PinTape extends StatelessWidget {
-  const _PinTape();
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: Container(
-      width: 74,
-      height: 18,
-      color: Palette.brick.withValues(alpha: .28),
-    ),
-  );
-}
-
-/// An official guide in a list.
-class OfficialPostCard extends StatelessWidget {
-  const OfficialPostCard({
-    super.key,
-    required this.id,
-    required this.title,
-    this.publishedAt,
-    this.pinned = false,
-  });
-  final String id;
-  final String title;
-  final DateTime? publishedAt;
-  final bool pinned;
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    final read = vm.isRead('guide:$id');
-    final when = [
-      if (pinned)
-        vm.pair('置頂', 'Pinned')
-      else if (publishedAt != null)
-        timeAgo(vm, publishedAt!),
-      if (read) vm.pair('已看過', 'Read'),
-    ].join(' · ');
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        NoteCard(
-          key: Key('guide-$id'),
-          read: read,
-          onTap: () => openGuide(context, id),
-          focusable: false,
-          padding: const EdgeInsets.fromLTRB(12, 14, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              OfficialByline(when: when),
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: CardTitle(
-                  title,
-                  read: read,
-                  onTap: () => openGuide(context, id),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (pinned) const Positioned(top: -9, left: 22, child: _PinTape()),
-      ],
-    );
-  }
-}
-
 /// Who wrote a student post: the chosen name, or anonymous with the student type.
 String authorLine(BridgeViewModel vm, ExperienceItem item) {
   final type = item.identityType == 'other'
@@ -214,7 +83,7 @@ String authorLine(BridgeViewModel vm, ExperienceItem item) {
 String authorInitial(BridgeViewModel vm, String? name) =>
     name == null || name.isEmpty ? vm.pair('匿', 'A') : name.characters.first;
 
-/// The bookmark on student posts and guides.
+/// The bookmark on student posts and official questions.
 class BookmarkButton extends StatelessWidget {
   const BookmarkButton({
     super.key,

@@ -1,12 +1,9 @@
-from app.assistant.db_operations import DbOperationService
 from app.assistant.pg_data import PostgresAssistantData
-from app.assistant.schemas import AssistantMessageRequest
 from app.core.auth import CurrentUser
 from app.core.config import get_settings
 from app.models import User, UserBlock
 from app.seed import seed
 from app.services import actions
-from tests.conftest import ScriptedLLM, answer, call
 
 MEI = CurrentUser(id="dev-mei")
 
@@ -44,22 +41,3 @@ def test_progress_and_blocks_follow_the_viewer(db):
     db.commit()
     assert data.get_experience("professor-see") is None
     assert "professor-see" not in [e.id for e in data.search_experiences(None, None, None, 10)]
-
-
-def test_confirmed_operation_starts_a_real_execution(db, make_assistant):
-    setup(db)
-    ops = DbOperationService(db)
-    llm = ScriptedLLM(call("propose_start_action", action_id="arc"), answer("請確認"))
-    reply = make_assistant(llm).reply(
-        AssistantMessageRequest(message="開始 ARC"),
-        MEI,
-        data=PostgresAssistantData(db, MEI),
-        operations=ops,
-    )
-    [op] = reply.pending_operations
-    assert actions.my_executions(db, MEI, False) == []
-    confirmed = ops.confirm(op.id, MEI)
-    assert confirmed.status == "confirmed"
-    [execution] = actions.my_executions(db, MEI, False)
-    assert confirmed.result == {"execution_id": execution.id, "already_started": False}
-    assert ops.confirm(op.id, MEI).result == confirmed.result

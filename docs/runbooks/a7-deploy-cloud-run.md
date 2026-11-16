@@ -93,7 +93,7 @@ gcloud run jobs create culture-bridge-seed --image=$IMAGE:$TAG --region=$REGION 
 gcloud run jobs execute culture-bridge-seed --region=$REGION --wait
 ```
 
-第一批官方流程卡草稿（D-8）：`bash scripts/gcp-setup.sh 7`，說明見 [D-8 流程卡](../content/d8-official-procedures.md)。
+官方問答（教育部 NISA）：`bash scripts/gcp-setup.sh 7` 匯入並建立 AI 向量；之後 `deploy.sh` 在 `backend/app/content/nisa_faq.json` 變更時自動重新匯入。舊的 [D-8 流程卡](../content/d8-official-procedures.md) 已由官方問答取代。
 
 ## 5. 部署服務
 

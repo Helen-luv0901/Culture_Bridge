@@ -19,7 +19,7 @@ import 'post_cards.dart';
 /// Opens the assistant. Only signed-in users may use it; guests are asked to sign in first.
 Future<void> openAssistantFor(BuildContext context, {String? question}) async {
   final vm = BridgeScope.of(context);
-  // Guests see the panel too: suggestions that search the guides, and a sign-in line
+  // Guests see the panel too: suggestions that search the official Q&A, and a sign-in line
   // where the input would be, instead of a sign-in dialog in front of everything.
   final ask = vm.signedIn ? question : null;
   if (ask == null || vm.aiNoticeSeen) return vm.openAssistant(question: ask);
@@ -167,7 +167,7 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
       autofocus: true,
       child: AssistantPanel(
         uri: uri,
-        // Opening a guide or post closes the chat, so the page isn't covered.
+        // Opening a question or post closes the chat, so the page isn't covered.
         onNavigate: (path) {
           vm.closeAssistant();
           onNavigate(path);
@@ -394,8 +394,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
     final segments = widget.uri.pathSegments;
     return {
       'route': widget.uri.path,
-      if (segments.length >= 2 && segments[0] == 'actions')
-        'action_id': segments[1],
+      if (segments.length >= 2 && segments[0] == 'faqs') 'faq_id': segments[1],
       if (segments.length >= 2 && segments[0] == 'experiences')
         'experience_id': segments[1],
     };
@@ -489,8 +488,8 @@ class _AssistantPanelState extends State<AssistantPanel> {
                   children: [
                     _Bubble(
                       text: vm.pair(
-                        '嗨！我是 Culture Bridge 助理，在台灣生活遇到問題都可以問我。',
-                        "Hi! I'm the Culture Bridge assistant. Ask me anything about life in Taiwan.",
+                        '嗨！我是 Culture Bridge 助理，在台灣生活遇到問題都可以問我。我會參考政府機關回覆的官方問答，也推薦同學的經驗。',
+                        "Hi! I'm the Culture Bridge assistant. Ask me anything about life in Taiwan. I draw on official Q&A answered by government agencies and point you to students' posts.",
                       ),
                     ),
                     if (vm.chat.isEmpty)
@@ -553,9 +552,9 @@ class _AssistantPanelState extends State<AssistantPanel> {
                 Expanded(
                   child: Text(
                     vm.pair(
-                      '登入後就能直接問助理；沒登入也可以點上面的問題，看相關的指南和分享。',
+                      '登入後就能直接問助理；沒登入也可以點上面的問題，看相關的官方問答和分享。',
                       'Sign in to ask the assistant. You can still tap a question above '
-                          'to see related guides and posts.',
+                          'to see related official Q&A and posts.',
                     ),
                     style: mutedStyle,
                   ),
@@ -755,11 +754,15 @@ class _Entry extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final reply = entry.reply;
-    // Official guides first, then student posts: each a card that opens it.
-    final cards = [
-      for (final type in ['action', 'experience'])
-        for (final card in reply?.cards ?? const <AssistantCard>[])
-          if (card.type == type) card,
+    // Official questions first, then student posts: each a card that opens it.
+    final cards = reply?.cards ?? const <AssistantCard>[];
+    final faqs = [
+      for (final card in cards)
+        if (card.type == 'faq') card,
+    ];
+    final posts = [
+      for (final card in cards)
+        if (card.type == 'experience') card,
     ];
     final links = <(String, String)>[
       if (reply != null) ...[
@@ -809,35 +812,35 @@ class _Entry extends StatelessWidget {
             onPressed: () => onNavigate(path),
             child: Text('$label →'),
           ),
-        if (cards.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.only(top: 6, bottom: 4, left: 2),
-            child: Text(
-              vm.pair('相關貼文', 'Related posts'),
-              style: mutedStyle.copyWith(fontSize: 12),
-            ),
+        for (final (group, label) in [
+          (
+            faqs,
+            vm.pair('官方問答（政府機關回覆）', 'Official Q&A (answered by agencies)'),
           ),
-          for (final card in cards)
-            _PostCard(
-              card: card,
-              onTap: () => onNavigate(
-                card.type == 'action'
-                    ? '/actions/${card.id}'
-                    : '/experiences/${card.id}',
-              ),
+          (posts, vm.pair('同學的經驗分享', 'Student posts')),
+        ])
+          if (group.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 4, left: 2),
+              child: Text(label, style: mutedStyle.copyWith(fontSize: 12)),
             ),
-        ],
-        if (reply != null)
-          for (final operation in reply.pendingOperations)
-            _OperationCard(operation: operation, onNavigate: onNavigate),
+            for (final card in group)
+              _PostCard(
+                card: card,
+                onTap: () => onNavigate(
+                  card.type == 'faq'
+                      ? '/faqs/${Uri.encodeComponent(card.id)}'
+                      : '/experiences/${Uri.encodeComponent(card.id)}',
+                ),
+              ),
+          ],
       ],
     );
   }
 
   String _actionLabel(BridgeViewModel vm, ScreenAction action) =>
       switch (action.type) {
-        'open_action' => vm.pair('打開官方指南', 'Open the guide'),
-        'open_progress' => vm.pair('打開辦理進度', 'Open progress'),
+        'open_faq' => vm.pair('看這則官方問答', 'Read this official answer'),
         'open_experience' => vm.pair('看這篇學生分享', 'Read this student post'),
         'open_explore' => vm.pair('去看板看看', 'Go to Boards'),
         'open_share' => vm.pair('去分享', 'Go to Share'),
@@ -851,8 +854,7 @@ String? screenActionPath(ScreenAction action) {
       ? null
       : Uri.encodeComponent(action.targetId!);
   return switch (action.type) {
-    'open_action' when id != null => '/actions/$id',
-    'open_progress' when id != null => '/actions/$id/progress',
+    'open_faq' when id != null => '/faqs/$id',
     'open_experience' when id != null => '/experiences/$id',
     'open_explore' => switch (action.topic) {
       'life_adaptation' => '/explore?cat=life',
@@ -866,83 +868,8 @@ String? screenActionPath(ScreenAction action) {
   };
 }
 
-/// A write the assistant prepared; nothing happens until the user confirms (A-17, C-13).
-class _OperationCard extends StatelessWidget {
-  const _OperationCard({required this.operation, required this.onNavigate});
-  final PendingOperation operation;
-  final void Function(String path) onNavigate;
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    final status = vm.operationStates[operation.id] ?? operation.status;
-    final expired =
-        status == 'pending' && DateTime.now().isAfter(operation.expiresAt);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: NoteCard(
-        color: Palette.paleMoss,
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              operation.summary,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            if (status == 'pending' && !expired)
-              Wrap(
-                spacing: 8,
-                children: [
-                  FilledButton(
-                    key: Key('confirm-${operation.id}'),
-                    onPressed: vm.resolvingOperation(operation.id)
-                        ? null
-                        : () => vm.resolveOperation(operation, true),
-                    child: Text(vm.t('confirm')),
-                  ),
-                  TextButton(
-                    onPressed: vm.resolvingOperation(operation.id)
-                        ? null
-                        : () => vm.resolveOperation(operation, false),
-                    child: Text(vm.t('cancel')),
-                  ),
-                  if (vm.operationRetryable(operation.id))
-                    Padding(
-                      key: Key('operation-retry-${operation.id}'),
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        vm.pair(
-                          '剛才沒有連上，還沒有辦理；可以再按一次。',
-                          "That didn't go through; nothing was done yet. Try again.",
-                        ),
-                        style: mutedStyle,
-                      ),
-                    ),
-                ],
-              )
-            else if (status == 'confirmed')
-              TextButton(
-                onPressed: () =>
-                    onNavigate('/actions/${operation.targetId}/progress'),
-                child: Text(vm.pair('已開始，打開進度', 'Started. Open progress')),
-              )
-            else
-              Text(switch (expired ? 'expired' : status) {
-                'cancelled' => vm.pair('已取消', 'Cancelled'),
-                'expired' => vm.pair('已過期，請再問一次', 'Expired. Ask again.'),
-                _ => vm.pair('無法完成', 'Could not be done'),
-              }, style: const TextStyle(color: Palette.muted)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A guide or student post the assistant found, as a small card that opens it.
-/// Official guides carry the Culture Bridge logo and name.
+/// An official question or student post the assistant found, as a small card that opens
+/// it. Questions say who answered and when; posts show their board.
 class _PostCard extends StatelessWidget {
   const _PostCard({required this.card, required this.onTap});
   final AssistantCard card;
@@ -951,6 +878,7 @@ class _PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final category = card.category;
+    final faq = card.type == 'faq';
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -971,29 +899,25 @@ class _PostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (card.type == 'action')
+                      if (faq)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(
-                            children: [
-                              const Avatar(size: 20),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  'Culture Bridge',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: mutedStyle.copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            [
+                              vm.pair('官方問答', 'Official Q&A'),
+                              if (card.agency.isNotEmpty) card.agency,
+                              ?card.postedOn,
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: mutedStyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       Text(
-                        card.title ?? '',
+                        card.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1009,10 +933,12 @@ class _PostCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: mutedStyle.copyWith(fontSize: 13),
                         ),
-                      if (category != null)
+                      if (category != null && category.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: PaperTag(categoryName(vm, category)),
+                          child: PaperTag(
+                            faq ? category : categoryName(vm, category),
+                          ),
                         ),
                     ],
                   ),

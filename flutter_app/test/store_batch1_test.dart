@@ -218,64 +218,6 @@ void main() {
       expect(app.vm.notice, '已收藏，在「我的 › 收藏」找得到');
       expect(app.vm.experience('professor-see').data!.item.saved, isTrue);
     });
-
-    test(
-      'a confirm that could not reach the server can be tried again',
-      () async {
-        final app = TestApp();
-        await Future<void>.delayed(Duration.zero);
-        app.repository.confirmErrors.add(
-          const ApiException(0, 'network_error'),
-        );
-        final operation = PendingOperation(
-          id: 'op1',
-          summary: '開始辦理',
-          status: 'pending',
-          expiresAt: DateTime.now().add(const Duration(hours: 1)),
-          targetId: 'arc',
-          result: null,
-        );
-        await app.vm.resolveOperation(operation, true);
-        expect(app.vm.operationStates['op1'], isNot('network_error'));
-        expect(app.vm.operationStates['op1'] ?? 'pending', 'pending');
-        expect(app.vm.operationRetryable('op1'), isTrue);
-        await app.vm.resolveOperation(operation, true);
-        expect(app.vm.operationStates['op1'], 'confirmed');
-        expect(app.vm.operationRetryable('op1'), isFalse);
-      },
-    );
-
-    testWidgets('the confirm card stays usable after a network error', (
-      tester,
-    ) async {
-      final app = await mount(tester, '/actions/arc');
-      app.repository.assistantReply = (message) => AssistantReply(
-        conversationId: 'c1',
-        text: '要幫你開始辦理嗎？',
-        cards: const [],
-        screenActions: const [],
-        pendingOperations: [
-          PendingOperation(
-            id: 'op1',
-            summary: '開始辦理「申請或更新 ARC」',
-            status: 'pending',
-            expiresAt: DateTime.now().add(const Duration(minutes: 5)),
-            targetId: 'arc',
-            result: null,
-          ),
-        ],
-        fallback: false,
-      );
-      app.repository.confirmErrors.add(const ApiException(0, 'network_error'));
-      await tap(tester, find.byKey(const Key('assistant-button')));
-      await tap(tester, find.text('居留證要準備什麼？'));
-      await tap(tester, find.byKey(const Key('confirm-op1')));
-      expect(find.text('無法完成'), findsNothing);
-      expect(find.byKey(const Key('operation-retry-op1')), findsOneWidget);
-      await tap(tester, find.byKey(const Key('confirm-op1')));
-      expect(app.repository.confirmed, ['op1']);
-      expect(find.text('已開始，打開進度'), findsOneWidget);
-    });
   });
 
   group('Terms of use', () {
@@ -426,7 +368,7 @@ void main() {
       expect(app.repository.assistantReports.single, {
         'conversation_id': 'conv-1',
         'question': '居留證要準備什麼？',
-        'answer': '依據「申請工作證」流程卡（已驗證）。',
+        'answer': '依據官方問答「在學期間可以打工嗎？」（勞動部回覆）。',
         'reason': 'inaccurate',
         'details': '少了文件',
       });

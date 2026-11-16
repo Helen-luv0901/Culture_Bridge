@@ -10,17 +10,13 @@ abstract class PreferencesRepository {
   Future<void> saveLanguage(bool english);
   Future<void> saveDraft(ShareDraft draft);
 
-  /// Posts and guides the reader has opened; lists show them dimmed.
+  /// Posts and official questions the reader has opened; lists show them dimmed.
   Set<String> get readIds;
   Future<void> saveReadIds(Set<String> ids);
 
-  /// Official guides bookmarked on this device (student posts are saved on the server).
-  Set<String> get savedGuides;
-  Future<void> saveSavedGuides(Set<String> ids);
-
-  /// The reader has lived in Taiwan a while, so Home skips the first-month checklist.
-  bool get settled;
-  Future<void> saveSettled(bool value);
+  /// Official questions bookmarked on this device (student posts are saved on the server).
+  Set<String> get savedFaqs;
+  Future<void> saveSavedFaqs(Set<String> ids);
 
   /// The short "answers come from Google Gemini and can be wrong" notice was shown.
   bool get aiNoticeSeen;
@@ -72,17 +68,10 @@ class LocalPreferencesRepository implements PreferencesRepository {
   }
 
   @override
-  Set<String> get savedGuides => {...?preferences.getStringList('savedGuides')};
+  Set<String> get savedFaqs => {...?preferences.getStringList('savedFaqs')};
   @override
-  Future<void> saveSavedGuides(Set<String> ids) async {
-    await preferences.setStringList('savedGuides', ids.toList());
-  }
-
-  @override
-  bool get settled => preferences.getBool('settled') ?? false;
-  @override
-  Future<void> saveSettled(bool value) async {
-    await preferences.setBool('settled', value);
+  Future<void> saveSavedFaqs(Set<String> ids) async {
+    await preferences.setStringList('savedFaqs', ids.toList());
   }
 
   @override

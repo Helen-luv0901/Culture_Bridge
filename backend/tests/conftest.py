@@ -42,6 +42,7 @@ from app.core.auth import CurrentUser
 from app.core.config import get_settings
 from app.core.db import get_engine, get_sessionmaker
 from app.main import app
+from app.services.faqs import forget_cache as forget_faq_cache
 
 KEEP_TABLES = {"alembic_version", "topics"}
 
@@ -68,6 +69,7 @@ def database() -> Iterator[None]:
 def clean_tables(database) -> Iterator[None]:
     yield
     forget_cached_actions()
+    forget_faq_cache()
     with get_engine().begin() as conn:
         tables = conn.execute(
             text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")

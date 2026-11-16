@@ -62,9 +62,9 @@ void main() {
       '/guide/welcome',
       '/official',
       '/experiences/first-rental',
-      '/actions/arc',
-      '/actions/arc/progress',
-      '/actions/arc/complete',
+      '/faqs',
+      '/faqs/nisa-1070',
+      '/faqs/nisa-900',
       '/assistant',
     ]) {
       testWidgets('$route renders without overflow at $width', (tester) async {
@@ -72,7 +72,7 @@ void main() {
           tester,
           route,
           Size(width, 900),
-          before: (app) => app.vm.startAction('arc'),
+          before: (app) async => app.vm.toggleSavedFaq('nisa-1070'),
         );
         expect(tester.takeException(), isNull);
         expect(
@@ -102,17 +102,14 @@ void main() {
     );
   });
 
-  testWidgets('Home: a pinned first-month row, then posts as a forum list', (
+  testWidgets('Home: posts as a forum list, no procedure checklist', (
     tester,
   ) async {
     await mount(tester, '/', const Size(1280, 2400));
-    double top(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
-    expect(top('pinned-checklist'), lessThan(top('post-first-rental')));
-    expect(find.text('來台第一個月要辦的事'), findsOneWidget);
-    // Guides are not in the feed, and there is no big checklist on Home.
-    expect(find.byKey(const Key('next-guide')), findsNothing);
-    expect(find.byKey(const Key('guide-row-arc')), findsNothing);
-    // Official guides are marked only by the name and avatar: no seal, badge or check mark.
+    expect(find.byKey(const Key('post-first-rental')), findsOneWidget);
+    expect(find.text('來台第一個月要辦的事'), findsNothing);
+    // Official questions are not in the feed.
+    expect(find.byKey(const Key('faq-row-nisa-1070')), findsNothing);
     expect(find.byType(OfficialSeal), findsNothing);
     expect(find.byIcon(Icons.verified), findsNothing);
   });
@@ -124,52 +121,111 @@ void main() {
     expect(find.byKey(const Key('post-first-rental')), findsOneWidget);
   });
 
-  testWidgets('Settled students close the pinned row, and can pin it again', (
+  testWidgets('The Q&A tab filters by category and identity, and searches', (
     tester,
   ) async {
-    final app = await mount(tester, '/', const Size(375, 1600));
-    await tap(tester, find.byKey(const Key('i-am-settled')));
-    expect(app.vm.settled, isTrue);
-    expect(app.preferences.settled, isTrue);
-    expect(find.byKey(const Key('pinned-checklist')), findsNothing);
-    expect(find.byKey(const Key('post-first-rental')), findsOneWidget);
+    await mount(tester, '/faqs', const Size(375, 1600));
+    expect(find.byKey(const Key('faqs-intro')), findsOneWidget);
+    expect(find.text('共 3 則'), findsOneWidget);
+    for (final id in ['nisa-1070', 'nisa-1001', 'nisa-900']) {
+      expect(find.byKey(Key('faq-row-$id')), findsOneWidget);
+    }
+    // Chips show each category's count.
+    expect(find.text('工作 1'), findsOneWidget);
 
-    await tap(tester, find.byKey(const Key('nav-1')));
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('i-am-new')),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tap(tester, find.byKey(const Key('i-am-new')));
-    expect(app.vm.settled, isFalse);
-    await tap(tester, find.byKey(const Key('nav-0')));
-    expect(find.byKey(const Key('pinned-checklist')), findsOneWidget);
+    await tap(tester, find.byKey(const Key('faq-cat-work')));
+    expect(find.text('共 1 則'), findsOneWidget);
+    expect(find.byKey(const Key('faq-row-nisa-1001')), findsOneWidget);
+    expect(find.byKey(const Key('faq-row-nisa-1070')), findsNothing);
+
+    await tap(tester, find.byKey(const Key('faq-cat-all')));
+    await tap(tester, find.byKey(const Key('faq-who-mainland')));
+    expect(find.byKey(const Key('faq-row-nisa-900')), findsOneWidget);
+    expect(find.byKey(const Key('faq-row-nisa-1001')), findsNothing);
+
+    await tap(tester, find.byKey(const Key('faq-who-all')));
+    await tester.enterText(find.byKey(const Key('faq-search')), '延期');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('faq-row-nisa-1070')), findsOneWidget);
+    expect(find.byKey(const Key('faq-row-nisa-900')), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('faq-search')), '沒有這個字');
+    await tester.pumpAndSettle();
+    expect(find.text('沒有符合的問題'), findsOneWidget);
   });
 
-  testWidgets('The guides page lists every guide by stage', (tester) async {
-    await mount(tester, '/guides?stage=papers', const Size(375, 812));
-    expect(find.byKey(const Key('official-account')), findsOneWidget);
-    expect(find.byKey(const Key('guide-row-arc')), findsOneWidget);
-    // Guides with no stage are still listed, under 其他指南.
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('guide-row-transport')),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('其他指南'), findsOneWidget);
-    expect(find.byKey(const Key('post-first-rental')), findsNothing);
-  });
-
-  testWidgets('Old official account links open the guides page', (
+  testWidgets('A question shows its answer, source, related posts and saves', (
     tester,
   ) async {
+    final app = await mount(tester, '/faqs', const Size(375, 2400));
+    await tap(tester, find.byKey(const Key('faq-row-nisa-1070')));
+    expect(app.vm.isRead('faq:nisa-1070'), isTrue);
+    expect(find.text('居留證到期前多久可以申請延期？'), findsOneWidget);
+    // The answer keeps its line breaks.
+    expect(
+      tester.widget<Text>(find.byKey(const Key('faq-answer'))).data,
+      contains('\n'),
+    );
+    expect(find.textContaining('內政部移民署'), findsWidgets);
+    expect(
+      find.textContaining('115 年境外生輔導人員研習', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('faq-original')), findsOneWidget);
+    // Student posts on the same subject, labelled as personal experience.
+    expect(find.byKey(const Key('faq-related-posts')), findsOneWidget);
+    expect(find.byKey(const Key('post-professor-see')), findsOneWidget);
+    expect(find.textContaining('個人經驗'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('save-faq')));
+    expect(app.vm.faqSaved('nisa-1070'), isTrue);
+    expect(app.preferences.savedFaqs, {'nisa-1070'});
+    await tester.pumpWidget(const SizedBox());
+    await mount(tester, '/faqs/nisa-1001', const Size(375, 1600));
+    // No related posts: no section.
+    expect(find.byKey(const Key('faq-related-posts')), findsNothing);
+  });
+
+  testWidgets('English shows a note where the site has no English version', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/faqs/nisa-900', const Size(375, 1600));
+    expect(find.byKey(const Key('faq-no-english')), findsNothing);
+    app.vm.setEnglish(true);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('faq-no-english')), findsOneWidget);
+    expect(find.text('陸生可以加入全民健保嗎？'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await mount(
+      tester,
+      '/faqs/nisa-1070',
+      const Size(375, 1600),
+      before: (app) async => app.vm.setEnglish(true),
+    );
+    expect(find.text('How early can I renew my ARC?'), findsOneWidget);
+    expect(find.byKey(const Key('faq-no-english')), findsNothing);
+  });
+
+  testWidgets('Saved questions are listed under Me › Saved', (tester) async {
+    await mount(
+      tester,
+      '/profile?tab=saved',
+      const Size(375, 1600),
+      before: (app) async => app.vm.toggleSavedFaq('nisa-1001'),
+    );
+    expect(find.byKey(const Key('faq-row-nisa-1001')), findsOneWidget);
+  });
+
+  testWidgets('Old guide links open the official Q&A', (tester) async {
     for (final route in [
       '/official',
       '/guide/welcome',
+      '/guides',
+      '/actions/arc',
       '/explore?cat=official',
     ]) {
       await mount(tester, route, const Size(375, 812));
-      expect(find.byKey(const Key('official-account')), findsOneWidget);
+      expect(find.byKey(const Key('faqs-intro')), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     }
   });
@@ -184,10 +240,10 @@ void main() {
     expect(find.text('學生分享'), findsWidgets);
   });
 
-  testWidgets('Opened posts are dimmed and marked read', (tester) async {
-    final app = await mount(tester, '/guides', const Size(1280, 2400));
-    await tap(tester, find.text('申請或更新 ARC').first);
-    expect(app.vm.isRead('guide:arc'), isTrue);
+  testWidgets('Opened questions are dimmed and marked read', (tester) async {
+    final app = await mount(tester, '/faqs', const Size(1280, 2400));
+    await tap(tester, find.text('在學期間可以打工嗎？').first);
+    expect(app.vm.isRead('faq:nisa-1001'), isTrue);
     await tap(tester, find.byKey(const Key('back')));
     expect(find.textContaining('已看過'), findsOneWidget);
   });
@@ -199,7 +255,7 @@ void main() {
     for (final key in postCategories) {
       expect(find.byKey(Key('board-card-$key')), findsOneWidget);
     }
-    // Official posts live on the guides page, not on a board card.
+    // Official Q&A lives on its own tab, not on a board card.
     expect(find.byKey(const Key('board-card-official')), findsNothing);
     expect(find.byType(StudentPostCard), findsNothing);
     expect(find.byKey(const Key('sort-new')), findsNothing);
@@ -228,8 +284,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('explore-search')), 'ARC');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(find.text('官方指南'.toUpperCase()), findsOneWidget);
-    expect(find.byKey(const Key('guide-row-arc')), findsOneWidget);
+    expect(find.text('官方問答'.toUpperCase()), findsOneWidget);
+    expect(find.byKey(const Key('faq-row-nisa-1070')), findsOneWidget);
     expect(find.byKey(const Key('ask-assistant')), findsOneWidget);
     expect(find.byKey(const Key('board-card-food')), findsNothing);
 
@@ -325,35 +381,8 @@ void main() {
   testWidgets('Pages are plain: no decorative stickers in the margins', (
     tester,
   ) async {
-    await mount(tester, '/guides', const Size(1920, 1200));
+    await mount(tester, '/faqs', const Size(1920, 1200));
     expect(find.byType(Sticker), findsNothing);
-  });
-
-  testWidgets('Guide steps show English notes in English', (tester) async {
-    final app = await mount(tester, '/actions/arc', const Size(1280, 1600));
-    expect(find.text('先線上預約。'), findsOneWidget);
-    app.vm.setEnglish(true);
-    await tester.pumpAndSettle();
-    expect(find.text('Book online first.'), findsOneWidget);
-    expect(find.text('先線上預約。'), findsNothing);
-    // Sources are folded under one line; open, they show English names.
-    expect(find.textContaining('Sources ('), findsOneWidget);
-    await tap(tester, find.byKey(const Key('guide-sources')));
-    expect(find.textContaining('Example Agency'), findsWidgets);
-  });
-
-  testWidgets('Official guides use the team logo', (tester) async {
-    await mount(tester, '/actions/certificate', const Size(1280, 1600));
-    Iterable<String> logos() => tester
-        .widgetList<Image>(find.byType(Image))
-        .map((i) => i.image)
-        .whereType<AssetImage>()
-        .map((a) => a.assetName)
-        .where((name) => name == 'assets/images/logo-mark.png');
-    expect(logos(), isNotEmpty);
-    await tester.pumpWidget(const SizedBox());
-    await mount(tester, '/actions/arc', const Size(1280, 1600));
-    expect(logos(), isNotEmpty);
   });
 
   testWidgets('New posts appear on Home without a reload', (tester) async {
@@ -388,11 +417,11 @@ void main() {
   testWidgets('Guests are sent to sign in, then back', (tester) async {
     final app = await mount(
       tester,
-      '/actions/arc',
+      '/experiences/first-rental',
       const Size(1280, 1600),
       signedIn: false,
     );
-    await tap(tester, find.byKey(const Key('start-action')));
+    await tap(tester, find.byKey(const Key('me-too')));
     expect(find.byKey(const Key('dev-name')), findsOneWidget);
     await tester.enterText(find.byKey(const Key('dev-name')), 'mei');
     await tap(tester, find.byKey(const Key('dev-sign-in')));
@@ -400,7 +429,7 @@ void main() {
     // First sign-in without names: asked once, can skip.
     expect(find.text('歡迎！要怎麼稱呼你？'), findsOneWidget);
     await tap(tester, find.byKey(const Key('names-later')));
-    expect(find.byKey(const Key('start-action')), findsOneWidget);
+    expect(find.byKey(const Key('me-too')), findsOneWidget);
   });
 
   testWidgets('Share: required fields, AI tags, publish as written', (
@@ -504,58 +533,10 @@ void main() {
     expect(comments.last.replyToId, comments.first.id);
   });
 
-  testWidgets('Official guide: steps, documents checklist, share under it', (
-    tester,
-  ) async {
-    final app = await mount(tester, '/actions/arc', const Size(375, 2400));
-    expect(find.text('步驟'.toUpperCase()), findsOneWidget);
-    expect(find.text('已備妥 0 / 2'), findsOneWidget);
-    await tap(tester, find.byKey(const Key('document-1')));
-    expect(find.text('已備妥 1 / 2'), findsOneWidget);
-    await tap(tester, find.byKey(const Key('share-under-guide')));
-    expect(app.vm.draft.actionId, 'arc');
-    expect(find.textContaining('也會出現在官方指南'), findsOneWidget);
-    // Let the debounced draft save run before the test ends.
-    await tester.pump(const Duration(seconds: 1));
-  });
-
-  testWidgets('Step interaction and stuck report reach the API', (
-    tester,
-  ) async {
-    final app = await mount(
-      tester,
-      '/actions/arc/progress',
-      const Size(375, 1400),
-      before: (app) => app.vm.startAction('arc'),
-    );
-    await tap(tester, find.byKey(const Key('step-0')));
-    expect(find.text('進度: 1 / 5'), findsOneWidget);
-
-    await tap(tester, find.byKey(const Key('stuck-1')));
-    await tap(tester, find.text('需要的文件不同'));
-    await tap(tester, find.text('送出'));
-    expect(app.repository.feedback.single['category'], 'documents');
-    expect(app.repository.executions.single.steps[1].state, 'stuck');
-  });
-
-  testWidgets('Completion sends the outcome', (tester) async {
-    final app = await mount(
-      tester,
-      '/actions/arc/complete',
-      const Size(1280, 1400),
-      before: (app) => app.vm.startAction('arc'),
-    );
-    await tap(tester, find.text('流程和原本不同'));
-    await tap(tester, find.text('費用'));
-    await tap(tester, find.byKey(const Key('send-outcome')));
-    expect(app.repository.feedback.single['category'], 'fee');
-    expect(app.repository.executions, isEmpty);
-  });
-
   testWidgets('Mobile tabs, My page and the language setting', (tester) async {
     await mount(tester, '/', const Size(375, 812));
     // Four destinations; the assistant is the bubble and writing is a button.
-    for (final (i, label) in ['首頁', '指南', '看板', '我的'].indexed) {
+    for (final (i, label) in ['首頁', '問答', '看板', '我的'].indexed) {
       expect(
         find.descendant(
           of: find.byKey(Key('nav-$i')),
@@ -566,7 +547,7 @@ void main() {
     }
     expect(find.byKey(const Key('nav-4')), findsNothing);
     await tap(tester, find.byKey(const Key('nav-1')));
-    expect(find.byKey(const Key('official-account')), findsOneWidget);
+    expect(find.byKey(const Key('faqs-intro')), findsOneWidget);
     await tap(tester, find.byKey(const Key('nav-3')));
     expect(find.text('我的分享'), findsOneWidget);
     expect(find.text('收藏'), findsOneWidget);
@@ -707,38 +688,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Assistant: greeting, suggestions, links and confirm cards', (
+  testWidgets('Assistant: greeting, suggestions, official answers and links', (
     tester,
   ) async {
-    final app = await mount(tester, '/actions/arc', const Size(1280, 900));
-    app.repository.assistantReply = (message) => AssistantReply(
+    final app = await mount(tester, '/faqs/nisa-1001', const Size(1280, 900));
+    Map<String, String>? screen;
+    app.repository.assistantReply = (message) => const AssistantReply(
       conversationId: 'c1',
-      text: '依據「申請或更新 ARC」流程卡。',
-      cards: const [
+      text: '依據官方問答（內政部移民署回覆）。',
+      cards: [
         AssistantCard(
-          type: 'action',
-          id: 'arc',
-          title: '申請或更新 ARC',
-          verificationStatus: 'verified',
-          lastVerifiedAt: '2026-08-14',
-          recentSuccessCount: 12,
-          sources: ['內政部移民署'],
-          reminder: null,
+          type: 'faq',
+          id: 'nisa-1070',
+          title: '居留證到期前多久可以申請延期？',
+          excerpt: '居留期限屆滿前 30 日內申請。',
+          category: '簽證與居留',
+          agency: '內政部移民署',
+          postedOn: '2026-08-03',
         ),
       ],
-      screenActions: const [ScreenAction('open_progress', 'arc', null)],
-      pendingOperations: [
-        PendingOperation(
-          id: 'op1',
-          summary: '開始辦理「申請或更新 ARC」',
-          status: 'pending',
-          expiresAt: DateTime.now().add(const Duration(minutes: 5)),
-          targetId: 'arc',
-          result: null,
-        ),
-      ],
+      screenActions: [ScreenAction('open_faq', 'nisa-1070', null)],
       fallback: false,
     );
+    app.repository.onAsk = (s) => screen = s;
     await tap(tester, find.byKey(const Key('assistant-button')));
     expect(find.textContaining('我是 Culture Bridge 助理'), findsOneWidget);
     expect(find.text('居留證要準備什麼？'), findsOneWidget);
@@ -748,19 +720,26 @@ void main() {
 
     await tap(tester, find.text('居留證要準備什麼？'));
     expect(app.repository.assistantMessages, ['居留證要準備什麼？']);
-    // The guide shows as an official post card, like student posts.
-    expect(find.byKey(const Key('assistant-post-arc')), findsOneWidget);
+    // The question being read goes along with the message.
+    expect(screen?['faq_id'], 'nisa-1001');
+    // The official answer shows as a card with who answered and when.
+    final card = find.byKey(const Key('assistant-post-nisa-1070'));
+    expect(card, findsOneWidget);
+    expect(
+      find.descendant(of: card, matching: find.text('居留證到期前多久可以申請延期？')),
+      findsOneWidget,
+    );
     expect(
       find.descendant(
-        of: find.byKey(const Key('assistant-post-arc')),
-        matching: find.text('申請或更新 ARC'),
+        of: card,
+        matching: find.text('官方問答 · 內政部移民署 · 2026-08-03'),
       ),
       findsOneWidget,
     );
-    expect(find.text('打開辦理進度 →'), findsOneWidget);
-    await tap(tester, find.byKey(const Key('confirm-op1')));
-    expect(app.repository.confirmed, ['op1']);
-    expect(find.text('已開始，打開進度'), findsOneWidget);
+    expect(find.text('看這則官方問答 →'), findsOneWidget);
+    await tap(tester, card);
+    expect(find.byKey(const Key('faq-answer')), findsOneWidget);
+    expect(find.text('居留證到期前多久可以申請延期？'), findsWidgets);
   });
 
   testWidgets('Guests are asked to sign in before using the assistant', (
@@ -774,7 +753,7 @@ void main() {
     expect(find.byKey(const Key('assistant-input')), findsNothing);
     expect(find.byKey(const Key('assistant-sign-in')), findsOneWidget);
 
-    // A suggestion searches the guides and posts instead of asking.
+    // A suggestion searches the official Q&A and posts instead of asking.
     await tap(tester, find.text('居留證要準備什麼？'));
     expect(app.vm.assistantOpen, isFalse);
     expect(find.byKey(const Key('ask-assistant')), findsOneWidget);
@@ -852,24 +831,19 @@ void main() {
               type: 'experience',
               id: 'first-rental',
               title: '第一次在台中租房子',
-              verificationStatus: null,
-              lastVerifiedAt: null,
-              recentSuccessCount: 0,
-              sources: [],
               reminder: '',
               excerpt: '看房時記得問電費怎麼算……',
               category: 'housing',
             ),
           ],
           screenActions: [],
-          pendingOperations: [],
           fallback: false,
         );
         await tap(tester, find.byKey(const Key('assistant-button')));
         await tester.enterText(find.byType(TextField).last, '租房子要注意什麼？');
         await tester.testTextInput.receiveAction(TextInputAction.send);
         await tester.pumpAndSettle();
-        expect(find.text('相關貼文'), findsOneWidget);
+        expect(find.text('同學的經驗分享'), findsOneWidget);
         expect(find.text('第一次在台中租房子'), findsOneWidget);
 
         await tap(tester, find.byKey(const Key('assistant-post-first-rental')));
@@ -906,17 +880,12 @@ void main() {
           type: 'experience',
           id: 'first-rental',
           title: '第一次在台中租房子',
-          verificationStatus: null,
-          lastVerifiedAt: null,
-          recentSuccessCount: 0,
-          sources: [],
           reminder: '',
           excerpt: '看房時記得問電費怎麼算……',
           category: 'housing',
         ),
       ],
       screenActions: [],
-      pendingOperations: [],
       fallback: false,
     );
     GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/assistant');
@@ -976,8 +945,13 @@ void main() {
 
   test('Only whitelisted screen actions become routes', () {
     expect(
+      screenActionPath(const ScreenAction('open_faq', 'nisa-1070', null)),
+      '/faqs/nisa-1070',
+    );
+    // Procedure guides are gone: older replies' links are dropped.
+    expect(
       screenActionPath(const ScreenAction('open_action', 'arc', null)),
-      '/actions/arc',
+      isNull,
     );
     expect(
       screenActionPath(
@@ -994,12 +968,12 @@ void main() {
       isNull,
     );
     expect(
-      screenActionPath(const ScreenAction('open_action', null, null)),
+      screenActionPath(const ScreenAction('open_faq', null, null)),
       isNull,
     );
     expect(
-      screenActionPath(const ScreenAction('open_action', '../admin', null)),
-      '/actions/..%2Fadmin',
+      screenActionPath(const ScreenAction('open_faq', '../admin', null)),
+      '/faqs/..%2Fadmin',
     );
   });
 

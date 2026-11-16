@@ -10,17 +10,21 @@ from sqlalchemy.orm import Session
 from app.assistant.data import (
     ActionRecord,
     ExperienceRecord,
+    FaqRecord,
     Localized,
     ProgressRecord,
     ProgressStep,
     Source,
+    both,
+    faq_text,
     rank,
 )
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError
+from app.models import FaqCategory, OfficialFaq
 from app.rag.embedder import Embedder, EmbeddingUnavailable, get_embedder
 from app.rag.index import semantic_search
-from app.services import actions, experiences
+from app.services import actions, experiences, faqs
 from app.services.common import Text2
 
 # The assistant ranks candidates itself (bigram/stem matching handles natural questions better
@@ -89,6 +93,21 @@ def _experience_record(item: experiences.PublicExperience) -> ExperienceRecord:
     )
 
 
+def faq_record(faq: OfficialFaq, category: FaqCategory) -> FaqRecord:
+    return FaqRecord(
+        id=faq.id,
+        category=Localized(category.name_zh, category.name_en),
+        question=both(faq.question_zh, faq.question_en),
+        answer=both(faq.answer_zh, faq.answer_en),
+        agency=both(faq.agency_zh, faq.agency_en),
+        source=both(faq.source_zh, faq.source_en),
+        posted_on=faq.posted_on.isoformat() if faq.posted_on else None,
+        url=faq.url,
+        identities=tuple(faq.identities or ()),
+        has_english=bool(faq.question_en and faq.answer_en),
+    )
+
+
 def _searchable(e: ExperienceRecord) -> str:
     parts = [e.original_voice, e.summary, e.reminder]
     return " ".join(f"{p.zh} {p.en}" for p in parts).lower()
@@ -106,6 +125,15 @@ class PostgresAssistantData:
         if self._actions is None:
             self._actions = _published_actions(self.db)
         return self._actions
+
+    def _all_faqs(self) -> dict[str, FaqRecord]:
+        return {f.id: faq_record(f, c) for f, c in faqs.active_with_categories(self.db)}
+
+    def search_faqs(self, query: str, limit: int) -> list[FaqRecord]:
+        return rank([(f, *faq_text(f)) for f in self._all_faqs().values()], query, limit)
+
+    def get_faq(self, faq_id: str) -> FaqRecord | None:
+        return self._all_faqs().get(faq_id)
 
     def search_actions(self, query: str, limit: int) -> list[ActionRecord]:
         items = [

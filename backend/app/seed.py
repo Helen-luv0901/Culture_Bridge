@@ -5,7 +5,9 @@
 
 Demo procedures carry no real source URLs, so every seeded source and verification record says it
 is demo data; D-8 replaces them with reviewed official sources before launch. Running it twice is
-safe: anything already present is skipped.
+safe: anything already present is skipped. It also loads the official NISA Q&A (without the
+Gemini embeddings; run `python -m app.official_faq` for those), so local previews show the real
+Official Q&A tab.
 """
 
 import argparse
@@ -172,7 +174,10 @@ def seed(db: Session, content_path: Path) -> dict[str, int]:
     actions = sum(seed_action(db, card) for card in raw["actionCards"])
     experiences = sum(seed_experience(db, item) for item in raw["experiences"])
     db.commit()
-    return {"actions": actions, "experiences": experiences}
+    from app.official_faq import DEFAULT_PATH, import_faqs, load
+
+    faqs = import_faqs(db, load(DEFAULT_PATH))["new"]
+    return {"actions": actions, "experiences": experiences, "faqs": faqs}
 
 
 def main() -> None:
