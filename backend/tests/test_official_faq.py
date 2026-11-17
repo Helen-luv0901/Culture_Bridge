@@ -191,3 +191,40 @@ def test_related_posts_fall_back_to_keywords_before_embedding(api, db, faq_file)
     loaded(db, faq_file)
     assert db.scalar(select(func.count()).select_from(ContentEmbedding)) == 0
     assert api.get("/api/faqs/nisa-934/related-posts").status_code == 200
+
+
+def test_the_job_waits_and_retries_when_gemini_refuses_a_batch(db, faq_file):
+    from app.rag.embedder import EmbeddingUnavailable
+
+    loaded(db, faq_file)
+    calls: list[int] = []
+    waits: list[float] = []
+
+    class Flaky(HashingEmbedder):
+        def embed_documents(self, texts):
+            calls.append(len(texts))
+            if len(calls) == 2:  # the second batch hits the per-minute quota once
+                raise EmbeddingUnavailable("429")
+            return super().embed_documents(texts)
+
+    done = embed_missing(db, Flaky(), batch=100, pause=5, retries=2, sleep=waits.append)
+    assert done == len(faq_file.faqs)
+    assert calls[:3] == [100, 100, 100]
+    assert waits[:2] == [5, 65.0]  # the pause before batch two, then the minute after refusal
+
+    always = HashingEmbedder()
+    always.embed_documents = lambda texts: (_ for _ in ()).throw(EmbeddingUnavailable("down"))
+    db.execute(ContentEmbedding.__table__.delete())
+    db.commit()
+    with pytest.raises(EmbeddingUnavailable):
+        embed_missing(db, always, retries=1, sleep=lambda _: None)
+
+
+def test_embedded_text_keeps_only_the_opening_of_long_answers(db, faq_file):
+    loaded(db, faq_file)
+    faq = max(db.scalars(select(OfficialFaq)), key=lambda f: len(f.answer_zh))
+    text = embedding_text(faq, db.get(FaqCategory, faq.category_id))
+    fixed = len(faq.question_zh) + len(faq.question_en) + 120  # category names, line breaks
+    assert len(faq.answer_zh) > 600
+    assert faq.answer_zh[:600] in text and faq.answer_zh[600:] not in text
+    assert len(text) <= fixed + 2 * 600
