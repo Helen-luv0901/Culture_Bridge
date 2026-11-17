@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-16a",
+  "version": "2026-11-18a",
   "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: facts about rules, procedures, fees and dates always come from the official Q&A tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
   "entries": [
     {
@@ -28,8 +28,8 @@
       "keywords": ["官方問答", "官方指南", "常見問答", "問答", "分類", "教育部", "NISA", "政府", "官方", "official", "q&a", "faq", "guide", "category", "government"],
       "title": {"zh-Hant": "官方問答", "en": "Official Q&A"},
       "body": {
-        "zh-Hant": "「官方問答」收錄教育部「大專校院境外學生輔導人員支援體系計畫（NISA）」網站上的常見問答，由內政部移民署、勞動部、健保署、教育部等機關回覆。可以依 16 個分類（例如簽證/居留證、在學期間工讀、健保/保險、畢業後留臺工作）和身分（外國學生、僑生、港澳生、陸生）篩選，也可以搜尋。每一題會列出回復機關、發布日期、資料來源和原文連結，下方還有同學分享的相關貼文。部分問題官網只有中文版，英文介面會顯示中文原文。規定可能變動，辦理前請以主管機關最新公告為準。",
-        "en": "Official Q&A collects the FAQ of the Ministry of Education's NISA site (Network for International Student Advisors), answered by agencies such as the National Immigration Agency, the Ministry of Labor, the NHIA and the Ministry of Education. Filter by 16 categories (for example Visa and ARC, Part-time Job and Work Permits, Health and Insurance, Staying in Taiwan for Employment) and by identity (foreign, overseas Chinese, Hong Kong and Macao, mainland Chinese students), or search. Each question shows the answering agency, date, source and a link to the original, with related student posts below. Some questions exist only in Chinese on the site, so the English interface shows the Chinese original. Rules can change; check the agency's latest notice before acting."
+        "zh-Hant": "「官方問答」收錄教育部「大專校院境外學生輔導人員支援體系計畫（NISA）」網站上的常見問答，由內政部移民署、勞動部、健保署、教育部等機關回覆。可以依 16 個分類（例如簽證/居留證、在學期間工讀、健保/保險、畢業後留臺工作）和身分（外國學生、僑生、港澳生、陸生）篩選，也可以搜尋。每一題會列出回復機關、發布日期、資料來源和原文連結，下方還有同學分享的相關貼文；學生貼文的下方也會列出相關的官方問答。學校承辦人提出的行政問題預設不顯示，可以用「含學校行政問題」打開；可能已被較新回覆取代、說法不一或已經結束的措施，會標示提醒並連到較新的回覆。部分問題官網只有中文版，英文介面會顯示中文原文。規定可能變動，辦理前請以主管機關最新公告為準。",
+        "en": "Official Q&A collects the FAQ of the Ministry of Education's NISA site (Network for International Student Advisors), answered by agencies such as the National Immigration Agency, the Ministry of Labor, the NHIA and the Ministry of Education. Filter by 16 categories (for example Visa and ARC, Part-time Job and Work Permits, Health and Insurance, Staying in Taiwan for Employment) and by identity (foreign, overseas Chinese, Hong Kong and Macao, mainland Chinese students), or search. Each question shows the answering agency, date, source and a link to the original, with related student posts below, and student posts list related official questions. Administrative questions asked by school staff are hidden unless you turn on “Include school admin questions”; answers that a newer one replaced, that differ from others, or that describe an ended measure carry a warning and link to the newer answer. Some questions exist only in Chinese on the site, so the English interface shows the Chinese original. Rules can change; check the agency's latest notice before acting."
       }
     },
     {

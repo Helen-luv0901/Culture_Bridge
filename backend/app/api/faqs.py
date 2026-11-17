@@ -29,3 +29,15 @@ def related_posts(
 ) -> list[PublicExperience]:
     """Student posts closest in meaning to the question (unverified personal experience)."""
     return svc.related_posts(db, viewer, faq_id, locale, limit)
+
+
+@router.get("/experiences/{experience_id}/related-faqs")
+def related_faqs(
+    experience_id: str,
+    db: DbSession,
+    viewer: OptionalUser,
+    limit: int = Query(default=svc.RELATED_FAQS, ge=1, le=6),
+) -> list[svc.FaqSummary]:
+    """Official questions about what this post describes (school administration and outdated
+    answers left out)."""
+    return svc.related_faqs(db, viewer, experience_id, limit)

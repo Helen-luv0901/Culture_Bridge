@@ -46,8 +46,8 @@ PREVIEW="${PREVIEW:-}"  # a tag name: deploy for viewing only, traffic untouched
 if [[ -n "${PREVIEW}" ]]; then BRANCH="${BRANCH:-dev}"; else BRANCH=main; fi
 IMAGE_REPO="${REGION}-docker.pkg.dev/${PROJECT}/culture-bridge/app"
 SERVICE=culture-bridge
-# The Q&A import reruns when the content or the importer changes.
-FAQS=(backend/app/content/nisa_faq.json backend/app/official_faq.py)
+# The Q&A import reruns when the content, its reviewed labels or the importer change.
+FAQS=(backend/app/content/nisa_faq.json backend/app/content/nisa_faq_review.json backend/app/official_faq.py)
 
 bold() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 note() { printf '  %s\n' "$*"; }

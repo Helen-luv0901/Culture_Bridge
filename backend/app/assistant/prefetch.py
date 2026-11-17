@@ -31,6 +31,7 @@ FAQS = 3  # full answers for the best keyword matches
 OTHER_FAQS = 5
 EXPERIENCES = 3
 PASSAGES = 3
+SEMANTIC_FAQS = 8  # candidates for the fused ranking
 MAX_QUERY = 200
 MAX_CHARS = 9000  # keep the attached block small (it is not remembered)
 
@@ -64,9 +65,10 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     except Exception:  # never let a search problem stop the assistant; the tools remain
         logger.exception("Assistant prefetch failed")
         return Prefetched(block="")
-    faqs, others = matches[:FAQS], matches[FAQS:]
     keywords_done = time.monotonic()
     passages = _semantic(query, ctx)
+    ranked = fuse(matches, passages, ctx)
+    faqs, others = ranked[:FAQS], ranked[FAQS : FAQS + OTHER_FAQS]
     logger.info(
         "Assistant prefetch: keywords %.2fs, then semantic %.2fs",
         keywords_done - started,
@@ -93,6 +95,31 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     return Prefetched(block=f"{_HEADER}\n{text}", faqs=tuple(faqs))
 
 
+RRF_K = 60  # the usual reciprocal-rank-fusion constant: rank 1 and rank 5 differ, but not hugely
+
+
+def fuse(keyword: list[FaqRecord], passages: dict | None, ctx: ToolContext) -> list[FaqRecord]:
+    """One ranking from both searches (reciprocal rank fusion): a question either search ranks
+    high comes first, and one both find beats one only keywords like. Keywords alone favour long
+    multi-part questions that repeat common words ("work", "students"); meaning alone misses
+    exact terms. School-administration and outdated answers go after the rest.
+
+    The official answers found by meaning move from related_passages into this list, so the
+    model gets each question once, with its full answer."""
+    semantic_ids = [f["faq_id"] for f in (passages or {}).pop("official_faqs", None) or []]
+    scores: dict[str, float] = {}
+    records = {f.id: f for f in keyword}
+    for ranking in ([f.id for f in keyword], semantic_ids):
+        for rank, faq_id in enumerate(ranking, 1):
+            scores[faq_id] = scores.get(faq_id, 0.0) + 1.0 / (RRF_K + rank)
+    for faq_id in semantic_ids:
+        if faq_id not in records and (faq := ctx.data.get_faq(faq_id)) is not None:
+            records[faq_id] = faq
+    order = sorted((i for i in scores if i in records), key=lambda i: -scores[i])
+    fused = [records[i] for i in order]
+    return [f for f in fused if not f.demoted] + [f for f in fused if f.demoted]
+
+
 def _brief(faq: FaqRecord, locale) -> dict[str, str | None]:
     return {
         "faq_id": faq.id,
@@ -103,7 +130,7 @@ def _brief(faq: FaqRecord, locale) -> dict[str, str | None]:
 
 def _semantic(query: str, ctx: ToolContext) -> dict | None:
     try:
-        return ctx.data.semantic_search(query, PASSAGES)
+        return ctx.data.semantic_search(query, PASSAGES, faq_limit=SEMANTIC_FAQS)
     except Exception:
         logger.exception("Assistant prefetch: semantic search failed")
         return None

@@ -4,6 +4,11 @@
     uv run python -m app.official_faq --dry-run       # only validate the file
     uv run python -m app.official_faq --no-embed      # skip the Gemini embeddings
 
+Reviewed labels live apart from the scraped text, in app/content/nisa_faq_review.json: who each
+question is for (student or school administration) and warnings for answers that a newer one
+replaced, that conflict, or that described a temporary measure. Re-scraping the site never
+touches them; changing them never re-embeds anything.
+
 The questions are government answers published on the MOE NISA site, so they go live as they
 are (no review drafts). Running it again updates changed questions, marks questions the file no
 longer lists inactive, and embeds only what changed or was never embedded, so it is cheap to
@@ -17,6 +22,7 @@ import sys
 import time
 from datetime import date
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete, select
@@ -29,6 +35,7 @@ from app.rag.index import _upsert
 from app.services.faqs import EMBEDDING_TYPE, forget_cache
 
 DEFAULT_PATH = Path(__file__).with_name("content") / "nisa_faq.json"
+REVIEW_PATH = DEFAULT_PATH.with_name("nisa_faq_review.json")
 _SLUG = r"^[a-z0-9-]{1,64}$"
 
 
@@ -84,8 +91,39 @@ class FaqFile(BaseModel):
         return self
 
 
+class ReviewIn(BaseModel):
+    id: str = Field(pattern=_SLUG)
+    kind: Literal["superseded", "conflict", "time_limited"]
+    superseded_by: str | None = Field(default=None, pattern=_SLUG)
+    related: list[str] = []
+    note_zh: str = Field(min_length=1, max_length=300)
+    note_en: str = Field(default="", max_length=600)
+
+
+class ReviewFile(BaseModel):
+    """Reviewed labels: audience per question, and warnings (see the module docstring)."""
+
+    audience: dict[str, Literal["student", "school"]] = {}
+    reviews: list[ReviewIn] = []
+
+    def check(self, faqs: FaqFile) -> None:
+        ids = {f.id for f in faqs.faqs}
+        named = set(self.audience) | {r.id for r in self.reviews}
+        named |= {r.superseded_by for r in self.reviews if r.superseded_by}
+        if unknown := named - ids:
+            raise ValueError(f"review file names unknown questions: {sorted(unknown)}")
+        if len({r.id for r in self.reviews}) != len(self.reviews):
+            raise ValueError("review file lists a question twice")
+
+
 def load(path: Path) -> FaqFile:
     return FaqFile.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def load_review(path: Path = REVIEW_PATH) -> ReviewFile:
+    if not path.is_file():
+        return ReviewFile()
+    return ReviewFile.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def embedding_text(faq: OfficialFaq, category: FaqCategory) -> str:
@@ -116,12 +154,17 @@ def _upsert_labels(db: Session, model, labels: list[LabelIn]) -> None:
         db.add(row)
 
 
-def import_faqs(db: Session, data: FaqFile) -> dict[str, int]:
-    """Write the file's questions; returns counts of new, updated, unchanged and retired."""
+def import_faqs(db: Session, data: FaqFile, review: ReviewFile | None = None) -> dict[str, int]:
+    """Write the file's questions and their reviewed labels; returns counts of new, updated,
+    unchanged and retired questions (by text) and of labels that changed."""
+    # Labels for questions the file no longer has are ignored here (a re-scrape may drop one);
+    # --dry-run reports them so the review file can be tidied.
+    review = review if review is not None else load_review()
+    notes = {r.id: r for r in review.reviews}
     _upsert_labels(db, FaqCategory, data.categories)
     _upsert_labels(db, FaqIdentity, data.identities)
     db.flush()
-    counts = {"new": 0, "updated": 0, "unchanged": 0, "retired": 0}
+    counts = {"new": 0, "updated": 0, "unchanged": 0, "retired": 0, "relabelled": 0}
     listed = set()
     for item in data.faqs:
         listed.add(item.id)
@@ -129,6 +172,7 @@ def import_faqs(db: Session, data: FaqFile) -> dict[str, int]:
         row = db.get(OfficialFaq, item.id)
         if row is not None and row.content_hash == digest and row.active:
             counts["unchanged"] += 1
+            counts["relabelled"] += _label(row, review.audience.get(item.id), notes.get(item.id))
             continue
         counts["new" if row is None else "updated"] += 1
         row = row or OfficialFaq(id=item.id)
@@ -138,6 +182,7 @@ def import_faqs(db: Session, data: FaqFile) -> dict[str, int]:
         row.category_id = item.category
         row.content_hash = digest
         row.active = True
+        _label(row, review.audience.get(item.id), notes.get(item.id))
         db.add(row)
         # The text changed: its old embedding no longer describes it.
         db.execute(
@@ -159,6 +204,21 @@ def import_faqs(db: Session, data: FaqFile) -> dict[str, int]:
     db.commit()
     forget_cache()
     return counts
+
+
+def _label(row: OfficialFaq, audience: str | None, note: ReviewIn | None) -> bool:
+    """Apply the reviewed labels; True when something changed."""
+    values = {
+        "audience": audience or "student",
+        "review_kind": note.kind if note else None,
+        "review_note_zh": note.note_zh if note else "",
+        "review_note_en": note.note_en if note else "",
+        "superseded_by": note.superseded_by if note else None,
+    }
+    changed = any(getattr(row, k, None) != v for k, v in values.items())
+    for key, value in values.items():
+        setattr(row, key, value)
+    return changed
 
 
 def embed_missing(
@@ -227,6 +287,7 @@ def main() -> None:
     parser.add_argument("--no-embed", action="store_true", help="skip the Gemini embeddings")
     args = parser.parse_args()
     data = load(args.path)
+    load_review().check(data)
     if args.dry_run:
         print(f"{len(data.faqs)} questions in {len(data.categories)} categories OK")
         return

@@ -16,8 +16,8 @@ from app.assistant.data import (
     ProgressStep,
     Source,
     both,
-    faq_text,
     rank,
+    search_faq_records,
 )
 from app.core.auth import CurrentUser
 from app.core.errors import ApiError
@@ -105,6 +105,10 @@ def faq_record(faq: OfficialFaq, category: FaqCategory) -> FaqRecord:
         url=faq.url,
         identities=tuple(faq.identities or ()),
         has_english=bool(faq.question_en and faq.answer_en),
+        audience=faq.audience or "student",
+        review_kind=faq.review_kind,
+        review_note=both(faq.review_note_zh, faq.review_note_en) if faq.review_kind else None,
+        superseded_by=faq.superseded_by,
     )
 
 
@@ -130,7 +134,7 @@ class PostgresAssistantData:
         return {f.id: faq_record(f, c) for f, c in faqs.active_with_categories(self.db)}
 
     def search_faqs(self, query: str, limit: int) -> list[FaqRecord]:
-        return rank([(f, *faq_text(f)) for f in self._all_faqs().values()], query, limit)
+        return search_faq_records(self._all_faqs().values(), query, limit)
 
     def get_faq(self, faq_id: str) -> FaqRecord | None:
         return self._all_faqs().get(faq_id)
@@ -176,13 +180,21 @@ class PostgresAssistantData:
         # Only the Gemini call runs on another thread; the session never leaves this one.
         self._embedding = (query, _embedding_pool.submit(self.embedder.embed_query, query))
 
-    def semantic_search(self, query: str, limit: int) -> dict | None:
+    def semantic_search(self, query: str, limit: int, faq_limit: int | None = None) -> dict | None:
         self.release()  # the query is embedded first, a call to Gemini
         started = self._embedding if self._embedding and self._embedding[0] == query else None
         self._embedding = None
         try:
             vector = started[1].result() if started else None
-            return semantic_search(self.db, self.embedder, query, self.viewer, limit, vector=vector)
+            return semantic_search(
+                self.db,
+                self.embedder,
+                query,
+                self.viewer,
+                limit,
+                vector=vector,
+                faq_limit=faq_limit,
+            )
         except EmbeddingUnavailable:
             return None
 

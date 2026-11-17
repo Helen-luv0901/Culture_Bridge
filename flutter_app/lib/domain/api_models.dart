@@ -122,6 +122,25 @@ class FaqIdentity {
   final Text2 name;
 }
 
+/// A note that an official answer may no longer hold.
+class FaqReview {
+  const FaqReview({required this.kind, required this.note, this.supersededBy});
+  factory FaqReview.fromJson(Json json) => FaqReview(
+    kind: json['kind'] as String? ?? '',
+    note: Text2.fromJson(json['note'] as Json?),
+    supersededBy: json['superseded_by'] as String?,
+  );
+
+  /// 'superseded', 'conflict' or 'time_limited'.
+  final String kind;
+
+  /// One sentence for students.
+  final Text2 note;
+
+  /// The newer question that replaces this one, if any.
+  final String? supersededBy;
+}
+
 /// An official question answered by a government agency (MOE NISA), as listed.
 class FaqSummary {
   const FaqSummary({
@@ -132,6 +151,8 @@ class FaqSummary {
     this.identities = const [],
     this.postedOn,
     this.hasEnglish = true,
+    this.audience = 'student',
+    this.review,
   });
   factory FaqSummary.fromJson(Json json) => FaqSummary(
     id: json['id'] as String,
@@ -141,6 +162,10 @@ class FaqSummary {
     excerpt: Text2.fromJson(json['excerpt'] as Json),
     postedOn: json['posted_on'] as String?,
     hasEnglish: json['has_english'] as bool? ?? true,
+    audience: json['audience'] as String? ?? 'student',
+    review: json['review'] == null
+        ? null
+        : FaqReview.fromJson(json['review'] as Json),
   );
   final String id;
   final String categoryId;
@@ -153,6 +178,13 @@ class FaqSummary {
 
   /// False when the official site has no English version (English shows the Chinese).
   final bool hasEnglish;
+
+  /// 'student', or 'school' for a school-administration question asked by staff.
+  final String audience;
+  bool get forSchool => audience == 'school';
+
+  /// Set when the answer may be outdated, ended or contradicted.
+  final FaqReview? review;
 
   /// Whether every word of [query] appears in the question or excerpt, in either language.
   bool matches(String query) {

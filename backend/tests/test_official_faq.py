@@ -17,6 +17,7 @@ from app.official_faq import (
     embedding_text,
     import_faqs,
     load,
+    load_review,
 )
 from app.rag.embedder import HashingEmbedder
 from app.rag.index import semantic_search, sync_experience
@@ -59,7 +60,13 @@ def test_import_is_repeatable_and_retires_what_the_file_drops(db, faq_file):
     first = import_faqs(db, faq_file)
     assert first["new"] == len(faq_file.faqs) and first["retired"] == 0
     again = import_faqs(db, faq_file)
-    assert again == {"new": 0, "updated": 0, "unchanged": len(faq_file.faqs), "retired": 0}
+    assert again == {
+        "new": 0,
+        "updated": 0,
+        "unchanged": len(faq_file.faqs),
+        "retired": 0,
+        "relabelled": 0,
+    }
 
     embed_missing(db, EMBED)
     changed = faq_file.model_copy(deep=True)
@@ -228,3 +235,123 @@ def test_embedded_text_keeps_only_the_opening_of_long_answers(db, faq_file):
     assert len(faq.answer_zh) > 600
     assert faq.answer_zh[:600] in text and faq.answer_zh[600:] not in text
     assert len(text) <= fixed + 2 * 600
+
+
+# ---------- reviewed labels (migration 0017) ----------
+
+
+def test_reviewed_labels_are_imported_and_shown(api, db, faq_file):
+    counts = import_faqs(db, faq_file)
+    assert counts["new"] == len(faq_file.faqs)
+    review = load_review()
+    school = next(i for i, a in review.audience.items() if a == "school")
+    assert api.get(f"/api/faqs/{school}").json()["audience"] == "school"
+
+    flagged = next(r for r in review.reviews if r.superseded_by)
+    body = api.get(f"/api/faqs/{flagged.id}").json()
+    assert body["review"]["kind"] == "superseded"
+    assert body["review"]["superseded_by"] == flagged.superseded_by
+    assert body["review"]["note"]["zh"] == flagged.note_zh
+    assert api.get("/api/faqs/nisa-934").json()["review"] is None
+
+    # Relabelling touches no text, so nothing is re-embedded.
+    embed_missing(db, EMBED)
+    changed = review.model_copy(deep=True)
+    changed.audience[school] = "student"
+    again = import_faqs(db, faq_file, changed)
+    assert again["relabelled"] == 1 and again["updated"] == 0
+    assert embed_missing(db, EMBED) == 0
+
+
+def test_review_file_must_name_real_questions(faq_file):
+    from app.official_faq import ReviewFile
+
+    bad = ReviewFile(audience={"nisa-0": "school"})
+    with pytest.raises(ValueError, match="unknown questions"):
+        bad.check(faq_file)
+
+
+def test_school_and_outdated_questions_come_after_in_explore_search(api, db, faq_file):
+    import_faqs(db, faq_file)
+    labels = {f["id"]: f for f in api.get("/api/faqs").json()["items"]}
+    found = api.get("/api/search", params={"q": "居留證"}).json()["faqs"]
+    flags = [
+        labels[f["id"]]["audience"] == "school"
+        or (labels[f["id"]]["review"] or {}).get("kind") in ("superseded", "time_limited")
+        for f in found
+    ]
+    assert flags == sorted(flags)
+
+
+# ---------- mutual recommendations ----------
+
+
+def _set_vector(db, content_type: str, content_id: str, vector) -> None:
+    row = db.scalar(
+        select(ContentEmbedding).where(
+            ContentEmbedding.content_type == content_type,
+            ContentEmbedding.content_id == content_id,
+        )
+    )
+    row.embedding = list(vector)
+
+
+def test_a_post_close_to_everything_is_recommended_only_where_it_fits_best(api, db, faq_file):
+    """Production 2026-11-18: one short post was 'near' 224 of 227 questions."""
+    seed(db, get_settings().demo_content_path)
+    loaded(db, faq_file)
+    embed_missing(db, EMBED)
+    sync_experience(db, EMBED, "first-rental")
+    rental = list(
+        db.scalar(
+            select(ContentEmbedding.embedding).where(ContentEmbedding.content_id == "first-rental")
+        )
+    )
+    # The post sits exactly on one question and very close to every other one.
+    others = db.scalars(
+        select(ContentEmbedding.content_id).where(
+            ContentEmbedding.content_type == "official_faq",
+            ContentEmbedding.content_id != "nisa-934",
+        )
+    ).all()
+    _set_vector(db, "official_faq", "nisa-934", rental)
+    for i, faq_id in enumerate(others):
+        nudged = rental.copy()
+        nudged[i % len(nudged)] += 0.05 + 0.001 * i
+        _set_vector(db, "official_faq", faq_id, nudged)
+    db.commit()
+
+    showing = [
+        faq_id
+        for faq_id in ["nisa-934", *others]
+        if api.get(f"/api/faqs/{faq_id}/related-posts").json()
+    ]
+    assert "nisa-934" in showing
+    assert len(showing) <= 3  # K_FAQS: only where it fits best
+
+    # The other direction: the post lists that question (it is a student question).
+    related = api.get("/api/experiences/first-rental/related-faqs").json()
+    assert related[0]["id"] == "nisa-934"
+    assert api.get("/api/experiences/no-such-post/related-faqs").status_code == 404
+
+
+def test_related_faqs_leave_out_school_and_outdated_questions(api, db, faq_file):
+    seed(db, get_settings().demo_content_path)
+    loaded(db, faq_file)
+    embed_missing(db, EMBED)
+    sync_experience(db, EMBED, "first-rental")
+    rental = db.scalar(
+        select(ContentEmbedding.embedding).where(ContentEmbedding.content_id == "first-rental")
+    )
+    school = next(i for i, a in load_review().audience.items() if a == "school")
+    _set_vector(db, "official_faq", school, rental)
+    db.commit()
+    assert school not in [
+        f["id"] for f in api.get("/api/experiences/first-rental/related-faqs").json()
+    ]
+
+
+def test_an_unindexed_post_has_no_related_questions(api, db, faq_file):
+    seed(db, get_settings().demo_content_path)
+    loaded(db, faq_file)
+    assert api.get("/api/experiences/first-rental/related-faqs").json() == []
