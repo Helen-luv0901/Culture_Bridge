@@ -59,9 +59,6 @@ class _FaqsPageState extends State<FaqsPage> {
   static const _pageSize = 30;
   late String _category = widget.category ?? 'all';
   String? _identity;
-
-  /// Whether school-administration questions (asked by staff) are listed too.
-  bool _school = false;
   final _search = TextEditingController();
   int _shown = _pageSize;
 
@@ -140,10 +137,12 @@ class _FaqsPageState extends State<FaqsPage> {
 
   Widget _catalog(BuildContext context, BridgeViewModel vm, FaqCatalog all) {
     final wrap = AppLayout.of(context) != AppLayout.phone;
-    final schoolCount = all.items.where((f) => f.forSchool).length;
+    // School-administration questions are never listed: administrative guidance may appear only
+    // once checked and published by Feng Chia University itself. The server leaves them out;
+    // this also covers an older server that still sends them.
     final visible = [
       for (final faq in all.items)
-        if (_school || !faq.forSchool) faq,
+        if (!faq.forSchool) faq,
     ];
     final counts = <String, int>{};
     for (final faq in visible) {
@@ -207,22 +206,6 @@ class _FaqsPageState extends State<FaqsPage> {
                   onTap: () => _set(() => _identity = who.id),
                 ),
             ],
-          ),
-        ],
-        if (schoolCount > 0) ...[
-          const SizedBox(height: 10),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: NoteChip(
-              key: const Key('faq-school'),
-              dense: true,
-              label: vm.pair(
-                '含學校行政問題（$schoolCount）',
-                'Include school admin questions ($schoolCount)',
-              ),
-              selected: _school,
-              onTap: () => _set(() => _school = !_school),
-            ),
           ),
         ],
         const SizedBox(height: 16),
@@ -362,23 +345,17 @@ class _FaqRow extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(meta, style: mutedStyle.copyWith(fontSize: 13)),
                     ],
-                    if (faq.forSchool || faq.review != null) ...[
+                    if (faq.review case final review?) ...[
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          if (faq.review case final review?)
-                            PaperTag(
-                              faqReviewLabel(vm, review.kind),
-                              key: Key('faq-review-tag-${faq.id}'),
-                              color: Palette.ochre,
-                            ),
-                          if (faq.forSchool)
-                            PaperTag(
-                              vm.pair('學校行政', 'School admin'),
-                              key: Key('faq-school-tag-${faq.id}'),
-                            ),
+                          PaperTag(
+                            faqReviewLabel(vm, review.kind),
+                            key: Key('faq-review-tag-${faq.id}'),
+                            color: Palette.ochre,
+                          ),
                         ],
                       ),
                     ],
@@ -405,8 +382,32 @@ class FaqDetailPage extends StatelessWidget {
     key: ValueKey(id),
     resource: (vm) => vm.faq(id),
     load: (vm) => vm.loadFaq(id),
-    builder: (context, detail) => _FaqDetail(detail: detail),
+    builder: (context, detail) => detail.summary.forSchool
+        ? const _NotShown()
+        : _FaqDetail(detail: detail),
   );
+}
+
+/// A school-administration question reached by an old link or an older server.
+class _NotShown extends StatelessWidget {
+  const _NotShown();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return FlowBody(
+      maxWidth: 760,
+      children: [
+        EmptyNote(
+          key: const Key('faq-not-shown'),
+          title: vm.pair('這則問答不提供', 'This question is not available'),
+          body: vm.pair(
+            '學校行政相關內容需經逢甲大學官方發布並確認後才會顯示。',
+            'School administration content appears only once Feng Chia University has published and checked it.',
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FaqDetail extends StatelessWidget {
@@ -470,17 +471,6 @@ class _FaqDetail extends StatelessWidget {
                     ),
                 ],
               ),
-              if (faq.forSchool) ...[
-                const SizedBox(height: 10),
-                Text(
-                  vm.pair(
-                    '這題是學校承辦人提出的行政問題，內容可能與學生無直接關係。',
-                    'Asked by school staff about administration; it may not apply to you directly.',
-                  ),
-                  key: const Key('faq-school-note'),
-                  style: mutedStyle.copyWith(fontSize: 13),
-                ),
-              ],
               if (note != null) ...[
                 const SizedBox(height: 10),
                 Text(

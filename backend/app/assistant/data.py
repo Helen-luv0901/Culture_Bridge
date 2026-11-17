@@ -283,6 +283,8 @@ def faq_records(raw: dict, review: dict | None = None) -> dict[str, FaqRecord]:
             **note(f["id"]),
         )
         for f in raw["faqs"]
+        # School administration is not shown (see app.official_faq).
+        if audience.get(f["id"], "student") != "school"
     }
 
 

@@ -9,6 +9,12 @@ question is for (student or school administration) and warnings for answers that
 replaced, that conflict, or that described a temporary measure. Re-scraping the site never
 touches them; changing them never re-embeds anything.
 
+School-administration questions (audience "school") are not shown at all: the team decided on
+2026-11-18 that administrative guidance may appear only once it has been checked and comes
+from Feng Chia University's own official publications, and these are MOE answers to other
+schools' staff. They are kept out of the database (an earlier import's rows are retired), so
+no list, search, recommendation or assistant answer can reach them.
+
 The questions are government answers published on the MOE NISA site, so they go live as they
 are (no review drafts). Running it again updates changed questions, marks questions the file no
 longer lists inactive, and embeds only what changed or was never embedded, so it is cheap to
@@ -166,7 +172,11 @@ def import_faqs(db: Session, data: FaqFile, review: ReviewFile | None = None) ->
     db.flush()
     counts = {"new": 0, "updated": 0, "unchanged": 0, "retired": 0, "relabelled": 0}
     listed = set()
+    hidden = {i for i, a in review.audience.items() if a == "school"}
+    counts["school_hidden"] = len(hidden & {f.id for f in data.faqs})
     for item in data.faqs:
+        if item.id in hidden:  # see the module docstring
+            continue
         listed.add(item.id)
         digest = item.content_hash()
         row = db.get(OfficialFaq, item.id)
@@ -194,7 +204,7 @@ def import_faqs(db: Session, data: FaqFile, review: ReviewFile | None = None) ->
     for row in db.scalars(select(OfficialFaq).where(OfficialFaq.active.is_(True))):
         if row.id not in listed:
             row.active = False
-            counts["retired"] += 1
+            counts["retired"] += row.id not in hidden
     db.execute(
         delete(ContentEmbedding).where(
             ContentEmbedding.content_type == EMBEDDING_TYPE,

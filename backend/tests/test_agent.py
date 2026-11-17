@@ -401,5 +401,5 @@ def test_outdated_answers_reach_the_model_with_their_warning(ctx):
     faq = run(ctx, "get_official_faq", faq_id="nisa-852")["faq"]
     assert faq["warning"]["kind"] == "superseded"
     assert faq["warning"]["superseded_by"] == "nisa-1076"
-    school = run(ctx, "get_official_faq", faq_id="nisa-910")["faq"]
-    assert "school administration" in school["audience"]
+    # School administration is not shown at all (only FCU's own checked guidance may be).
+    assert run(ctx, "get_official_faq", faq_id="nisa-910") == {"found": False, "faq_id": "nisa-910"}

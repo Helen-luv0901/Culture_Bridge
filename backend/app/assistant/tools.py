@@ -142,8 +142,6 @@ def faq_detail(faq: FaqRecord, locale: Locale) -> dict[str, Any]:
     }
     if locale == "en" and not faq.has_english:
         detail["note"] = "Only the Chinese original exists; translate it in your answer."
-    if faq.audience == "school":
-        detail["audience"] = "school administration: tell the student only what affects them"
     if faq.review_kind and faq.review_note:
         detail["warning"] = {
             "kind": faq.review_kind,

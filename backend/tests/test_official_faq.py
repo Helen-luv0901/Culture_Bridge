@@ -13,6 +13,7 @@ from app.models import ContentEmbedding, FaqCategory, OfficialFaq
 from app.official_faq import (
     DEFAULT_PATH,
     FaqFile,
+    ReviewIn,
     embed_missing,
     embedding_text,
     import_faqs,
@@ -58,14 +59,15 @@ def test_the_content_file_is_valid_and_bilingual_where_the_site_is(faq_file):
 
 def test_import_is_repeatable_and_retires_what_the_file_drops(db, faq_file):
     first = import_faqs(db, faq_file)
-    assert first["new"] == len(faq_file.faqs) and first["retired"] == 0
+    assert first["new"] == shown(faq_file) and first["retired"] == 0
     again = import_faqs(db, faq_file)
     assert again == {
         "new": 0,
         "updated": 0,
-        "unchanged": len(faq_file.faqs),
+        "unchanged": shown(faq_file),
         "retired": 0,
         "relabelled": 0,
+        "school_hidden": len(faq_file.faqs) - shown(faq_file),
     }
 
     embed_missing(db, EMBED)
@@ -101,8 +103,8 @@ def test_bad_files_are_rejected_before_anything_is_written():
 def test_list_and_detail(api, db, faq_file):
     loaded(db, faq_file)
     body = api.get("/api/faqs").json()
-    assert len(body["items"]) == len(faq_file.faqs)
-    assert sum(c["count"] for c in body["categories"]) == len(faq_file.faqs)
+    assert len(body["items"]) == shown(faq_file)
+    assert sum(c["count"] for c in body["categories"]) == shown(faq_file)
     assert body["categories"][0]["name"] == {
         "zh": "來臺就學",
         "en": "General Questions and Admissions",
@@ -215,8 +217,9 @@ def test_the_job_waits_and_retries_when_gemini_refuses_a_batch(db, faq_file):
             return super().embed_documents(texts)
 
     done = embed_missing(db, Flaky(), batch=100, pause=5, retries=2, sleep=waits.append)
-    assert done == len(faq_file.faqs)
-    assert calls[:3] == [100, 100, 100]
+    assert done == shown(faq_file)
+    rest = shown(faq_file) - 100
+    assert calls[:3] == [100, rest, rest]  # the refused batch is sent again
     assert waits[:2] == [5, 65.0]  # the pause before batch two, then the minute after refusal
 
     always = HashingEmbedder()
@@ -241,11 +244,13 @@ def test_embedded_text_keeps_only_the_opening_of_long_answers(db, faq_file):
 
 
 def test_reviewed_labels_are_imported_and_shown(api, db, faq_file):
-    counts = import_faqs(db, faq_file)
-    assert counts["new"] == len(faq_file.faqs)
     review = load_review()
-    school = next(i for i, a in review.audience.items() if a == "school")
-    assert api.get(f"/api/faqs/{school}").json()["audience"] == "school"
+    school = {i for i, a in review.audience.items() if a == "school"} & {
+        f.id for f in faq_file.faqs
+    }
+    counts = import_faqs(db, faq_file)
+    assert school and counts["school_hidden"] == len(school)
+    assert counts["new"] == len(faq_file.faqs) - len(school)
 
     flagged = next(r for r in review.reviews if r.superseded_by)
     body = api.get(f"/api/faqs/{flagged.id}").json()
@@ -257,10 +262,45 @@ def test_reviewed_labels_are_imported_and_shown(api, db, faq_file):
     # Relabelling touches no text, so nothing is re-embedded.
     embed_missing(db, EMBED)
     changed = review.model_copy(deep=True)
-    changed.audience[school] = "student"
+    changed.reviews.append(ReviewIn(id="nisa-934", kind="conflict", note_zh="說法不一"))
     again = import_faqs(db, faq_file, changed)
     assert again["relabelled"] == 1 and again["updated"] == 0
     assert embed_missing(db, EMBED) == 0
+
+
+def test_school_administration_questions_are_never_shown(api, db, faq_file):
+    """Only checked guidance published by Feng Chia University may cover school
+    administration; the MOE answers to other schools' staff are kept out everywhere."""
+    review = load_review()
+    school = sorted(
+        {i for i, a in review.audience.items() if a == "school"} & {f.id for f in faq_file.faqs}
+    )
+    assert school
+    import_faqs(db, faq_file)
+    embed_missing(db, EMBED)
+    listed = {f["id"] for f in api.get("/api/faqs").json()["items"]}
+    assert not listed & set(school)
+    assert all(api.get(f"/api/faqs/{i}").status_code == 404 for i in school)
+    embedded = set(
+        db.scalars(
+            select(ContentEmbedding.content_id).where(
+                ContentEmbedding.content_type == "official_faq"
+            )
+        )
+    )
+    assert not embedded & set(school)
+    for i in school[:5]:
+        question = next(f for f in faq_file.faqs if f.id == i).question_zh
+        if question:
+            found = api.get("/api/search", params={"q": question[:40]}).json()["faqs"]
+            assert i not in [f["id"] for f in found]
+
+    # A row an earlier import showed is retired, not counted as a dropped question.
+    db.add(OfficialFaq(**{**_row_values(faq_file, school[0]), "active": True}))
+    db.commit()
+    again = import_faqs(db, faq_file)
+    assert again["retired"] == 0
+    assert db.get(OfficialFaq, school[0]).active is False
 
 
 def test_review_file_must_name_real_questions(faq_file):
@@ -271,7 +311,7 @@ def test_review_file_must_name_real_questions(faq_file):
         bad.check(faq_file)
 
 
-def test_school_and_outdated_questions_come_after_in_explore_search(api, db, faq_file):
+def test_outdated_questions_come_after_in_explore_search(api, db, faq_file):
     import_faqs(db, faq_file)
     labels = {f["id"]: f for f in api.get("/api/faqs").json()["items"]}
     found = api.get("/api/search", params={"q": "居留證"}).json()["faqs"]
@@ -335,7 +375,7 @@ def test_a_post_close_to_everything_is_recommended_only_where_it_fits_best(api, 
     assert api.get("/api/experiences/no-such-post/related-faqs").status_code == 404
 
 
-def test_related_faqs_leave_out_school_and_outdated_questions(api, db, faq_file):
+def test_related_faqs_leave_out_outdated_questions(api, db, faq_file):
     seed(db, get_settings().demo_content_path)
     loaded(db, faq_file)
     embed_missing(db, EMBED)
@@ -343,10 +383,10 @@ def test_related_faqs_leave_out_school_and_outdated_questions(api, db, faq_file)
     rental = db.scalar(
         select(ContentEmbedding.embedding).where(ContentEmbedding.content_id == "first-rental")
     )
-    school = next(i for i, a in load_review().audience.items() if a == "school")
-    _set_vector(db, "official_faq", school, rental)
+    ended = next(r.id for r in load_review().reviews if r.kind == "time_limited")
+    _set_vector(db, "official_faq", ended, rental)
     db.commit()
-    assert school not in [
+    assert ended not in [
         f["id"] for f in api.get("/api/experiences/first-rental/related-faqs").json()
     ]
 
@@ -355,3 +395,15 @@ def test_an_unindexed_post_has_no_related_questions(api, db, faq_file):
     seed(db, get_settings().demo_content_path)
     loaded(db, faq_file)
     assert api.get("/api/experiences/first-rental/related-faqs").json() == []
+
+
+def _row_values(faq_file, faq_id: str) -> dict:
+    item = next(f for f in faq_file.faqs if f.id == faq_id)
+    values = item.model_dump(exclude={"id", "category"})
+    return {**values, "id": faq_id, "category_id": item.category, "content_hash": "old"}
+
+
+def shown(faq_file) -> int:
+    """Questions the app shows: all but school administration."""
+    school = {i for i, a in load_review().audience.items() if a == "school"}
+    return sum(f.id not in school for f in faq_file.faqs)

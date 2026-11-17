@@ -154,9 +154,7 @@ void main() {
     expect(find.text('沒有符合的問題'), findsOneWidget);
   });
 
-  testWidgets('School admin questions are hidden until the toggle shows them', (
-    tester,
-  ) async {
+  testWidgets('School admin questions are never listed', (tester) async {
     await mount(tester, '/faqs', const Size(375, 1600));
     expect(find.text('共 3 則'), findsOneWidget);
     expect(find.text('全部 3'), findsOneWidget);
@@ -166,28 +164,17 @@ void main() {
     expect(find.byKey(const Key('faq-review-tag-nisa-1001')), findsOneWidget);
     expect(find.text('可能已過時'), findsOneWidget);
 
-    await tap(tester, find.byKey(const Key('faq-school')));
-    expect(find.text('含學校行政問題（1）'), findsOneWidget);
-    expect(find.text('共 4 則'), findsOneWidget);
-    expect(find.text('全部 4'), findsOneWidget);
-    expect(find.text('簽證與居留 2'), findsOneWidget);
-    expect(find.byKey(const Key('faq-row-nisa-800')), findsOneWidget);
-    expect(find.byKey(const Key('faq-school-tag-nisa-800')), findsOneWidget);
-    expect(find.text('學校行政'), findsOneWidget);
-
-    // Search inside the tab respects the toggle.
+    // Not even by searching for it.
     await tester.enterText(find.byKey(const Key('faq-search')), '學校');
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('faq-row-nisa-800')), findsOneWidget);
-    await tap(tester, find.byKey(const Key('faq-school')));
     expect(find.byKey(const Key('faq-row-nisa-800')), findsNothing);
     expect(find.text('沒有符合的問題'), findsOneWidget);
   });
 
-  testWidgets('A school question says so under its tags', (tester) async {
+  testWidgets('A school question opened by link is not shown', (tester) async {
     await mount(tester, '/faqs/nisa-800', const Size(375, 1600));
-    expect(find.byKey(const Key('faq-school-note')), findsOneWidget);
-    expect(find.byKey(const Key('faq-review')), findsNothing);
+    expect(find.byKey(const Key('faq-not-shown')), findsOneWidget);
+    expect(find.byKey(const Key('faq-answer')), findsNothing);
   });
 
   testWidgets('An outdated answer warns and links to the newer one', (
@@ -197,7 +184,6 @@ void main() {
     expect(find.byKey(const Key('faq-review')), findsOneWidget);
     expect(find.text('已有較新的回覆'), findsOneWidget);
     expect(find.text('規定已改，請看較新的回覆。'), findsOneWidget);
-    expect(find.byKey(const Key('faq-school-note')), findsNothing);
     // The notice comes before the answer.
     expect(
       tester.getTopLeft(find.byKey(const Key('faq-review'))).dy,
