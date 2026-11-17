@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
@@ -93,10 +94,19 @@ def embedding_text(faq: OfficialFaq, category: FaqCategory) -> str:
         f"{category.name_zh} / {category.name_en}",
         faq.question_zh,
         faq.question_en,
-        faq.answer_zh,
-        faq.answer_en,
+        _clip(faq.answer_zh),
+        _clip(faq.answer_en),
     ]
     return "\n".join(p for p in parts if p)
+
+
+# The opening of an answer says what it is about; whole answers (some run to thousands of
+# characters in two languages) only cost tokens against the free tier's per-minute limit.
+EMBED_ANSWER_CHARS = 600
+
+
+def _clip(text: str) -> str:
+    return text[:EMBED_ANSWER_CHARS]
 
 
 def _upsert_labels(db: Session, model, labels: list[LabelIn]) -> None:
@@ -151,8 +161,19 @@ def import_faqs(db: Session, data: FaqFile) -> dict[str, int]:
     return counts
 
 
-def embed_missing(db: Session, embedder: Embedder, batch: int = 50) -> int:
-    """Embed active questions that have no embedding yet; returns how many were embedded."""
+def embed_missing(
+    db: Session,
+    embedder: Embedder,
+    batch: int = 50,
+    pause: float = 0.0,
+    retries: int = 0,
+    sleep=time.sleep,
+) -> int:
+    """Embed active questions that have no embedding yet; returns how many were embedded.
+
+    The import job paces itself (`pause` seconds between batches) and, when Gemini refuses a
+    batch (a per-minute quota, a timeout), waits a minute and tries it again up to `retries`
+    times: on 2026-11-18 the first production run sent 50 long texts at once and failed."""
     missing = db.execute(
         select(OfficialFaq, FaqCategory)
         .join(FaqCategory, FaqCategory.id == OfficialFaq.category_id)
@@ -169,15 +190,34 @@ def embed_missing(db: Session, embedder: Embedder, batch: int = 50) -> int:
     ).all()
     done = 0
     for start in range(0, len(missing), batch):
+        if start and pause:
+            sleep(pause)
         rows = missing[start : start + batch]
         texts = [embedding_text(faq, category) for faq, category in rows]
-        vectors = embedder.embed_documents(texts)
+        db.commit()  # hand the connection back while Gemini works
+        for attempt in range(retries + 1):
+            try:
+                vectors = embedder.embed_documents(texts)
+                break
+            except EmbeddingUnavailable as exc:
+                if attempt == retries:
+                    raise
+                print(f"batch at {start} refused ({exc}); trying again in a minute", flush=True)
+                sleep(RETRY_SECONDS)
         for (faq, _), text, vector in zip(rows, texts, vectors, strict=True):
-            published = None
-            _upsert(db, EMBEDDING_TYPE, faq.id, text, vector, published)
+            _upsert(db, EMBEDDING_TYPE, faq.id, text, vector, None)
         db.commit()  # keep finished batches if a later one fails
         done += len(rows)
+        print(f"embedded {done}/{len(missing)}", flush=True)
     return done
+
+
+RETRY_SECONDS = 65.0  # past a per-minute quota window
+# For the import job: about 10 texts of ~1,500 characters per batch, 15 s apart, stays well under
+# the free tier's tokens per minute; 227 questions take about six minutes.
+JOB_BATCH = 10
+JOB_PAUSE_SECONDS = 15.0
+JOB_RETRIES = 4
 
 
 def main() -> None:
@@ -196,7 +236,14 @@ def main() -> None:
         if args.no_embed:
             return
         try:
-            print(f"embedded {embed_missing(db, get_embedder())}")
+            embedded = embed_missing(
+                db,
+                get_embedder(),
+                batch=JOB_BATCH,
+                pause=JOB_PAUSE_SECONDS,
+                retries=JOB_RETRIES,
+            )
+            print(f"embedded {embedded}")
         except EmbeddingUnavailable as exc:
             # The questions are live already; the AI finds them by keyword until a rerun embeds.
             print(f"embedding failed, run again later: {exc}", file=sys.stderr)

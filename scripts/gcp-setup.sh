@@ -474,12 +474,12 @@ step_import() {
   if gcloud run jobs describe "${job}" --region="${REGION}" --project="${PROJECT}" >/dev/null 2>&1; then
     run gcloud run jobs update "${job}" --image="${image}" --region="${REGION}" --project="${PROJECT}" \
       --command=python --args=-m,app.official_faq \
-      --update-secrets=GEMINI_API_KEY=gemini-api-key:latest
+      --update-secrets=GEMINI_API_KEY=gemini-api-key:latest --task-timeout=30m --max-retries=0
   else
     run gcloud run jobs create "${job}" --image="${image}" --region="${REGION}" \
       --project="${PROJECT}" --service-account="${SA}" --set-cloudsql-instances="${conn}" \
       --set-secrets=DATABASE_URL=database-url:latest,GEMINI_API_KEY=gemini-api-key:latest \
-      --command=python --args=-m,app.official_faq
+      --command=python --args=-m,app.official_faq --task-timeout=30m --max-retries=0
   fi
   run gcloud run jobs execute "${job}" --region="${REGION}" --project="${PROJECT}" --wait
   note "完成後 app 的「官方問答」分頁就會顯示；內容來源見 backend/app/content/nisa_faq.json"
