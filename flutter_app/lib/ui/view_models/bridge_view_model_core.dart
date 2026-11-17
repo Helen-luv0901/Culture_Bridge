@@ -195,11 +195,15 @@ abstract class _BridgeCore extends ChangeNotifier {
   final Map<String, Resource<SearchResults>> _searches = {};
   final Map<String, Resource<ExperienceDetail>> _experiences = {};
 
+  /// Student posts shown under an official question, by question id.
+  final Map<String, Resource<List<ExperienceItem>>> _faqPosts = {};
+
   /// Drops every cached list (after publishing, deleting, blocking or renaming).
   void _dropLists() {
     _explore.clear();
     _searches.clear();
     _experiences.clear();
+    _faqPosts.clear();
   }
 
   /// Replace one post everywhere it is cached (after a reaction or save).
@@ -216,10 +220,15 @@ abstract class _BridgeCore extends ChangeNotifier {
       final found = entry.value.data;
       if (found == null) continue;
       _searches[entry.key] = entry.value.withData(
-        SearchResults(found.actions, [
-          for (final e in found.experiences) swap(e),
-        ]),
+        SearchResults(found.faqs, [for (final e in found.experiences) swap(e)]),
       );
+    }
+    for (final entry in _faqPosts.entries.toList()) {
+      final posts = entry.value.data;
+      if (posts == null) continue;
+      _faqPosts[entry.key] = entry.value.withData([
+        for (final e in posts) swap(e),
+      ]);
     }
     final detail = _experiences[item.id]?.data;
     if (detail != null) {
@@ -231,5 +240,4 @@ abstract class _BridgeCore extends ChangeNotifier {
   }
 }
 
-String _listKey(String? category, String sort, String? actionId) =>
-    '${category ?? 'all'}|$sort|${actionId ?? ''}';
+String _listKey(String? category, String sort) => '${category ?? 'all'}|$sort';

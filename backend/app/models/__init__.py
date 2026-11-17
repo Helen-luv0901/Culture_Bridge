@@ -411,6 +411,49 @@ class AssistantOperation(Base):
 EMBEDDING_DIMENSIONS = 768
 
 
+# ---------- official Q&A (migration 0016) ----------
+
+
+class FaqCategory(Base):
+    __tablename__ = "faq_categories"
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    name_zh: Mapped[str] = mapped_column(Text)
+    name_en: Mapped[str] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer)
+
+
+class FaqIdentity(Base):
+    __tablename__ = "faq_identities"
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    name_zh: Mapped[str] = mapped_column(Text)
+    name_en: Mapped[str] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer)
+
+
+class OfficialFaq(Base):
+    """A question answered by a government agency, from the MOE NISA site."""
+
+    __tablename__ = "official_faqs"
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    category_id: Mapped[str] = mapped_column(ForeignKey("faq_categories.id"))
+    identities: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    question_zh: Mapped[str] = mapped_column(Text, default="")
+    question_en: Mapped[str] = mapped_column(Text, default="")
+    answer_zh: Mapped[str] = mapped_column(Text, default="")
+    answer_en: Mapped[str] = mapped_column(Text, default="")
+    source_zh: Mapped[str] = mapped_column(Text, default="")
+    source_en: Mapped[str] = mapped_column(Text, default="")
+    agency_zh: Mapped[str] = mapped_column(Text, default="")
+    agency_en: Mapped[str] = mapped_column(Text, default="")
+    posted_on: Mapped[date | None] = mapped_column(Date)
+    url: Mapped[str] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    content_hash: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        Timestamp, default=_utcnow, server_default=func.now()
+    )
+
+
 class KbDocument(Base):
     __tablename__ = "kb_documents"
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=new_id)

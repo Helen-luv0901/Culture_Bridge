@@ -20,7 +20,7 @@ class AppShell extends StatefulWidget {
   final Widget child;
   final Uri uri;
 
-  static const tabs = ['/', '/guides', '/explore', '/profile'];
+  static const tabs = ['/', '/faqs', '/explore', '/profile'];
   static const icons = ['home', 'guide', 'boards', 'me'];
   // A feed reads best around 760px; the side menu holds the rest.
   static const maxContentWidth = 760.0;
@@ -30,13 +30,14 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  /// Posts and guides keep the tab they were opened from highlighted.
+  /// Posts and questions keep the tab they were opened from highlighted.
   int _lastTab = 0;
 
   int? get _tabOfPath {
     final path = widget.uri.path;
     if (path == '/') return 0;
-    if (path == '/guides') return 1;
+    // A question opened from elsewhere (an assistant card, a link) still belongs to Q&A.
+    if (path == '/faqs' || path.startsWith('/faqs/')) return 1;
     if (path.startsWith('/explore')) return 2;
     if (path.startsWith('/profile')) return 3;
     return null;
@@ -68,7 +69,7 @@ class _AppShellState extends State<AppShell> {
     if (path == '/') return phone ? 'Culture Bridge' : '';
     // On wider screens the brand and sidebar are already there, so the tabs
     // need no page name beside the brand; phones keep it.
-    if (path == '/guides') return phone ? vm.pair('官方指南', 'Guides') : '';
+    if (path == '/faqs') return phone ? vm.pair('官方問答', 'Official Q&A') : '';
     if (path == '/explore') return phone ? vm.pair('看板', 'Boards') : '';
     if (path == '/share') return phone ? vm.pair('分享', 'Share') : '';
     if (path == '/profile') return phone ? vm.pair('我的', 'Me') : '';
@@ -77,11 +78,7 @@ class _AppShellState extends State<AppShell> {
     if (path.startsWith('/experiences')) {
       return vm.pair('學生分享', 'Student post');
     }
-    if (path.startsWith('/actions')) {
-      if (path.endsWith('/progress')) return vm.t('myActionProgress');
-      if (path.endsWith('/complete')) return vm.t('actionCompletion');
-      return vm.pair('官方指南', 'Official guide');
-    }
+    if (path.startsWith('/faqs/')) return vm.pair('官方問答', 'Official Q&A');
     if (path == '/signin') return vm.t('signIn');
     if (path == '/welcome') return vm.t('profileNames');
     if (path.startsWith('/admin')) return vm.pair('審查與管理', 'Review & admin');
@@ -94,10 +91,6 @@ class _AppShellState extends State<AppShell> {
       return;
     }
     final path = widget.uri.path;
-    if (path.endsWith('/progress') || path.endsWith('/complete')) {
-      context.go('/actions/${widget.uri.pathSegments[1]}');
-      return;
-    }
     if (path.startsWith('/profile/')) {
       context.go('/profile');
       return;
@@ -133,20 +126,10 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
-  /// Home, the guides list and a guide's page all show what is in progress.
-  void _loadExecutions(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    if (!vm.signedIn || !vm.executions.needsLoad) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (vm.signedIn && vm.executions.needsLoad) vm.loadExecutions();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     _showNotice(context);
-    _loadExecutions(context);
     final layout = AppLayout.of(context);
     final phone = layout == AppLayout.phone;
     // The assistant tab is the chat itself: no bubble or window over it, and a
@@ -210,8 +193,8 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
           // Phone: the panel covers the page, so the bubble hides. Elsewhere it toggles.
-          // Phones also leave it off posts, guides and the share form, where it sat
-          // over Send and the guide's steps; the tabs still have it.
+          // Phones also leave it off posts, questions and the share form, where it sat
+          // over Send and the answer; the tabs still have it.
           if (!onAssistantPage &&
               !(phone && (vm.assistantOpen || !_isTabRoot || _onShare)))
             Positioned(
@@ -270,7 +253,7 @@ class _AppShellState extends State<AppShell> {
 }
 
 /// Tabs whose page starts with its own PageTitle.
-const _ownTitle = {'/guides', '/share'};
+const _ownTitle = {'/faqs', '/share'};
 
 /// The tab's name, for the h1 when the header shows none.
 String _pageName(BuildContext context, Uri uri) {
@@ -302,7 +285,7 @@ class _Header extends StatelessWidget {
     final phone = layout == AppLayout.phone;
     final onExplore = uri.path == '/explore';
     // The page's name is its h1, unless the page has its own title (PageTitle) or is
-    // a post or guide (those titles are the h1).
+    // a post or question (those titles are the h1).
     final nameIsH1 = !showBack && !_ownTitle.contains(uri.path);
     return Material(
       color: Palette.header,
@@ -505,7 +488,7 @@ List<String> _navLabels(BuildContext context) {
   final vm = BridgeScope.of(context);
   return [
     vm.pair('首頁', 'Home'),
-    vm.pair('指南', 'Guides'),
+    vm.pair('問答', 'Q&A'),
     vm.pair('看板', 'Boards'),
     vm.pair('我的', 'Me'),
   ];

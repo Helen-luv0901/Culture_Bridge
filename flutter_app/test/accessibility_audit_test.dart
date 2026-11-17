@@ -50,10 +50,10 @@ void main() {
 
   for (final route in [
     '/',
-    '/guides',
+    '/faqs',
     '/explore',
     '/experiences/first-rental',
-    '/actions/arc',
+    '/faqs/nisa-1070',
   ]) {
     testWidgets('All text on $route uses the bundled font', (tester) async {
       await mount(tester, route, const Size(375, 900));
@@ -73,27 +73,12 @@ void main() {
     expect(find.byType(SelectableText), findsNothing);
   });
 
-  testWidgets('The pinned card is one button with a plain name', (
-    tester,
-  ) async {
-    final handle = tester.ensureSemantics();
-    await mount(tester, '/', const Size(375, 900));
-    expect(
-      find.bySemanticsLabel(RegExp(r'^來台第一個月要辦的事，已看 \d+ / \d+$')),
-      findsOneWidget,
-    );
-    expect(
-      semanticsNodes(tester).where((n) => n.role == SemanticsRole.progressBar),
-      isEmpty,
-    );
-    handle.dispose();
-  });
-
   for (final (route, size) in [
     ('/', const Size(375, 900)),
     ('/', const Size(1280, 900)),
-    ('/guides', const Size(1280, 900)),
-    ('/guides', const Size(375, 900)),
+    ('/faqs', const Size(1280, 900)),
+    ('/faqs', const Size(375, 900)),
+    ('/faqs/nisa-1070', const Size(375, 900)),
     ('/share', const Size(375, 900)),
     ('/explore', const Size(375, 900)),
     ('/experiences/first-rental', const Size(375, 900)),

@@ -1,85 +1,35 @@
 {
-  "version": "2026-10-14c",
-  "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: procedure facts, steps, fees and dates always come from the tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
+  "version": "2026-11-16a",
+  "notes": "How to use the Culture Bridge app (work-assignment A-14). Explains the app only: facts about rules, procedures, fees and dates always come from the official Q&A tools, never from this file. Keep zh-Hant and en in sync and bump version on every change.",
   "entries": [
     {
       "id": "nav-tabs",
       "kind": "navigation",
       "keywords": ["分頁", "導覽", "選單", "在哪", "tab", "menu", "navigation", "where"],
-      "title": {"zh-Hant": "App 的四個分頁", "en": "The four tabs"},
+      "title": {"zh-Hant": "App 的分頁", "en": "The tabs"},
       "body": {
-        "zh-Hant": "手機底部有四個分頁：「首頁」看你的辦理流程和可以開始的官方流程；「探索」看其他學生的生活經驗；「分享」匿名分享你的經驗；「我的」看你分享過的經驗、你的影響和語言設定。寬螢幕時這些分頁會顯示在左側。",
-        "en": "On phones there are four tabs at the bottom: Home shows your procedures in progress and official procedures you can start; Explore shows other students' experiences; Share lets you share an experience anonymously; My shows the experiences you shared, your impact and language settings. On wide screens the tabs appear on the left."
+        "zh-Hant": "手機底部的分頁：「首頁」看最新的學生貼文；「官方問答」依分類瀏覽政府機關回覆的官方問答；「看板」看與搜尋其他學生的貼文；「分享」發一篇你的經驗；「我的」看你分享和收藏的內容、帳號與語言設定。寬螢幕時這些分頁會顯示在左側。",
+        "en": "The tabs at the bottom on phones: Home shows the latest student posts; Official Q&A lets you browse official questions answered by government agencies, by category; Boards lets you browse and search other students' posts; Share lets you post your own experience; Me shows what you shared and saved, your account and language settings. On wide screens the tabs appear on the left."
       }
     },
     {
       "id": "home",
       "kind": "feature",
-      "keywords": ["首頁", "辦理流程", "開始辦理", "home", "start"],
+      "keywords": ["首頁", "最新", "貼文", "home", "latest", "posts"],
       "title": {"zh-Hant": "首頁", "en": "Home"},
       "body": {
-        "zh-Hant": "首頁上方是「我的辦理流程」，顯示你正在辦的流程和完成了幾個步驟；中間是可以開始的官方流程，例如工作證、ARC、健保、銀行帳戶、在學證明；下方「了解台灣生活」可以進入學生經驗。",
-        "en": "The top of Home shows your procedures in progress and how many steps are done. Below are official procedures you can start, such as work permit, ARC, health insurance, bank account and enrollment certificate. At the bottom, \"Life in Taiwan\" leads to student experiences."
+        "zh-Hant": "首頁會顯示其他學生最新分享的貼文。想查簽證、居留證、工讀、健保等規定，請到「官方問答」分頁，或直接問 AI 助理。",
+        "en": "Home shows the latest posts shared by other students. For rules about visas, the ARC, part-time work, health insurance and more, open the Official Q&A tab or ask the assistant."
       }
     },
     {
-      "id": "action-card",
-      "kind": "glossary",
-      "keywords": ["流程卡", "官方流程", "流程", "action card", "procedure", "action"],
-      "title": {"zh-Hant": "流程卡（官方流程）", "en": "Procedure cards"},
-      "body": {
-        "zh-Hant": "流程卡整理一件要辦的事，例如申請工作證。每張卡會顯示驗證狀態、最後官方更新日期、適用對象、學生近期完成人數、步驟和官方來源。流程內容由管理者依官方資料維護，不是由按讚或多數決決定。",
-        "en": "A procedure card describes one thing to get done, such as applying for a work permit. Each card shows its verification status, last official update, who it applies to, how many students recently completed it, the steps and official sources. Admins maintain cards from official sources; likes or votes never decide their content."
-      }
-    },
-    {
-      "id": "verification-status",
-      "kind": "glossary",
-      "keywords": ["驗證", "已驗證", "待確認", "社群支持", "過時", "未驗證", "verified", "needs review", "community supported", "outdated", "status"],
-      "title": {"zh-Hant": "驗證狀態代表什麼", "en": "What verification statuses mean"},
-      "body": {
-        "zh-Hant": "「已驗證」：有官方來源，並經管理者審查確認。「待確認」：可能有變動，正在重新確認，辦理前請向學校再確認。「社群支持」：有學生回報可行，但還沒有經過官方來源審查。「未驗證」：尚未審查。「已過時」：內容可能不再適用。驗證狀態只來自來源與審查，不會因為很多人按讚就變成已驗證。",
-        "en": "Verified: backed by an official source and confirmed by an admin review. Needs review: it may have changed and is being rechecked, so confirm with your school before acting. Community supported: students report it works, but it has not been checked against official sources. Unverified: not reviewed yet. Outdated: it may no longer apply. Status comes only from sources and reviews; many likes never make something verified."
-      }
-    },
-    {
-      "id": "recent-completions",
-      "kind": "glossary",
-      "keywords": ["近期完成", "完成人數", "成功", "recently completed", "completions"],
-      "title": {"zh-Hant": "學生近期完成", "en": "Recently completed by students"},
-      "body": {
-        "zh-Hant": "流程卡上的「學生近期完成」是最近 30 天回報成功完成這個流程的學生人數，讓你知道這個流程最近有人照著辦成功。它不是驗證狀態，人數多不代表內容已驗證。",
-        "en": "\"Recently completed\" counts students who reported finishing the procedure successfully in the last 30 days, so you can see it has worked for others lately. It is not a verification status; a high count does not mean the content is verified."
-      }
-    },
-    {
-      "id": "progress",
+      "id": "official-faq",
       "kind": "feature",
-      "keywords": ["進度", "步驟", "標記完成", "progress", "step", "mark complete"],
-      "title": {"zh-Hant": "辦理進度與步驟", "en": "Procedure progress and steps"},
+      "keywords": ["官方問答", "官方指南", "常見問答", "問答", "分類", "教育部", "NISA", "政府", "官方", "official", "q&a", "faq", "guide", "category", "government"],
+      "title": {"zh-Hant": "官方問答", "en": "Official Q&A"},
       "body": {
-        "zh-Hant": "在流程頁按「開始辦理」後，可以逐步「標記完成」或「取消完成」。進度會顯示在首頁的「我的辦理流程」。",
-        "en": "After tapping \"Start\" on a procedure page, you can mark each step complete or incomplete. Your progress appears under \"My procedures\" on Home."
-      }
-    },
-    {
-      "id": "stuck",
-      "kind": "feature",
-      "keywords": ["卡住", "卡關", "看不懂", "文件不同", "網站", "stuck", "problem", "website"],
-      "title": {"zh-Hant": "我卡住了", "en": "I'm stuck"},
-      "body": {
-        "zh-Hant": "在某個步驟遇到問題時，按「我卡住了」並選擇原因，例如看不懂這一步、需要的文件不同、網站無法使用。你的回報會幫助管理者改善流程，也能幫助下一位學生。",
-        "en": "If a step goes wrong, tap \"I'm stuck\" and choose what happened, such as not understanding the step, different documents being required, or the website not working. Your report helps admins improve the procedure and helps the next student."
-      }
-    },
-    {
-      "id": "complete-feedback",
-      "kind": "feature",
-      "keywords": ["完成回饋", "流程不同", "沒有完成", "回報", "completion", "different", "feedback", "report"],
-      "title": {"zh-Hant": "完成回饋與回報差異", "en": "Completion feedback and reporting differences"},
-      "body": {
-        "zh-Hant": "辦完後按「完成此流程」，選擇「是，我完成了」、「流程和原本不同」或「否，我沒有完成」。選擇流程不同時，可以指出哪裡不同：文件、費用、地點、流程或資格。回報會先送交審核，不會直接改動流程卡。",
-        "en": "When you finish, tap \"Complete this procedure\" and choose \"Yes, I completed it\", \"The process was different\" or \"No, I didn't complete it\". If it was different, say what changed: documents, fee, location, process or eligibility. Reports are reviewed first and never change the card directly."
+        "zh-Hant": "「官方問答」收錄教育部「大專校院境外學生輔導人員支援體系計畫（NISA）」網站上的常見問答，由內政部移民署、勞動部、健保署、教育部等機關回覆。可以依 16 個分類（例如簽證/居留證、在學期間工讀、健保/保險、畢業後留臺工作）和身分（外國學生、僑生、港澳生、陸生）篩選，也可以搜尋。每一題會列出回復機關、發布日期、資料來源和原文連結，下方還有同學分享的相關貼文。部分問題官網只有中文版，英文介面會顯示中文原文。規定可能變動，辦理前請以主管機關最新公告為準。",
+        "en": "Official Q&A collects the FAQ of the Ministry of Education's NISA site (Network for International Student Advisors), answered by agencies such as the National Immigration Agency, the Ministry of Labor, the NHIA and the Ministry of Education. Filter by 16 categories (for example Visa and ARC, Part-time Job and Work Permits, Health and Insurance, Staying in Taiwan for Employment) and by identity (foreign, overseas Chinese, Hong Kong and Macao, mainland Chinese students), or search. Each question shows the answering agency, date, source and a link to the original, with related student posts below. Some questions exist only in Chinese on the site, so the English interface shows the Chinese original. Rules can change; check the agency's latest notice before acting."
       }
     },
     {
@@ -148,8 +98,8 @@
       "keywords": ["助理", "AI", "問答", "可以做什麼", "assistant", "chat", "what can you do"],
       "title": {"zh-Hant": "AI 助理能做什麼？", "en": "What can the assistant do?"},
       "body": {
-        "zh-Hant": "助理可以幫你找流程卡和學生經驗、說明步驟與驗證狀態、查看你的辦理進度、帶你到相關頁面，也能幫你準備「開始辦理」讓你確認。助理不會替你送出任何申請，也不能修改流程或驗證狀態；它的回答會附上依據，遇到沒有資料的問題會直接說明，建議你向學校國際處確認。",
-        "en": "The assistant finds procedure cards and student experiences, explains steps and verification status, shows your progress, takes you to the right page and can prepare \"Start procedure\" for you to confirm. It never submits applications for you and cannot change procedures or verification status. Its answers cite their basis, and when it has no data it says so and suggests asking your school's international office."
+        "zh-Hant": "助理會根據「官方問答」回答你的問題，並告訴你是哪個機關、什麼時候回覆的；如果有同學分享過相關經驗，也會推薦那些貼文給你，並把官方問答和貼文附在回答下方，點了就能打開。學生貼文是個人經驗，不是官方規定。助理不會替你送出任何申請，也不能修改任何內容；遇到官方問答沒有提到的問題，它會直接說明，建議你向學校國際處或主管機關確認。",
+        "en": "The assistant answers from the Official Q&A and tells you which agency answered and when. If other students have shared related experiences, it recommends those posts too, and the questions and posts it used appear as cards under the answer that you can open. Student posts are personal experience, not official rules. The assistant never submits applications for you and can't change any content; when the Official Q&A doesn't cover something, it says so and suggests asking your school's international office or the agency in charge."
       }
     },
     {
@@ -158,8 +108,8 @@
       "keywords": ["過時", "不一樣", "不準", "錯誤", "更新", "outdated", "wrong", "different", "update"],
       "title": {"zh-Hant": "發現資訊和實際不同怎麼辦？", "en": "What if the information doesn't match reality?"},
       "body": {
-        "zh-Hant": "請在流程的完成回饋選「流程和原本不同」，或在卡住的步驟按「我卡住了」回報。管理者審查後會決定是否更新流程卡並發布新版本。急件請直接向學校國際處或主管機關確認。",
-        "en": "Choose \"The process was different\" in the completion feedback, or tap \"I'm stuck\" on the step. Admins review reports and decide whether to publish an updated version of the card. For anything urgent, confirm directly with your school's international office or the authority."
+        "zh-Hant": "官方問答的內容來自教育部 NISA 網站，每題都有發布日期和原文連結；較舊的回覆可能已經不適用。辦理前請點「查看原文」確認，或直接向學校國際處、主管機關確認最新規定。",
+        "en": "The Official Q&A comes from the MOE NISA site, and each question shows its date and a link to the original; older answers may no longer apply. Before acting, open the original or check the latest rule with your school's international office or the agency in charge."
       }
     },
     {
@@ -168,8 +118,8 @@
       "keywords": ["登入", "註冊", "帳號", "訪客", "google", "登出", "sign in", "log in", "login", "account", "guest", "sign out"],
       "title": {"zh-Hant": "需要登入嗎？", "en": "Do I need to sign in?"},
       "body": {
-        "zh-Hant": "瀏覽流程卡和學生經驗不需要登入。分享經驗、按「有幫助」等回應、開始辦理並記錄進度、檢舉與封鎖、使用 AI 助理時需要登入：到「我的」按「使用 Google 帳號登入」。登出也在「我的」的「帳號」區。",
-        "en": "You can browse procedure cards and student experiences without an account. Sharing, reacting, starting a procedure and saving progress, reporting or blocking, and using the assistant need you to sign in: go to My and choose \"Continue with Google\". Sign out is in the Account section of My."
+        "zh-Hant": "瀏覽官方問答和學生貼文不需要登入。分享經驗、按「有幫助」等回應、收藏貼文、檢舉與封鎖、使用 AI 助理時需要登入：到「我的」按「使用 Google 帳號登入」。登出也在「我的」的「帳號」區。",
+        "en": "You can browse the Official Q&A and student posts without an account. Sharing, reacting, saving posts, reporting or blocking, and using the assistant need you to sign in: go to Me and choose \"Continue with Google\". Sign out is in the Account section of Me."
       }
     },
     {
@@ -178,8 +128,8 @@
       "keywords": ["搜尋", "找", "關鍵字", "篩選", "search", "find", "keyword", "filter"],
       "title": {"zh-Hant": "怎麼找經驗？", "en": "How do I find experiences?"},
       "body": {
-        "zh-Hant": "在「探索」上方選主題篩選，或在「搜尋經驗」輸入關鍵字後按 Enter。想找要辦的流程，可以回到首頁，或直接問 AI 助理。",
-        "en": "In Explore, pick a topic filter at the top or type keywords in \"Search experiences\" and press Enter. To find a procedure, go back to Home or ask the assistant."
+        "zh-Hant": "在「看板」上方選分類，或在搜尋框輸入關鍵字，可以同時找到官方問答和學生貼文。在「官方問答」分頁也可以用分類、身分和關鍵字篩選問題。",
+        "en": "Pick a category at the top of Boards or type keywords in the search box to find both official questions and student posts. The Official Q&A tab also filters questions by category, identity and keywords."
       }
     },
     {
@@ -198,8 +148,8 @@
       "keywords": ["刪除帳號", "刪除資料", "註銷", "個資", "delete account", "delete my data", "remove account", "privacy"],
       "title": {"zh-Hant": "怎麼刪除帳號？", "en": "How do I delete my account?"},
       "body": {
-        "zh-Hant": "到「我的」→「帳號」→「刪除帳號」並確認。這會永久刪除你的帳號、分享的經驗、反應、收藏、辦理紀錄與助理對話，無法復原。只想移除某一則經驗的話，在「我的」那則經驗按「刪除」即可。沒有登入也可以在網站的 /account-deletion 頁面看刪除說明。",
-        "en": "Go to My → Account → Delete account and confirm. This permanently deletes your account, shared experiences, reactions, saved experiences, procedure progress and assistant conversations, and can't be undone. To remove just one experience, tap Delete on it in My. The /account-deletion page on the website explains this without signing in."
+        "zh-Hant": "到「我的」→「帳號」→「刪除帳號」並確認。這會永久刪除你的帳號、分享的經驗、反應、收藏與助理對話，無法復原。只想移除某一則經驗的話，在「我的」那則經驗按「刪除」即可。沒有登入也可以在網站的 /account-deletion 頁面看刪除說明。",
+        "en": "Go to My → Account → Delete account and confirm. This permanently deletes your account, shared experiences, reactions, saved experiences and assistant conversations, and can't be undone. To remove just one experience, tap Delete on it in My. The /account-deletion page on the website explains this without signing in."
       }
     },
     {
@@ -208,8 +158,8 @@
       "keywords": ["管理", "管理者", "審查", "reviewer", "admin", "誰維護", "who maintains", "review"],
       "title": {"zh-Hant": "誰在維護流程卡？", "en": "Who maintains the procedure cards?"},
       "body": {
-        "zh-Hant": "流程卡由團隊的審查者（reviewer）與管理者依官方資料編輯、審查後發布；學生的卡關與差異回報、檢舉也由他們處理。審查者登入後會在「我的」→「帳號」看到 Admin 入口。一般使用者沒有這個入口，也不能直接修改流程卡，請用回報功能告訴我們。",
-        "en": "Reviewers and admins on the team edit procedure cards from official sources, review them and publish them; they also handle stuck and difference reports and content reports. Reviewers see an Admin link under My → Account. Other users don't, and can't edit cards directly; please send a report instead."
+        "zh-Hant": "官方問答直接取自教育部 NISA 網站，團隊不會改寫內容，官網更新後由團隊重新匯入。學生貼文的檢舉由團隊的審查者（reviewer）與管理者處理；審查者登入後會在「我的」→「帳號」看到 Admin 入口。",
+        "en": "The Official Q&A is taken as is from the MOE NISA site; the team doesn't rewrite it and re-imports it when the site changes. Reviewers and admins on the team handle reports about student posts; reviewers see an Admin link under My → Account."
       }
     },
     {

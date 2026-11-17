@@ -14,11 +14,11 @@ List<T> _list<T>(Object? value, T Function(Json) parse) => [
 /// A text in both app languages.
 class Text2 {
   const Text2(this.zh, this.en);
-  factory Text2.fromJson(Json json) =>
-      Text2(json['zh'] as String, json['en'] as String);
+  factory Text2.fromJson(Json? json) =>
+      Text2(json?['zh'] as String? ?? '', json?['en'] as String? ?? '');
   final String zh;
   final String en;
-  String of(bool english) => english && en.isNotEmpty ? en : zh;
+  String of(bool english) => (english && en.isNotEmpty) || zh.isEmpty ? en : zh;
 }
 
 class Profile {
@@ -98,184 +98,127 @@ String clipText(String text, int count) {
   return chars.length > count ? '${chars.take(count)}…' : text;
 }
 
-// ---------- procedures ----------
+// ---------- official Q&A ----------
 
-class ActionSummary {
-  const ActionSummary({
-    required this.id,
-    required this.versionNumber,
-    required this.title,
-    required this.description,
-    required this.applicableTo,
-    required this.location,
-    required this.verificationStatus,
-    required this.lastVerifiedAt,
-    required this.recentSuccessCount,
-    this.slug = '',
-    this.publishedAt,
-  });
-  factory ActionSummary.fromJson(Json json) => ActionSummary(
-    id: json['id'] as String,
-    slug: json['slug'] as String? ?? '',
-    versionNumber: json['version_number'] as int,
-    title: Text2.fromJson(json['title'] as Json),
-    description: Text2.fromJson(json['description'] as Json),
-    applicableTo: Text2.fromJson(json['applicable_to'] as Json),
-    location: json['location'] == null
-        ? null
-        : Text2.fromJson(json['location'] as Json),
-    verificationStatus: json['verification_status'] as String,
-    lastVerifiedAt: _date(json['last_verified_at']),
-    publishedAt: _date(json['published_at']),
-    recentSuccessCount: json['recent_success_count'] as int,
+/// One of the official site's question categories, with how many questions it holds.
+class FaqCategory {
+  const FaqCategory(this.id, this.name, this.count);
+  factory FaqCategory.fromJson(Json json) => FaqCategory(
+    json['id'] as String,
+    Text2.fromJson(json['name'] as Json),
+    json['count'] as int? ?? 0,
   );
   final String id;
-  final String slug;
-  final int versionNumber;
-  final Text2 title;
-  final Text2 description;
-  final Text2 applicableTo;
-  final Text2? location;
-  final String verificationStatus;
-  final DateTime? lastVerifiedAt;
-
-  /// When this version went public; the feed sorts official guides by it.
-  final DateTime? publishedAt;
-  final int recentSuccessCount;
+  final Text2 name;
+  final int count;
 }
 
-class ActionStepInfo {
-  const ActionStepInfo({
+/// Who a question applies to (foreign, overseas Chinese, Hong Kong & Macao, mainland students).
+class FaqIdentity {
+  const FaqIdentity(this.id, this.name);
+  factory FaqIdentity.fromJson(Json json) =>
+      FaqIdentity(json['id'] as String, Text2.fromJson(json['name'] as Json));
+  final String id;
+  final Text2 name;
+}
+
+/// An official question answered by a government agency (MOE NISA), as listed.
+class FaqSummary {
+  const FaqSummary({
     required this.id,
-    required this.position,
-    required this.title,
-    required this.notes,
-    required this.recentStuckCount,
-    this.notesEn,
+    required this.categoryId,
+    required this.question,
+    required this.excerpt,
+    this.identities = const [],
+    this.postedOn,
+    this.hasEnglish = true,
   });
-  factory ActionStepInfo.fromJson(Json json) => ActionStepInfo(
+  factory FaqSummary.fromJson(Json json) => FaqSummary(
     id: json['id'] as String,
-    position: json['position'] as int,
-    title: Text2.fromJson(json['title'] as Json),
-    notes: json['notes'] as String?,
-    notesEn: json['notes_en'] as String?,
-    recentStuckCount: json['recent_stuck_count'] as int,
+    categoryId: json['category_id'] as String,
+    identities: List<String>.from(json['identities'] as List? ?? const []),
+    question: Text2.fromJson(json['question'] as Json),
+    excerpt: Text2.fromJson(json['excerpt'] as Json),
+    postedOn: json['posted_on'] as String?,
+    hasEnglish: json['has_english'] as bool? ?? true,
   );
   final String id;
-  final int position;
-  final Text2 title;
-  final String? notes;
-  final String? notesEn;
-  final int recentStuckCount;
+  final String categoryId;
+  final List<String> identities;
+  final Text2 question;
+  final Text2 excerpt;
 
-  /// The notes in the reader's language; English falls back to Chinese.
-  String? notesFor(bool english) =>
-      english && (notesEn ?? '').trim().isNotEmpty ? notesEn : notes;
+  /// The day the site posted it (YYYY-MM-DD), if known.
+  final String? postedOn;
+
+  /// False when the official site has no English version (English shows the Chinese).
+  final bool hasEnglish;
+
+  /// Whether every word of [query] appears in the question or excerpt, in either language.
+  bool matches(String query) {
+    final words = query.toLowerCase().split(RegExp(r'\s+'))
+      ..removeWhere((w) => w.isEmpty);
+    if (words.isEmpty) return true;
+    final text = '${question.zh} ${question.en} ${excerpt.zh} ${excerpt.en}'
+        .toLowerCase();
+    return words.every(text.contains);
+  }
 }
 
-class SourceInfo {
-  const SourceInfo({
-    required this.title,
-    required this.url,
-    required this.publisher,
-    required this.kind,
-    required this.evidenceNote,
-    this.publisherEn = '',
-  });
-  factory SourceInfo.fromJson(Json json) => SourceInfo(
-    title: json['title'] as String,
-    url: json['url'] as String,
-    publisher: json['publisher'] as String,
-    kind: json['kind'] as String,
-    evidenceNote: json['evidence_note'] as String,
-    publisherEn: json['publisher_en'] as String? ?? '',
-  );
-  final String title;
-  final String url;
-  final String publisher;
-  final String publisherEn;
-  final String kind;
-  final String evidenceNote;
-
-  /// The publisher's name in the reader's language.
-  String publisherFor(bool english) =>
-      english && publisherEn.isNotEmpty ? publisherEn : publisher;
-}
-
-class ActionDetail {
-  const ActionDetail({
+/// A whole official answer, with who answered it and where it comes from.
+class FaqDetail {
+  const FaqDetail({
     required this.summary,
-    required this.steps,
-    required this.sources,
-    this.documents = const [],
+    required this.category,
+    required this.answer,
+    required this.source,
+    required this.agency,
+    required this.publisher,
+    required this.url,
   });
-  factory ActionDetail.fromJson(Json json) => ActionDetail(
-    summary: ActionSummary.fromJson(json),
-    steps: _list(json['steps'], ActionStepInfo.fromJson),
-    sources: _list(json['sources'], SourceInfo.fromJson),
-    documents: _list(json['documents'], Text2.fromJson),
+  factory FaqDetail.fromJson(Json json) => FaqDetail(
+    summary: FaqSummary.fromJson(json),
+    category: Text2.fromJson(json['category'] as Json),
+    answer: Text2.fromJson(json['answer'] as Json),
+    source: Text2.fromJson(json['source'] as Json),
+    agency: Text2.fromJson(json['agency'] as Json),
+    publisher: Text2.fromJson(json['publisher'] as Json),
+    url: json['url'] as String? ?? '',
   );
-  final ActionSummary summary;
-  final List<ActionStepInfo> steps;
-  final List<SourceInfo> sources;
+  final FaqSummary summary;
+  final Text2 category;
 
-  /// What to bring, shown as a checklist the student ticks before going.
-  final List<Text2> documents;
+  /// Plain text over several lines; the line breaks matter.
+  final Text2 answer;
+
+  /// Where the question was asked (such as a training course); may be empty.
+  final Text2 source;
+
+  /// The government agency that answered.
+  final Text2 agency;
+  final Text2 publisher;
+
+  /// The question on the official site.
+  final String url;
 }
 
-class ExecutionStepState {
-  const ExecutionStepState({
-    required this.stepId,
-    required this.position,
-    required this.title,
-    required this.state,
-  });
-  factory ExecutionStepState.fromJson(Json json) => ExecutionStepState(
-    stepId: json['step_id'] as String,
-    position: json['position'] as int,
-    title: Text2.fromJson(json['title'] as Json),
-    state: json['state'] as String,
+/// Every official question with its categories and identities (`GET /faqs`), newest first.
+class FaqCatalog {
+  const FaqCatalog(this.categories, this.identities, this.items);
+  factory FaqCatalog.fromJson(Json json) => FaqCatalog(
+    _list(json['categories'], FaqCategory.fromJson),
+    _list(json['identities'], FaqIdentity.fromJson),
+    _list(json['items'], FaqSummary.fromJson),
   );
-  final String stepId;
-  final int position;
-  final Text2 title;
-  final String state;
-}
+  final List<FaqCategory> categories;
+  final List<FaqIdentity> identities;
+  final List<FaqSummary> items;
 
-class Execution {
-  const Execution({
-    required this.id,
-    required this.actionId,
-    required this.versionNumber,
-    required this.title,
-    required this.startedAt,
-    required this.finishedAt,
-    required this.outcome,
-    required this.steps,
-    required this.newerVersionAvailable,
-  });
-  factory Execution.fromJson(Json json) => Execution(
-    id: json['id'] as String,
-    actionId: json['action_id'] as String,
-    versionNumber: json['version_number'] as int,
-    title: Text2.fromJson(json['title'] as Json),
-    startedAt: _date(json['started_at'])!,
-    finishedAt: _date(json['finished_at']),
-    outcome: json['outcome'] as String?,
-    steps: _list(json['steps'], ExecutionStepState.fromJson),
-    newerVersionAvailable: json['newer_version_available'] as bool,
-  );
-  final String id;
-  final String actionId;
-  final int versionNumber;
-  final Text2 title;
-  final DateTime startedAt;
-  final DateTime? finishedAt;
-  final String? outcome;
-  final List<ExecutionStepState> steps;
-  final bool newerVersionAvailable;
-  int get doneCount => steps.where((s) => s.state == 'done').length;
-  bool get finished => finishedAt != null;
+  FaqCategory? category(String id) =>
+      categories.where((c) => c.id == id).firstOrNull;
+  FaqIdentity? identity(String id) =>
+      identities.where((i) => i.id == id).firstOrNull;
+  FaqSummary? item(String id) => items.where((i) => i.id == id).firstOrNull;
 }
 
 // ---------- experiences ----------
@@ -347,7 +290,6 @@ class ExperienceItem {
     this.tags = const [],
     this.commentCount = 0,
     this.mine = false,
-    this.actionId,
   });
   factory ExperienceItem.fromJson(Json json) => ExperienceItem(
     id: json['id'] as String,
@@ -374,7 +316,6 @@ class ExperienceItem {
     tags: List<String>.from(json['tags'] as List? ?? const []),
     commentCount: json['comment_count'] as int? ?? 0,
     mine: json['mine'] as bool? ?? false,
-    actionId: json['action_id'] as String?,
   );
   final String id;
   final String topicId;
@@ -409,9 +350,6 @@ class ExperienceItem {
   /// Written by the signed-in reader (they can delete it).
   final bool mine;
 
-  /// The official guide this post was shared under, if any.
-  final String? actionId;
-
   String get categoryKey => categoryFor(category, topicId);
 
   ExperienceItem withSaved(bool value) => copyWith(saved: value);
@@ -439,7 +377,6 @@ class ExperienceItem {
     tags: tags,
     commentCount: commentCount ?? this.commentCount,
     mine: mine,
-    actionId: actionId,
   );
 
   /// Summary text (situation plus feeling), in the translation when [translated].
@@ -487,14 +424,14 @@ class ExperienceDetail {
   final String? respondsToId;
 }
 
-/// Keyword search over official guides and student posts.
+/// Keyword search over the official Q&A and student posts.
 class SearchResults {
-  const SearchResults(this.actions, this.experiences);
+  const SearchResults(this.faqs, this.experiences);
   factory SearchResults.fromJson(Json json) => SearchResults(
-    _list(json['actions'], ActionSummary.fromJson),
+    _list(json['faqs'], FaqSummary.fromJson),
     _list(json['experiences'], ExperienceItem.fromJson),
   );
-  final List<ActionSummary> actions;
+  final List<FaqSummary> faqs;
   final List<ExperienceItem> experiences;
 }
 
@@ -652,55 +589,61 @@ class BlockInfo {
 
 // ---------- assistant ----------
 
+/// An official question or a student post the assistant's answer relies on.
 class AssistantCard {
   const AssistantCard({
     required this.type,
     required this.id,
     required this.title,
-    required this.verificationStatus,
-    required this.lastVerifiedAt,
-    required this.recentSuccessCount,
-    required this.sources,
-    required this.reminder,
+    this.reminder,
     this.excerpt = '',
     this.category,
+    this.agency = '',
+    this.postedOn,
+    this.url = '',
   });
-  factory AssistantCard.fromJson(Json json) => json['type'] == 'action'
-      ? AssistantCard(
-          type: 'action',
-          id: json['action_id'] as String,
-          title: json['title'] as String,
-          verificationStatus: json['verification_status'] as String,
-          lastVerifiedAt: json['last_verified_at'] as String?,
-          recentSuccessCount: json['recent_success_count'] as int,
-          sources: List<String>.from(json['sources'] as List),
-          reminder: null,
-          excerpt: (json['excerpt'] as String?) ?? '',
-        )
-      : AssistantCard(
-          type: 'experience',
-          id: json['experience_id'] as String,
-          title: (json['title'] as String?) ?? '',
-          verificationStatus: null,
-          lastVerifiedAt: null,
-          recentSuccessCount: 0,
-          sources: const [],
-          reminder: json['reminder'] as String,
-          excerpt: (json['excerpt'] as String?) ?? '',
-          category: json['category'] as String?,
-        );
+
+  /// Null for kinds this app doesn't show (older procedure cards, anything new).
+  static AssistantCard? fromJson(Json json) => switch (json['type']) {
+    'faq' => AssistantCard(
+      type: 'faq',
+      id: json['faq_id'] as String,
+      title: json['question'] as String? ?? '',
+      excerpt: json['excerpt'] as String? ?? '',
+      category: json['category'] as String?,
+      agency: json['answering_agency'] as String? ?? '',
+      postedOn: json['posted_on'] as String?,
+      url: json['url'] as String? ?? '',
+    ),
+    'experience' => AssistantCard(
+      type: 'experience',
+      id: json['experience_id'] as String,
+      title: json['title'] as String? ?? '',
+      reminder: json['reminder'] as String?,
+      excerpt: json['excerpt'] as String? ?? '',
+      category: json['category'] as String?,
+    ),
+    _ => null,
+  };
+
+  /// 'faq' or 'experience'.
   final String type;
   final String id;
-  final String? title;
-  final String? verificationStatus;
-  final String? lastVerifiedAt;
-  final int recentSuccessCount;
-  final List<String> sources;
+
+  /// The question, or the post's title.
+  final String title;
   final String? reminder;
 
-  /// For student posts: the opening words and category, shown on the post card.
+  /// The opening words of the answer or post.
   final String excerpt;
+
+  /// A question's category name, or a post's category key.
   final String? category;
+
+  /// For questions: the agency that answered, when it was posted and the official page.
+  final String agency;
+  final String? postedOn;
+  final String url;
 }
 
 class ScreenAction {
@@ -715,55 +658,27 @@ class ScreenAction {
   final String? topic;
 }
 
-class PendingOperation {
-  const PendingOperation({
-    required this.id,
-    required this.summary,
-    required this.status,
-    required this.expiresAt,
-    required this.targetId,
-    required this.result,
-  });
-  factory PendingOperation.fromJson(Json json) => PendingOperation(
-    id: json['id'] as String,
-    summary: json['summary'] as String,
-    status: json['status'] as String,
-    expiresAt: _date(json['expires_at'])!,
-    targetId: json['target_id'] as String,
-    result: json['result'] as Json?,
-  );
-  final String id;
-  final String summary;
-  final String status;
-  final DateTime expiresAt;
-  final String targetId;
-  final Json? result;
-}
-
 class AssistantReply {
   const AssistantReply({
     required this.conversationId,
     required this.text,
     required this.cards,
     required this.screenActions,
-    required this.pendingOperations,
     required this.fallback,
   });
   factory AssistantReply.fromJson(Json json) => AssistantReply(
     conversationId: json['conversation_id'] as String,
     text: json['text'] as String,
-    cards: _list(json['cards'], AssistantCard.fromJson),
+    cards: [
+      for (final card in json['cards'] as List? ?? const [])
+        ?AssistantCard.fromJson(card as Json),
+    ],
     screenActions: _list(json['screen_actions'], ScreenAction.fromJson),
-    pendingOperations: _list(
-      json['pending_operations'],
-      PendingOperation.fromJson,
-    ),
     fallback: json['fallback'] as bool,
   );
   final String conversationId;
   final String text;
   final List<AssistantCard> cards;
   final List<ScreenAction> screenActions;
-  final List<PendingOperation> pendingOperations;
   final bool fallback;
 }

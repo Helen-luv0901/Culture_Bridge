@@ -96,34 +96,17 @@ def test_starting_twice_reuses_execution(service, data):
     assert len(data.get_in_progress("alice")) == 1
 
 
-def test_assistant_proposes_but_does_not_write(make_assistant, data):
-    llm = ScriptedLLM(
-        call("propose_start_action", action_id="bank"),
-        answer("請在 5 分鐘內按「確認」開始辦理。"),
-    )
-    reply = make_assistant(llm).reply(AssistantMessageRequest(message="幫我開始辦銀行帳戶"), ALICE)
+def test_operation_endpoints(client, db):
+    # The assistant no longer proposes operations (the procedure guides are gone), but pending
+    # ones from before still confirm, cancel and expire through these endpoints.
+    from app.assistant.db_operations import DbOperationService
+    from app.models import User
 
-    tool_result = llm.calls[1]["history"][-1].results[0].result
-    assert tool_result["status"] == "awaiting_user_confirmation"
-    [op] = reply.pending_operations
-    assert (op.type, op.target_id, op.status) == ("start_action", "bank", "pending")
-    assert op.summary == "開始辦理「開銀行帳戶」"
-    assert data.get_in_progress("alice") == []
-
-
-def test_guest_cannot_propose(make_assistant):
-    llm = ScriptedLLM(call("propose_start_action", action_id="bank"), answer("請先登入。"))
-    reply = make_assistant(llm).reply(AssistantMessageRequest(message="開始"), None)
-    assert llm.calls[1]["history"][-1].results[0].result == {"requires_login": True}
-    assert reply.pending_operations == []
-
-
-def test_operation_endpoints(client):
-    llm = ScriptedLLM(call("propose_start_action", action_id="arc"), answer("請確認。"))
-    c = client(llm)
+    c = client(ScriptedLLM())
     alice = {"X-Dev-User-Id": "alice"}
-    reply = c.post("/api/assistant/message", json={"message": "開始 ARC"}, headers=alice).json()
-    op_id = reply["pending_operations"][0]["id"]
+    db.add(User(id="alice", auth_subject="dev:alice"))
+    db.commit()
+    op_id = DbOperationService(db).propose_start_action(CurrentUser(id="alice"), "arc", "s").id
 
     assert c.get(f"/api/assistant/operations/{op_id}", headers=alice).json()["status"] == "pending"
     other = c.post(f"/api/assistant/operations/{op_id}/confirm", headers={"X-Dev-User-Id": "bob"})

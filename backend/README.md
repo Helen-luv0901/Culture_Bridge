@@ -75,7 +75,7 @@ POST /api/assistant/message
 
 工具：`search_actions`、`get_action`、`search_experiences`、`get_experience`、`get_my_progress`、`open_screen`（白名單畫面動作）、`semantic_search`、`search_app_help`（App 使用說明知識庫）、`propose_start_action`（只產生待確認操作）。
 
-回覆的 `cards`（流程卡含驗證狀態、最後驗證日、近期成功數；經驗卡標示學生經驗）、`screen_actions`、`pending_operations` 都由工具實際讀到的資料產生，模型無法捏造「已驗證」或任意路由。Gemini 失敗、空回答、超過輪數或超過每日總量時回備用回覆（`fallback: true`）。
+回覆的 `cards`（官方問答卡含回復機關、日期與原文連結；經驗卡標示學生經驗）、`screen_actions`、`pending_operations` 都由工具實際讀到的資料產生，模型無法捏造「已驗證」或任意路由。Gemini 失敗、空回答、超過輪數或超過每日總量時回備用回覆（`fallback: true`）。
 
 ## 語意搜尋（app/rag/）
 

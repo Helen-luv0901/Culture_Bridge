@@ -1,6 +1,6 @@
 part of 'bridge_view_model.dart';
 
-mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
+mixin _BridgeAssistant on _BridgeCore {
   // ---------- assistant ----------
 
   String? conversationId;
@@ -43,7 +43,7 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
     notifyListeners();
   }
 
-  /// Send a message with what the user is looking at, so "this procedure" can be resolved.
+  /// Send a message with what the user is looking at, so "this question" can be resolved.
   Future<void> ask(String text, {Map<String, String>? screen}) async {
     final message = text.trim();
     if (message.isEmpty || asking) return;
@@ -109,57 +109,6 @@ mixin _BridgeAssistant on _BridgeCore, _BridgeProcedures {
       return false;
     }
   }
-
-  /// Confirm or cancel a write the assistant prepared (A-17); the user always decides.
-  Future<void> resolveOperation(
-    PendingOperation operation,
-    bool confirm,
-  ) async {
-    // A second tap while the first is on its way would fail and hide its result.
-    if (!_resolving.add(operation.id)) return;
-    notifyListeners();
-    try {
-      final result = confirm
-          ? await repository.confirmOperation(operation.id)
-          : await repository.cancelOperation(operation.id);
-      operationStates[operation.id] = result.status;
-      _retryable.remove(operation.id);
-      if (result.status == 'confirmed') {
-        await loadExecutions();
-        showNotice(pair('已開始辦理。', 'Started.'));
-      }
-    } on ApiException catch (e) {
-      // Offline or a busy server: nothing happened yet, so the buttons stay to try again.
-      if (_transient(e)) {
-        _retryable.add(operation.id);
-      } else {
-        _retryable.remove(operation.id);
-        operationStates[operation.id] = e.code.replaceFirst('operation_', '');
-      }
-      showNotice(errorText(e));
-    } finally {
-      _resolving.remove(operation.id);
-    }
-    notifyListeners();
-  }
-
-  final Set<String> _resolving = {};
-  final Set<String> _retryable = {};
-
-  static bool _transient(ApiException e) =>
-      e.code == 'network_error' ||
-      e.code == 'internal_error' ||
-      e.code == 'bad_response' ||
-      (e.code.startsWith('http_') && e.status >= 500);
-
-  /// The last confirm or cancel of [id] didn't reach the server; it can be tried again.
-  bool operationRetryable(String id) => _retryable.contains(id);
-
-  /// Whether a confirm or cancel of [id] is on its way (its buttons wait).
-  bool resolvingOperation(String id) => _resolving.contains(id);
-
-  /// Latest known status of each pending operation shown in the chat.
-  final Map<String, String> operationStates = {};
 }
 
 /// One line in the assistant panel.

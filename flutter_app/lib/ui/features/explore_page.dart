@@ -9,12 +9,12 @@ import '../core/design_system.dart';
 import '../core/layout.dart';
 import '../core/loading.dart';
 import 'assistant_panel.dart';
-import 'home_page.dart';
+import 'faq_pages.dart';
 import 'post_cards.dart';
 
 /// Boards: a card per board first; a board shows its student posts, newest or most
-/// popular. Searching covers guides and posts, narrowed by the category tabs. Official
-/// guides live on /guides.
+/// popular. Searching covers the official Q&A and posts, narrowed by the category tabs.
+/// The official Q&A lives on /faqs.
 class ExplorePage extends StatelessWidget {
   const ExplorePage({
     super.key,
@@ -261,7 +261,7 @@ class _SearchFieldState extends State<SearchField> {
         isDense: widget.compact,
         // Easy to hit even in the compact header (44 px, like every other control).
         constraints: const BoxConstraints(minHeight: 44),
-        hintText: vm.pair('搜尋貼文、指南或 #標籤', 'Search posts, guides or #tags'),
+        hintText: vm.pair('搜尋貼文、官方問答或 #標籤', 'Search posts, Q&A or #tags'),
         prefixIcon: const Padding(
           padding: EdgeInsets.only(left: 12, right: 8),
           child: AppIcon('search', size: 20, color: Palette.muted),
@@ -300,7 +300,7 @@ class _PostFeed extends StatelessWidget {
       key: ValueKey('$category-$sort'),
       resource: (vm) => vm.posts(filter, sort),
       load: (vm) => vm.loadPosts(filter, false, sort),
-      watch: (vm, on) => vm.watchPosts(filter, sort, null, on),
+      watch: (vm, on) => vm.watchPosts(filter, sort, on),
       retry: (vm) => vm.loadPosts(
         filter,
         vm.posts(filter, sort).data?.nextOffset != null,
@@ -497,17 +497,18 @@ class _SearchResults extends StatelessWidget {
       resource: (vm) => vm.search(query),
       load: (vm) => vm.loadSearch(query),
       builder: (context, results) {
-        // A picked category narrows the search: 官方 only guides, a student category only its posts.
-        final guides = category == 'all' || category == 'official'
-            ? results.actions
-            : const <ActionSummary>[];
+        // A picked category narrows the search: 官方 only official Q&A, a student category
+        // only its posts.
+        final faqs = category == 'all' || category == 'official'
+            ? results.faqs
+            : const <FaqSummary>[];
         final posts = category == 'official'
             ? const <ExperienceItem>[]
             : [
                 for (final e in results.experiences)
                   if (category == 'all' || e.categoryKey == category) e,
               ];
-        if (guides.isEmpty && posts.isEmpty) {
+        if (faqs.isEmpty && posts.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -530,13 +531,13 @@ class _SearchResults extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (guides.isNotEmpty) ...[
+            if (faqs.isNotEmpty) ...[
               SectionLabel(
-                vm.pair('官方指南', 'Official guides'),
-                note: vm.pair('${guides.length} 篇', '${guides.length}'),
+                vm.pair('官方問答', 'Official Q&A'),
+                note: vm.pair('${faqs.length} 則', '${faqs.length}'),
               ),
               const SizedBox(height: 10),
-              GuideList(actions: guides),
+              FaqList(items: faqs),
               const SizedBox(height: 18),
             ],
             if (posts.isNotEmpty) ...[

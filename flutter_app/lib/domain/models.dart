@@ -11,7 +11,6 @@ class ShareDraft {
     this.customTags = const [],
     this.authorDisplay = 'anonymous',
     this.differentFromId,
-    this.actionId,
     this.resumesId,
   });
 
@@ -30,9 +29,6 @@ class ShareDraft {
 
   /// Set when this answers another post ("my experience was different").
   final String? differentFromId;
-
-  /// Set when shared from an official guide, so the post also shows under it.
-  final String? actionId;
 
   /// An unpublished post saved on the server that this draft continues; it is
   /// deleted once the draft is published.
@@ -55,20 +51,17 @@ class ShareDraft {
     customTags: customTags ?? this.customTags,
     authorDisplay: authorDisplay ?? this.authorDisplay,
     differentFromId: differentFromId,
-    actionId: actionId,
     resumesId: resumesId,
   );
 
-  /// The same draft without the link to another post or guide.
-  ShareDraft unlinked({bool post = false, bool guide = false}) => ShareDraft(
+  /// The same draft without the link to another post.
+  ShareDraft unlinked() => ShareDraft(
     title: title,
     voice: voice,
     category: category,
     chosenTags: chosenTags,
     customTags: customTags,
     authorDisplay: authorDisplay,
-    differentFromId: post ? null : differentFromId,
-    actionId: guide ? null : actionId,
     resumesId: resumesId,
   );
 
@@ -80,7 +73,6 @@ class ShareDraft {
     'customTags': customTags,
     'authorDisplay': authorDisplay,
     'differentFromId': differentFromId,
-    'actionId': actionId,
     'resumesId': resumesId,
   };
 
@@ -92,7 +84,6 @@ class ShareDraft {
     customTags: List<String>.from(json['customTags'] as List? ?? const []),
     authorDisplay: json['authorDisplay'] as String? ?? 'anonymous',
     differentFromId: json['differentFromId'] as String?,
-    actionId: json['actionId'] as String?,
     resumesId: json['resumesId'] as String?,
   );
 }

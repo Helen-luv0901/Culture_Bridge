@@ -5,8 +5,8 @@
 
 Uses the same database (DATABASE_URL) and model (GEMINI_API_KEY) as the server, asking as a
 guest, so nothing is written. Each question starts a new conversation. The sheet lists the answer,
-the cards with their verification status, the tools used and whether it was a fallback, with
-boxes for the reviewer to tick; send the problems to A.
+the cards (official questions with their agency and date, student posts), the tools used and
+whether it was a fallback, with boxes for the reviewer to tick; send the problems to A.
 """
 
 import argparse
@@ -41,11 +41,13 @@ def ask(question: str, locale: str) -> AssistantReply:
 def _cards(reply: AssistantReply) -> list[str]:
     lines = []
     for card in reply.cards:
-        if card.type == "action":
+        if card.type == "faq":
             lines.append(
-                f"流程卡 {card.title}（{card.verification_status}，"
-                f"最後驗證 {card.last_verified_at or '—'}，來源 {len(card.sources)}）"
+                f"官方問答 {card.faq_id} {card.question}"
+                f"（{card.answering_agency or '—'}，{card.posted_on or '—'}）"
             )
+        elif card.type == "action":
+            lines.append(f"流程卡 {card.title}（{card.verification_status}）")
         else:
             lines.append(f"學生經驗 {card.experience_id}：{card.reminder}")
     return lines

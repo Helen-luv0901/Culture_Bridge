@@ -7,8 +7,9 @@ from pydantic import BaseModel, Field
 
 from app.assistant.data import Locale, TopicId, VerificationStatus
 
+# open_action/open_progress belonged to the procedure guides; kept so older app builds parse.
 ScreenActionType = Literal[
-    "open_action", "open_experience", "open_explore", "open_share", "open_progress"
+    "open_faq", "open_action", "open_experience", "open_explore", "open_share", "open_progress"
 ]
 
 
@@ -17,6 +18,7 @@ class ScreenContext(BaseModel):
 
     route: str | None = Field(default=None, max_length=200)
     action_id: str | None = Field(default=None, max_length=100)
+    faq_id: str | None = Field(default=None, max_length=100)
     experience_id: str | None = Field(default=None, max_length=100)
 
 
@@ -47,6 +49,19 @@ class ActionCard(BaseModel):
     excerpt: str = ""
 
 
+class FaqCard(BaseModel):
+    """An official question (MOE NISA) the answer relies on."""
+
+    type: Literal["faq"] = "faq"
+    faq_id: str
+    question: str
+    category: str
+    answering_agency: str
+    posted_on: str | None
+    excerpt: str = ""
+    url: str
+
+
 class ExperienceCard(BaseModel):
     type: Literal["experience"] = "experience"
     experience_id: str
@@ -58,7 +73,7 @@ class ExperienceCard(BaseModel):
     category: str | None = None
 
 
-Card = Annotated[ActionCard | ExperienceCard, Field(discriminator="type")]
+Card = Annotated[FaqCard | ActionCard | ExperienceCard, Field(discriminator="type")]
 
 
 class PendingOperationOut(BaseModel):

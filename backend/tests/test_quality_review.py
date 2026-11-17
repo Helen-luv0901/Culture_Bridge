@@ -7,17 +7,15 @@ from tests.conftest import ScriptedLLM, answer, call
 
 def test_assistant_review_sheet(db, monkeypatch, make_assistant):
     seed(db, get_settings().demo_content_path)
-    llm = ScriptedLLM(call("get_action", action_id="work-permit"), answer("請看工作證流程卡。"))
+    llm = ScriptedLLM(call("get_official_faq", faq_id="nisa-934"), answer("請看移民署的回覆。"))
     services = type("S", (), {"assistant": make_assistant(llm)})()
     monkeypatch.setattr(assistant_review, "get_services", lambda: services)
 
-    reply = assistant_review.ask("工作證要準備哪些文件？", "zh-Hant")
-    sheet = assistant_review.render(
-        [{"question": "工作證要準備哪些文件？", "expect": "x"}], [reply]
-    )
-    assert "## 1. 工作證要準備哪些文件？" in sheet
-    assert "> 請看工作證流程卡。" in sheet
-    assert "流程卡 申請工作證（verified" in sheet and "get_action" in sheet
+    reply = assistant_review.ask("居留證過期怎麼辦？", "zh-Hant")
+    sheet = assistant_review.render([{"question": "居留證過期怎麼辦？", "expect": "x"}], [reply])
+    assert "## 1. 居留證過期怎麼辦？" in sheet
+    assert "> 請看移民署的回覆。" in sheet
+    assert "官方問答 nisa-934 居留證逾期" in sheet and "get_official_faq" in sheet
     assert "- [ ] 答案正確" in sheet
 
 

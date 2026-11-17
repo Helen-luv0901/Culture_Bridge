@@ -10,26 +10,17 @@ from tests.conftest import ScriptedLLM, answer, call
 
 
 def test_post_message(client):
-    llm = ScriptedLLM(call("get_action", action_id="certificate"), answer("在學證明……"))
+    llm = ScriptedLLM(call("get_official_faq", faq_id="nisa-934"), answer("移民署回覆……"))
     res = client(llm).post(
-        "/api/assistant/message", json={"message": "在學證明", "locale": "zh-Hant"}
+        "/api/assistant/message", json={"message": "居留證逾期", "locale": "zh-Hant"}
     )
     assert res.status_code == 200
     body = res.json()
-    assert body["text"] == "在學證明……"
-    assert body["cards"][0]["type"] == "action"
-    assert body["cards"][0]["verification_status"] == "verified"
+    assert body["text"] == "移民署回覆……"
+    assert body["cards"][0]["type"] == "faq"
+    assert body["cards"][0]["faq_id"] == "nisa-934" and body["cards"][0]["answering_agency"]
     assert body["fallback"] is False
     assert body["conversation_id"]
-
-
-def test_dev_user_header_reaches_tools(client, data):
-    llm = ScriptedLLM(call("get_my_progress"), answer("沒有進行中的流程。"))
-    client(llm).post(
-        "/api/assistant/message", json={"message": "我的進度"}, headers={"X-Dev-User-Id": "u9"}
-    )
-    result = llm.calls[1]["history"][-1].results[0].result
-    assert result == {"count": 0, "results": []}
 
 
 def test_validation_rejects_bad_input(client):

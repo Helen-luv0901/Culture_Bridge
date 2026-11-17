@@ -7,18 +7,12 @@ mixin _BridgePosts on _BridgeCore {
   /// Student posts, newest first (`'new'`) or most discussed first (`'hot'`:
   /// "me too" taps plus comments).
   Resource<ExperiencePage> posts([String? category, String sort = 'new']) =>
-      _explore[_listKey(category, sort, null)] ?? const Resource();
+      _explore[_listKey(category, sort)] ?? const Resource();
   Future<void> loadPosts([
     String? category,
     bool more = false,
     String sort = 'new',
-  ]) => _loadList(category, sort, null, more);
-
-  /// Student posts shared under an official guide.
-  Resource<ExperiencePage> postsForAction(String actionId) =>
-      _explore[_listKey(null, 'new', actionId)] ?? const Resource();
-  Future<void> loadPostsForAction(String actionId) =>
-      _loadList(null, 'new', actionId, false);
+  ]) => _loadList(category, sort, more);
 
   Timer? _liveTimer;
 
@@ -27,8 +21,8 @@ mixin _BridgePosts on _BridgeCore {
   final Map<String, int> _watching = {};
 
   /// A view showing this list appeared ([on]) or went away.
-  void watchPosts(String? category, String sort, String? actionId, bool on) {
-    final key = _listKey(category, sort, actionId);
+  void watchPosts(String? category, String sort, bool on) {
+    final key = _listKey(category, sort);
     final count = (_watching[key] ?? 0) + (on ? 1 : -1);
     if (count > 0) {
       _watching[key] = count;
@@ -72,12 +66,11 @@ mixin _BridgePosts on _BridgeCore {
             entry.key,
       ];
       for (final key in keys) {
-        final [category, _, actionId] = key.split('|');
+        final [category, _] = key.split('|');
         final ExperiencePage page;
         try {
           page = await repository.explore(
             category: category == 'all' ? null : category,
-            actionId: actionId.isEmpty ? null : actionId,
             locale: locale,
           );
         } on ApiException {
@@ -103,13 +96,8 @@ mixin _BridgePosts on _BridgeCore {
     if (changed) notifyListeners();
   }
 
-  Future<void> _loadList(
-    String? category,
-    String sort,
-    String? actionId,
-    bool more,
-  ) {
-    final key = _listKey(category, sort, actionId);
+  Future<void> _loadList(String? category, String sort, bool more) {
+    final key = _listKey(category, sort);
     final current = _explore[key]?.data;
     // A second "more" while one is loading would ask for the same page twice.
     if (more && (_explore[key]?.loading ?? false)) return Future.value();
@@ -119,7 +107,6 @@ mixin _BridgePosts on _BridgeCore {
       () async {
         final page = await repository.explore(
           category: category,
-          actionId: actionId,
           sort: sort,
           locale: locale,
           offset: more ? current?.nextOffset ?? 0 : 0,

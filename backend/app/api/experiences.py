@@ -13,6 +13,7 @@ from app.rag.embedder import get_embedder
 from app.rag.index import sync_in_background
 from app.services import actions as action_svc
 from app.services import experiences as svc
+from app.services import faqs as faq_svc
 from app.services import metrics
 from app.services import tags as tag_svc
 
@@ -206,8 +207,10 @@ def my_experience(experience_id: str, user: RequiredUser, db: DbSession) -> svc.
 
 
 class SearchResults(BaseModel):
-    actions: list[action_svc.ActionSummary]
+    # Official Q&A replaced the procedure guides; `actions` stays (empty) for older app builds.
+    faqs: list[faq_svc.FaqSummary]
     experiences: list[svc.PublicExperience]
+    actions: list[action_svc.ActionSummary] = []
 
 
 @router.get("/search")
@@ -216,10 +219,12 @@ def search(
     viewer: OptionalUser,
     q: str = Query(min_length=1, max_length=200),
     locale: svc.Locale | None = None,
-    kind: Literal["all", "actions", "experiences"] = "all",
+    kind: Literal["all", "faqs", "actions", "experiences"] = "all",
 ) -> SearchResults:
-    """Keyword search over procedures and experiences (B-16), best matches first."""
+    """Keyword search over the official Q&A and experiences (B-16), best matches first.
+    kind=actions is the old name for faqs."""
+    official = kind in ("all", "faqs", "actions")
     return SearchResults(
-        actions=action_svc.search_actions(db, q, 10) if kind != "experiences" else [],
-        experiences=svc.search(db, viewer, q, locale, 10) if kind != "actions" else [],
+        faqs=faq_svc.search_faqs(db, q, 10) if official else [],
+        experiences=svc.search(db, viewer, q, locale, 10) if kind in ("all", "experiences") else [],
     )

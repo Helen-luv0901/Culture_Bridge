@@ -189,11 +189,10 @@ def test_explore_filters_search_and_paging(api, db):
     demo = api.get("/api/experiences/professor-see?locale=en").json()
     assert demo["translation"]["method"] == "human"
 
+    # Official questions are in the same search (tests/test_official_faq.py); guides are not.
     results = api.get("/api/search", params={"q": "工作證"}).json()
-    assert [a["id"] for a in results["actions"]] == ["work-permit"]
-    assert (
-        api.get("/api/search", params={"q": "ARC", "kind": "actions"}).json()["experiences"] == []
-    )
+    assert results["actions"] == [] and "faqs" in results
+    assert api.get("/api/search", params={"q": "ARC", "kind": "faqs"}).json()["experiences"] == []
 
 
 def test_reactions_and_impact(api, ai):

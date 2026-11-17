@@ -32,10 +32,10 @@ class MemoryPreferences implements PreferencesRepository {
   }
 
   @override
-  Set<String> savedGuides = {};
+  Set<String> savedFaqs = {};
   @override
-  Future<void> saveSavedGuides(Set<String> ids) async {
-    savedGuides = {...ids};
+  Future<void> saveSavedFaqs(Set<String> ids) async {
+    savedFaqs = {...ids};
   }
 
   /// Seen by default, so tests that ask the assistant aren't stopped by the notice.
@@ -44,13 +44,6 @@ class MemoryPreferences implements PreferencesRepository {
   @override
   Future<void> saveAiNoticeSeen() async {
     aiNoticeSeen = true;
-  }
-
-  @override
-  bool settled = false;
-  @override
-  Future<void> saveSettled(bool value) async {
-    settled = value;
   }
 }
 

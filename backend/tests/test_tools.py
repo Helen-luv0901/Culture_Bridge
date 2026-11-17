@@ -1,6 +1,5 @@
 import pytest
 
-from app.assistant.data import Localized, ProgressRecord, ProgressStep
 from app.assistant.llm import ToolCall
 from app.assistant.tools import ToolContext, default_registry
 
@@ -14,59 +13,59 @@ def run(ctx: ToolContext, name: str, **args) -> dict:
 def test_specs_are_plain_json_schema():
     specs = {s.name: s for s in registry.specs()}
     assert set(specs) == {
-        "search_actions",
-        "get_action",
+        "search_official_faq",
+        "get_official_faq",
         "search_experiences",
         "get_experience",
-        "get_my_progress",
         "open_screen",
         "search_app_help",
-        "propose_start_action",
         "semantic_search",
     }
     search = specs["search_experiences"].parameters
     assert search["type"] == "object"
     assert search["properties"]["topic"]["enum"] == ["life_adaptation", "culture_communication"]
     assert "anyOf" not in search["properties"]["query"]
-    assert specs["get_action"].parameters["required"] == ["action_id"]
+    assert specs["get_official_faq"].parameters["required"] == ["faq_id"]
 
 
-def test_search_actions_matches_chinese_question(ctx):
-    result = run(ctx, "search_actions", query="工作證怎麼辦")
-    assert result["results"][0]["action_id"] == "work-permit"
-    assert result["results"][0]["verification_status"] == "verified"
+def test_search_official_faq_matches_chinese_question(ctx):
+    result = run(ctx, "search_official_faq", query="居留證逾期")
+    assert result["results"][0]["faq_id"] == "nisa-934"
+    assert result["results"][0]["category"] == "簽證/居留證"
 
 
-def test_search_actions_in_english(ctx):
+def test_search_official_faq_in_english(ctx):
     ctx.locale = "en"
-    result = run(ctx, "search_actions", query="bank account")
-    assert result["results"][0] == {
-        "action_id": "bank",
-        "title": "Open a Bank Account",
-        "verification_status": "verified",
-        "last_verified_at": "2026-08-12",
-        "recent_success_count": 9,
-    }
+    first = run(ctx, "search_official_faq", query="health insurance")["results"][0]
+    assert first["category"] == "Health and Insurance"
+    assert first["question"].isascii()  # the site's English version
 
 
-def test_search_actions_no_match_is_empty(ctx):
-    assert run(ctx, "search_actions", query="駕照") == {"count": 0, "results": []}
+def test_search_official_faq_no_match_is_empty(ctx):
+    assert run(ctx, "search_official_faq", query="寵物貓") == {"count": 0, "results": []}
 
 
-def test_get_action_returns_evidence_and_records_card(ctx):
-    result = run(ctx, "get_action", action_id="insurance")
-    action = result["action"]
+def test_get_official_faq_returns_the_answer_with_its_source_and_records_card(ctx):
+    result = run(ctx, "get_official_faq", faq_id="nisa-934")
+    faq = result["faq"]
     assert result["found"] is True
-    assert action["verification_status"] == "needs_review"
-    assert action["steps"][0]["position"] == 1
-    assert action["sources"]
-    card = ctx.cards["action:insurance"]
-    assert card.verification_status == "needs_review"
-    assert card.last_verified_at == "2026-07-29"
+    assert "government agencies" in result["notice"]
+    assert faq["answer"] and faq["answering_agency"] and faq["posted_on"]
+    assert faq["url"].startswith("https://www.nisa.moe.gov.tw/")
+    card = ctx.cards["faq:nisa-934"]
+    assert card.question == faq["question"]
+    assert card.answering_agency == faq["answering_agency"]
 
 
-def test_get_action_unknown_id(ctx):
-    assert run(ctx, "get_action", action_id="nope") == {"found": False, "action_id": "nope"}
+def test_chinese_only_question_tells_the_model_to_translate(ctx):
+    ctx.locale = "en"
+    faq = run(ctx, "get_official_faq", faq_id="nisa-1076")["faq"]
+    assert "Only the Chinese original" in faq["note"]
+    assert "居留證" in faq["question"]
+
+
+def test_get_official_faq_unknown_id(ctx):
+    assert run(ctx, "get_official_faq", faq_id="nope") == {"found": False, "faq_id": "nope"}
     assert ctx.cards == {}
 
 
@@ -81,44 +80,27 @@ def test_experiences_are_labelled_and_anonymous(ctx):
     assert ctx.cards["experience:professor-see"].label == "student_experience"
 
 
-def test_get_my_progress_requires_login(ctx):
-    ctx.user = None
-    assert run(ctx, "get_my_progress") == {"requires_login": True, "results": []}
-
-
-def test_get_my_progress_only_returns_own_records(ctx, data):
-    data.progress["u1"] = [
-        ProgressRecord(
-            execution_id="e1",
-            action_id="arc",
-            action_title=Localized("申請或更新 ARC", "Apply for or Renew Your ARC"),
-            started_at="2026-10-01T02:00:00Z",
-            steps=(ProgressStep(1, Localized("準備文件", "Prepare documents"), "done"),),
-        )
-    ]
-    data.progress["u2"] = []
-    assert run(ctx, "get_my_progress")["results"][0]["steps"][0]["state"] == "done"
-    ctx.user = ctx.user.__class__(id="u2")
-    assert run(ctx, "get_my_progress")["count"] == 0
-
-
 def test_unknown_tool_and_bad_args_become_error_results(ctx):
     assert "Unknown tool" in run(ctx, "delete_everything")["error"]
-    missing = run(ctx, "get_action")
+    missing = run(ctx, "get_official_faq")
     assert missing["error"] == "Invalid arguments"
-    assert run(ctx, "search_actions", query="x", sql="drop")["error"] == "Invalid arguments"
+    assert run(ctx, "search_official_faq", query="x", sql="drop")["error"] == "Invalid arguments"
+    # The procedure tools are gone with the procedure guides.
+    assert "Unknown tool" in run(ctx, "search_actions", query="ARC")["error"]
+    assert "Unknown tool" in run(ctx, "propose_start_action", action_id="arc")["error"]
 
 
 def test_open_screen_whitelist_and_target_checks(ctx):
     assert "error" in run(ctx, "open_screen", screen="open_admin")
-    assert "error" in run(ctx, "open_screen", screen="open_action", target_id="nope")
-    assert "error" in run(ctx, "open_screen", screen="open_action")
+    assert "error" in run(ctx, "open_screen", screen="open_faq", target_id="nope")
+    assert "error" in run(ctx, "open_screen", screen="open_faq")
+    assert "error" in run(ctx, "open_screen", screen="open_action", target_id="arc")
 
-    assert run(ctx, "open_screen", screen="open_action", target_id="arc")["ok"] is True
-    run(ctx, "open_screen", screen="open_action", target_id="arc")
+    assert run(ctx, "open_screen", screen="open_faq", target_id="nisa-934")["ok"] is True
+    run(ctx, "open_screen", screen="open_faq", target_id="nisa-934")
     run(ctx, "open_screen", screen="open_explore", topic="life_adaptation", target_id="ignored")
     assert [a.model_dump() for a in ctx.screen_actions] == [
-        {"type": "open_action", "target_id": "arc", "topic": None},
+        {"type": "open_faq", "target_id": "nisa-934", "topic": None},
         {"type": "open_explore", "target_id": None, "topic": "life_adaptation"},
     ]
 
@@ -127,14 +109,14 @@ def test_tool_crash_is_contained(ctx, monkeypatch):
     def boom(*_):
         raise RuntimeError("db down")
 
-    monkeypatch.setattr(ctx.data, "search_actions", boom)
-    assert "unavailable" in run(ctx, "search_actions", query="arc")["error"]
+    monkeypatch.setattr(ctx.data, "search_faqs", boom)
+    assert "unavailable" in run(ctx, "search_official_faq", query="arc")["error"]
 
 
 def test_app_help_answers_how_to_questions(ctx):
-    result = run(ctx, "search_app_help", query="驗證狀態代表什麼")
+    result = run(ctx, "search_app_help", query="官方問答是誰寫的")
     assert result["guide_version"]
-    assert result["results"][0]["id"] == "verification-status"
+    assert result["results"][0]["id"] == "official-faq"
 
     ctx.locale = "en"
     share = run(ctx, "search_app_help", query="how do I share anonymously")
@@ -172,8 +154,8 @@ def test_app_guide_is_complete_in_both_languages():
         assert entry.title.zh != entry.title.en
 
 
-def test_search_prefers_titles_and_ignores_question_words(ctx):
-    assert run(ctx, "search_actions", query="ARC")["results"][0]["action_id"] == "arc"
+def test_search_prefers_questions_and_ignores_question_words(ctx):
+    assert run(ctx, "search_official_faq", query="駕照")["results"][0]["faq_id"] == "nisa-923"
     ctx.locale = "en"
-    found = run(ctx, "search_actions", query="how do I get health insurance")["results"]
-    assert found[0]["action_id"] == "insurance"
+    found = run(ctx, "search_official_faq", query="how do I renew my driving license")["results"]
+    assert found[0]["faq_id"] == "nisa-923"

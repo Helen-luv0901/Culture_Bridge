@@ -14,6 +14,7 @@ from app.api import (
     client_errors,
     comments,
     experiences,
+    faqs,
     me,
     moderation,
 )
@@ -83,6 +84,7 @@ api = APIRouter(prefix="/api")
 api.include_router(me.router)
 api.include_router(avatars.router)
 api.include_router(actions.router)
+api.include_router(faqs.router)
 api.include_router(experiences.router)
 api.include_router(comments.router)
 api.include_router(moderation.router)

@@ -46,7 +46,7 @@ PREVIEW="${PREVIEW:-}"  # a tag name: deploy for viewing only, traffic untouched
 if [[ -n "${PREVIEW}" ]]; then BRANCH="${BRANCH:-dev}"; else BRANCH=main; fi
 IMAGE_REPO="${REGION}-docker.pkg.dev/${PROJECT}/culture-bridge/app"
 SERVICE=culture-bridge
-CARDS=backend/app/content/official_procedures.json
+FAQS=backend/app/content/nisa_faq.json
 
 bold() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 note() { printf '  %s\n' "$*"; }
@@ -199,12 +199,16 @@ if ! check_health "${url}"; then
 fi
 note "流量已切到 ${new_rev}（上一版 ${old_rev}，要退回見 docs/runbooks/rollback-and-restore.md）。"
 
-bold "5/5 官方流程卡"
-if [[ "${live_tag}" == "${tag}" ]] || git diff --quiet "${live_tag}" HEAD -- "${CARDS}" 2>/dev/null; then
-  note "流程卡檔案沒有變更，不用重新匯入。"
+bold "5/5 官方問答"
+if [[ "${live_tag}" == "${tag}" ]] || git diff --quiet "${live_tag}" HEAD -- "${FAQS}" 2>/dev/null; then
+  note "官方問答檔案沒有變更，不用重新匯入。"
 else
-  note "流程卡檔案有變更（${live_tag} → ${tag}），更新沒人編輯過的草稿。"
-  gc run jobs update culture-bridge-import --image="${image}" --region="${REGION}" --quiet
+  note "官方問答檔案有變更（${live_tag} → ${tag}），匯入並建立 AI 搜尋用的向量。"
+  # The job used to import procedure drafts; it now loads the NISA Q&A and needs the Gemini key
+  # for the embeddings (same service account, which can already read that secret).
+  gc run jobs update culture-bridge-import --image="${image}" --region="${REGION}" \
+    --command=python --args=-m,app.official_faq \
+    --update-secrets=GEMINI_API_KEY=gemini-api-key:latest --quiet
   gc run jobs execute culture-bridge-import --region="${REGION}" --wait
 fi
 

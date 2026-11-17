@@ -22,25 +22,21 @@ abstract class CultureRepository {
   /// Accept the terms of use [version]; answers with the updated profile.
   Future<Profile> acceptTerms(int version);
 
-  Future<List<ActionSummary>> actions();
-  Future<ActionDetail> action(String id);
-  Future<Execution> startExecution(String actionId, String identityType);
-  Future<List<Execution>> myExecutions({bool includeFinished = false});
-  Future<Execution> setStep(String executionId, String stepId, String state);
-  Future<Execution> finishExecution(String executionId, String outcome);
-  Future<void> sendFeedback(
-    String executionId, {
-    required String kind,
-    String? stepId,
-    String? category,
-    String? text,
+  /// Every official question (MOE NISA) with its categories; the app filters it locally.
+  Future<FaqCatalog> faqs();
+  Future<FaqDetail> faq(String id);
+
+  /// Student posts about the same subject as the question [id].
+  Future<List<ExperienceItem>> faqRelatedPosts(
+    String id, {
+    String? locale,
+    int limit = 3,
   });
 
   Future<ExperiencePage> explore({
     String? category,
     String? query,
     String? locale,
-    String? actionId,
     String sort = 'new',
     int offset = 0,
   });
@@ -68,7 +64,6 @@ abstract class CultureRepository {
     required String sourceLocale,
     String authorDisplay = 'anonymous',
     String? differentFromId,
-    String? actionId,
   });
   Future<void> deleteExperience(String id);
 
@@ -108,8 +103,6 @@ abstract class CultureRepository {
     required String reason,
     String? details,
   });
-  Future<PendingOperation> confirmOperation(String id);
-  Future<PendingOperation> cancelOperation(String id);
 }
 
 class ApiCultureRepository implements CultureRepository {
@@ -150,63 +143,29 @@ class ApiCultureRepository implements CultureRepository {
       Profile.fromJson(await api.post('/me/terms', {'version': version}));
 
   @override
-  Future<List<ActionSummary>> actions() async => [
-    for (final item in await api.get('/actions') as List)
-      ActionSummary.fromJson(item as Json),
+  Future<FaqCatalog> faqs() async =>
+      FaqCatalog.fromJson(await api.get('/faqs'));
+  @override
+  Future<FaqDetail> faq(String id) async =>
+      FaqDetail.fromJson(await api.get('/faqs/${Uri.encodeComponent(id)}'));
+  @override
+  Future<List<ExperienceItem>> faqRelatedPosts(
+    String id, {
+    String? locale,
+    int limit = 3,
+  }) async => [
+    for (final item in await api.get(
+      '/faqs/${Uri.encodeComponent(id)}/related-posts',
+      {'locale': ?locale, 'limit': '$limit'},
+    ) as List)
+      ExperienceItem.fromJson(item as Json),
   ];
-  @override
-  Future<ActionDetail> action(String id) async =>
-      ActionDetail.fromJson(await api.get('/actions/$id'));
-  @override
-  Future<Execution> startExecution(
-    String actionId,
-    String identityType,
-  ) async => Execution.fromJson(
-    await api.post('/actions/$actionId/executions', {
-      'identity_type': identityType,
-    }),
-  );
-  @override
-  Future<List<Execution>> myExecutions({bool includeFinished = false}) async =>
-      [
-        for (final item in await api.get('/me/executions', {
-          if (includeFinished) 'include_finished': 'true',
-        }) as List)
-          Execution.fromJson(item as Json),
-      ];
-  @override
-  Future<Execution> setStep(
-    String executionId,
-    String stepId,
-    String state,
-  ) async => Execution.fromJson(
-    await api.put('/executions/$executionId/steps/$stepId', {'state': state}),
-  );
-  @override
-  Future<Execution> finishExecution(String executionId, String outcome) async =>
-      Execution.fromJson(
-        await api.post('/executions/$executionId/finish', {'outcome': outcome}),
-      );
-  @override
-  Future<void> sendFeedback(
-    String executionId, {
-    required String kind,
-    String? stepId,
-    String? category,
-    String? text,
-  }) => api.post('/executions/$executionId/feedback', {
-    'kind': kind,
-    'step_id': ?stepId,
-    'category': ?category,
-    if (text != null && text.trim().isNotEmpty) 'original_voice': text.trim(),
-  });
 
   @override
   Future<ExperiencePage> explore({
     String? category,
     String? query,
     String? locale,
-    String? actionId,
     String sort = 'new',
     int offset = 0,
   }) async => ExperiencePage.fromJson(
@@ -214,7 +173,6 @@ class ApiCultureRepository implements CultureRepository {
       'category': ?category,
       if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       'locale': ?locale,
-      'action_id': ?actionId,
       if (sort != 'new') 'sort': sort,
       'offset': '$offset',
     }),
@@ -279,7 +237,6 @@ class ApiCultureRepository implements CultureRepository {
     required String sourceLocale,
     String authorDisplay = 'anonymous',
     String? differentFromId,
-    String? actionId,
   }) async => ExperienceItem.fromJson(
     await api.post('/posts', {
       'title': title,
@@ -289,7 +246,6 @@ class ApiCultureRepository implements CultureRepository {
       'source_locale': sourceLocale,
       'author_display': authorDisplay,
       'different_from_id': ?differentFromId,
-      'action_id': ?actionId,
     }),
   );
   @override
@@ -394,15 +350,4 @@ class ApiCultureRepository implements CultureRepository {
       'details': note.isEmpty ? null : clip(note, 1000),
     });
   }
-
-  @override
-  Future<PendingOperation> confirmOperation(String id) async =>
-      PendingOperation.fromJson(
-        await api.post('/assistant/operations/$id/confirm'),
-      );
-  @override
-  Future<PendingOperation> cancelOperation(String id) async =>
-      PendingOperation.fromJson(
-        await api.post('/assistant/operations/$id/cancel'),
-      );
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:culture_bridge/domain/api_models.dart';
 import 'package:culture_bridge/domain/keys.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -86,15 +87,67 @@ void main() {
     expect(app.vm.translated(item), isFalse);
   });
 
-  test('Starting twice resumes the same execution', () async {
+  test('Official questions load, parse and match searches', () async {
     final app = TestApp();
     addTearDown(app.vm.dispose);
-    final first = await app.vm.startAction('work-permit');
-    final again = await app.vm.startAction('work-permit');
-    expect(again!.id, first!.id);
-    await app.vm.setStepDone(first, first.steps.first.stepId, true);
-    expect(app.vm.openExecution('work-permit')!.doneCount, 1);
-    expect(app.vm.openExecution('arc'), isNull);
+    await app.vm.loadFaqs();
+    final catalog = app.vm.faqs.data!;
+    expect(catalog.items.first.id, 'nisa-1070');
+    expect(catalog.category('work')!.name.of(true), 'Work');
+    expect(catalog.items.first.matches('renew ARC'), isTrue);
+    expect(catalog.items.first.matches('延期'), isTrue);
+    expect(catalog.items.first.matches('打工'), isFalse);
+    await app.vm.loadFaq('nisa-404');
+    expect(app.vm.faq('nisa-404').error!.code, 'faq_not_found');
+    await app.vm.loadFaqPosts('nisa-1070');
+    expect(app.vm.faqPosts('nisa-1070').data!.single.id, 'professor-see');
+  });
+
+  test('FAQ JSON from the API parses, English falling back to Chinese', () {
+    final faq = FaqDetail.fromJson({
+      'id': 'nisa-1',
+      'category_id': 'visa-arc',
+      'identities': ['foreign'],
+      'question': {'zh': '問題', 'en': ''},
+      'excerpt': {'zh': '摘要', 'en': 'Summary'},
+      'posted_on': null,
+      'has_english': false,
+      'category': {'zh': '簽證', 'en': 'Visas'},
+      'answer': {'zh': '第一行\n第二行', 'en': ''},
+      'source': {'zh': '', 'en': ''},
+      'agency': {'zh': '內政部移民署', 'en': 'National Immigration Agency'},
+      'publisher': {'zh': '教育部', 'en': 'Ministry of Education'},
+      'url': 'https://www.nisa.moe.gov.tw/faq.new/view/sn/1/menu_sn/13',
+    });
+    expect(faq.summary.question.of(true), '問題');
+    expect(faq.answer.of(true), '第一行\n第二行');
+    expect(faq.summary.hasEnglish, isFalse);
+    expect(faq.summary.postedOn, isNull);
+    final reply = AssistantReply.fromJson({
+      'conversation_id': 'c1',
+      'text': 'ok',
+      'cards': [
+        {'type': 'action', 'action_id': 'arc', 'title': 'old'},
+        {
+          'type': 'faq',
+          'faq_id': 'nisa-1',
+          'question': '問題',
+          'category': '簽證',
+          'answering_agency': '內政部移民署',
+          'posted_on': '2026-08-03',
+          'excerpt': '摘要',
+          'url': 'https://example.test',
+        },
+        {'type': 'something_new'},
+      ],
+      'screen_actions': [
+        {'type': 'open_faq', 'target_id': 'nisa-1'},
+      ],
+      'pending_operations': [],
+      'fallback': false,
+    });
+    expect(reply.cards.single.type, 'faq');
+    expect(reply.cards.single.agency, '內政部移民署');
   });
 
   test('Reactions update every cached copy', () async {
@@ -145,7 +198,7 @@ void main() {
     expect(app.vm.experience('professor-see').data!.item.commentCount, 0);
   });
 
-  test('Read posts and saved guides are remembered on the device', () {
+  test('Read posts and saved questions are remembered on the device', () {
     final app = TestApp();
     addTearDown(app.vm.dispose);
     expect(app.vm.isRead('first-rental'), isFalse);
@@ -153,31 +206,21 @@ void main() {
     expect(app.vm.isRead('first-rental'), isTrue);
     expect(app.preferences.readIds, {'first-rental'});
 
-    app.vm.toggleSavedGuide('arc');
-    expect(app.vm.guideSaved('arc'), isTrue);
-    expect(app.preferences.savedGuides, {'arc'});
-    app.vm.toggleSavedGuide('arc');
-    expect(app.vm.guideSaved('arc'), isFalse);
-  });
-
-  test('Documents checklist counts what is ready', () {
-    final app = TestApp();
-    addTearDown(app.vm.dispose);
-    app.vm.toggleDocument('arc', 0);
-    app.vm.toggleDocument('arc', 1);
-    app.vm.toggleDocument('arc', 0);
-    expect(app.vm.documentsReady('arc'), 1);
-    expect(app.vm.documentReady('arc', 1), isTrue);
+    app.vm.toggleSavedFaq('nisa-1070');
+    expect(app.vm.faqSaved('nisa-1070'), isTrue);
+    expect(app.preferences.savedFaqs, {'nisa-1070'});
+    app.vm.toggleSavedFaq('nisa-1070');
+    expect(app.vm.faqSaved('nisa-1070'), isFalse);
   });
 
   test('Signing out clears personal data', () async {
     final app = TestApp();
     addTearDown(app.vm.dispose);
-    await app.vm.startAction('arc');
-    await app.vm.loadExecutions();
-    expect(app.vm.executions.data, isNotEmpty);
+    await app.vm.loadProfile();
+    await app.vm.loadSaved();
+    expect(app.vm.saved.data, isNotNull);
     await app.vm.signOut();
-    expect(app.vm.executions.data, isNull);
+    expect(app.vm.saved.data, isNull);
     expect(app.vm.profile, isNull);
   });
 

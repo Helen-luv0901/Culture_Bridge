@@ -25,7 +25,7 @@ Future<void> main() async {
   // Screen readers on the web get the page from the start, not only after an "Enable
   // accessibility" button that Flutter otherwise puts first. The apps use the platform's.
   if (kIsWeb) SemanticsBinding.instance.ensureSemantics();
-  // Posts and guides opened with push get their own address, so they can be shared.
+  // Posts and questions opened with push get their own address, so they can be shared.
   GoRouter.optionURLReflectsImperativeAPIs = true;
   // The token getter is wired up once we know which sign-in to use.
   AuthService? auth;

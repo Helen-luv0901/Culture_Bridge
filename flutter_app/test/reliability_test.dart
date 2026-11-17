@@ -25,19 +25,12 @@ class _Repo extends FakeCultureRepository {
   Completer<void>? holdProfile;
   Completer<void>? holdAsk;
   Object? askError;
-  String? failStep;
-  Completer<void>? holdFailingStep;
-  Completer<void>? holdConfirm;
-  int confirmCalls = 0;
-  Completer<void>? holdFeedback;
-  int feedbackCalls = 0;
 
   @override
   Future<ExperiencePage> explore({
     String? category,
     String? query,
     String? locale,
-    String? actionId,
     String sort = 'new',
     int offset = 0,
   }) async {
@@ -50,7 +43,6 @@ class _Repo extends FakeCultureRepository {
       category: category,
       query: query,
       locale: locale,
-      actionId: actionId,
       sort: sort,
     );
     final items = all.items.skip(offset).take(pageSize).toList();
@@ -58,19 +50,6 @@ class _Repo extends FakeCultureRepository {
         ? offset + items.length
         : null;
     return ExperiencePage(items, next);
-  }
-
-  @override
-  Future<Execution> setStep(
-    String executionId,
-    String stepId,
-    String state,
-  ) async {
-    if (stepId == failStep) {
-      await holdFailingStep?.future;
-      throw const ApiException(503, 'network_error');
-    }
-    return super.setStep(executionId, stepId, state);
   }
 
   @override
@@ -98,32 +77,6 @@ class _Repo extends FakeCultureRepository {
       locale: locale,
       conversationId: conversationId,
       screen: screen,
-    );
-  }
-
-  @override
-  Future<PendingOperation> confirmOperation(String id) async {
-    confirmCalls++;
-    await holdConfirm?.future;
-    return super.confirmOperation(id);
-  }
-
-  @override
-  Future<void> sendFeedback(
-    String executionId, {
-    required String kind,
-    String? stepId,
-    String? category,
-    String? text,
-  }) async {
-    feedbackCalls++;
-    await holdFeedback?.future;
-    return super.sendFeedback(
-      executionId,
-      kind: kind,
-      stepId: stepId,
-      category: category,
-      text: text,
     );
   }
 }
@@ -161,12 +114,12 @@ void main() {
       final app = await _App.create();
       await app.vm.loadPosts(null);
       await app.vm.loadPosts('food');
-      app.vm.watchPosts(null, 'new', null, true);
+      app.vm.watchPosts(null, 'new', true);
       app.repository.exploreCalls.clear();
       await app.vm.refreshNewPosts();
       expect(app.repository.exploreCalls, ['all@0']);
 
-      app.vm.watchPosts(null, 'new', null, false);
+      app.vm.watchPosts(null, 'new', false);
       app.repository.exploreCalls.clear();
       await app.vm.refreshNewPosts();
       expect(app.repository.exploreCalls, isEmpty);
@@ -318,71 +271,5 @@ void main() {
       await app.vm.ask('再問一次');
       expect(app.vm.chat.last.failed, isFalse);
     });
-
-    test('confirming twice sends one request', () async {
-      final app = await _App.create();
-      app.repository.holdConfirm = Completer();
-      final operation = PendingOperation(
-        id: 'op1',
-        summary: '開始辦理',
-        status: 'pending',
-        expiresAt: DateTime.now().add(const Duration(hours: 1)),
-        targetId: 'arc',
-        result: null,
-      );
-      final first = app.vm.resolveOperation(operation, true);
-      final second = app.vm.resolveOperation(operation, true);
-      expect(app.vm.resolvingOperation('op1'), isTrue);
-      app.repository.holdConfirm!.complete();
-      await Future.wait([first, second]);
-      expect(app.repository.confirmCalls, 1);
-      expect(app.vm.resolvingOperation('op1'), isFalse);
-    });
-  });
-
-  test('Sending "I am stuck" twice sends one report', () async {
-    final app = await _App.create();
-    final execution = (await app.vm.startAction('arc'))!;
-    app.repository.holdFeedback = Completer();
-    final step = execution.steps.first.stepId;
-    final first = app.vm.reportStuck(execution, step, 'dontUnderstandStep', '');
-    final second = app.vm.reportStuck(
-      execution,
-      step,
-      'dontUnderstandStep',
-      '',
-    );
-    expect(app.vm.reportingStuck, isTrue);
-    app.repository.holdFeedback!.complete();
-    await Future.wait([first, second]);
-    expect(app.repository.feedbackCalls, 1);
-    expect(app.vm.reportingStuck, isFalse);
-  });
-
-  test('Undoing a failed tick leaves a later tick alone', () async {
-    final app = await _App.create();
-    final execution = (await app.vm.startAction('arc'))!;
-    final a = execution.steps[0].stepId;
-    final b = execution.steps[1].stepId;
-    app.repository.failStep = a;
-    app.repository.holdFailingStep = Completer();
-    final tickA = app.vm.setStepDone(execution, a, true);
-    await app.vm.setStepDone(app.vm.openExecution('arc')!, b, true); // succeeds
-    app.repository.holdFailingStep!.complete();
-    await tickA;
-    final steps = app.vm.openExecution('arc')!.steps;
-    expect(steps[0].state, isNot('done')); // A put back
-    expect(steps[1].state, 'done'); // B kept
-  });
-
-  test('A ticked step shows as done before the server answers', () async {
-    final app = await _App.create();
-    final execution = (await app.vm.startAction('arc'))!;
-    final step = execution.steps.first.stepId;
-    final done = app.vm.setStepDone(execution, step, true);
-    final shown = app.vm.openExecution('arc')!.steps.first;
-    expect(shown.state, 'done');
-    await done;
-    expect(app.vm.openExecution('arc')!.steps.first.state, 'done');
   });
 }

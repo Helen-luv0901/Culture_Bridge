@@ -6,12 +6,12 @@ import 'domain/keys.dart';
 import 'ui/core/app_shell.dart';
 import 'ui/core/design_system.dart';
 import 'ui/features/account_pages.dart';
-import 'ui/features/action_pages.dart';
 import 'ui/features/admin_pages.dart';
 import 'ui/features/assistant_page.dart';
 import 'ui/features/browse_pages.dart';
 import 'ui/features/experience_page.dart';
 import 'ui/features/explore_page.dart';
+import 'ui/features/faq_pages.dart';
 import 'ui/features/home_page.dart';
 import 'ui/features/me_page.dart';
 import 'ui/features/share_page.dart';
@@ -52,10 +52,10 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
     // The old "review the AI summary" step is gone: posts publish as written.
     redirect: (context, state) => switch (state.uri.path) {
       '/review' => '/share',
-      // The official account page became the guides page.
-      '/official' || '/guide/welcome' => '/guides',
-      '/explore' when state.uri.queryParameters['cat'] == 'official' =>
-        '/guides',
+      // The official account and the procedure guides became the official Q&A.
+      '/official' || '/guide/welcome' || '/guides' => '/faqs',
+      final path when path.startsWith('/actions/') => '/faqs',
+      '/explore' when state.uri.queryParameters['cat'] == 'official' => '/faqs',
       _ => null,
     },
     routes: [
@@ -88,8 +88,14 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             routes: [_page('settings', (state) => const SettingsPage())],
           ),
           _page(
-            '/guides',
-            (state) => GuidesPage(stage: state.uri.queryParameters['stage']),
+            '/faqs',
+            (state) => FaqsPage(category: state.uri.queryParameters['cat']),
+            routes: [
+              _page(
+                ':id',
+                (state) => FaqDetailPage(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
           _page(
             '/admin',
@@ -113,21 +119,6 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
           _page(
             '/experiences/:id',
             (state) => ExperienceDetailPage(id: state.pathParameters['id']!),
-          ),
-          _page(
-            '/actions/:id',
-            (state) => ActionDetailPage(id: state.pathParameters['id']!),
-            routes: [
-              _page(
-                'progress',
-                (state) => ActionProgressPage(id: state.pathParameters['id']!),
-              ),
-              _page(
-                'complete',
-                (state) =>
-                    ActionCompletionPage(id: state.pathParameters['id']!),
-              ),
-            ],
           ),
         ],
       ),

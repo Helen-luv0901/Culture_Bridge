@@ -772,7 +772,7 @@ class _ExpandableTextState extends State<ExpandableText> {
   }
 }
 
-/// The page's own heading: the h1 of a post or guide.
+/// The page's own heading: the h1 of a post or question.
 class PageTitle extends StatelessWidget {
   const PageTitle(this.text, {super.key, this.size = 26});
   final String text;

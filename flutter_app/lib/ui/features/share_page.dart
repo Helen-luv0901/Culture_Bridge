@@ -131,16 +131,7 @@ class _ShareFormState extends State<_ShareForm> {
               'A different experience from "${_postTitle(draft.differentFromId!)}"',
             ),
             removeLabel: vm.pair('不要連結這篇', 'Unlink this post'),
-            onRemove: () => vm.unlinkDraft(post: true),
-          ),
-        if (draft.actionId != null)
-          _LinkNote(
-            text: vm.pair(
-              '也會出現在官方指南「${_guideTitle(draft.actionId!)}」底下',
-              'Also shown under the guide "${_guideTitle(draft.actionId!)}"',
-            ),
-            removeLabel: vm.pair('不要連結這篇指南', 'Unlink this guide'),
-            onRemove: () => vm.unlinkDraft(guide: true),
+            onRemove: vm.unlinkDraft,
           ),
         _Labeled(
           label: vm.pair('標題', 'Title'),
@@ -338,14 +329,6 @@ class _ShareFormState extends State<_ShareForm> {
     if (item == null) return '…';
     final title = item.heading(false);
     return title.length > 14 ? '${title.substring(0, 14)}…' : title;
-  }
-
-  String _guideTitle(String id) {
-    final v = BridgeScope.of(context);
-    final summary =
-        v.action(id).data?.summary ??
-        v.actions.data?.where((a) => a.id == id).firstOrNull;
-    return summary?.title.of(v.english) ?? '…';
   }
 }
 

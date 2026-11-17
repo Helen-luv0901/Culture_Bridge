@@ -19,22 +19,22 @@ def as_sent(message: str) -> UserTurn:
 
 def test_search_then_detail_then_answer(make_assistant):
     llm = ScriptedLLM(
-        call("search_actions", query="工作證"),
-        call("get_action", action_id="work-permit"),
-        answer("依據「申請工作證」流程卡（已驗證，2026-08-16）……"),
+        call("search_official_faq", query="居留證逾期"),
+        call("get_official_faq", faq_id="nisa-934"),
+        answer("依據內政部移民署的回覆……"),
     )
-    reply = make_assistant(llm).reply(ask("工作證要怎麼申請？"), USER)
+    reply = make_assistant(llm).reply(ask("居留證過期了怎麼辦？"), USER)
 
     assert reply.fallback is False
-    assert reply.tools_used == ["search_actions", "get_action"]
-    assert [c.model_dump()["action_id"] for c in reply.cards] == ["work-permit"]
-    assert reply.cards[0].recent_success_count == 18
+    assert reply.tools_used == ["search_official_faq", "get_official_faq"]
+    assert [c.model_dump()["faq_id"] for c in reply.cards] == ["nisa-934"]
+    assert reply.cards[0].answering_agency
 
     # The model saw each tool result paired with its call id before answering.
     results = llm.calls[2]["history"][-1]
     assert isinstance(results, ToolResultsTurn)
-    assert results.results[0].id == "call-get_action"
-    assert results.results[0].result["action"]["title"] == "申請工作證"
+    assert results.results[0].id == "call-get_official_faq"
+    assert results.results[0].result["faq"]["question"].startswith("居留證逾期")
 
 
 def test_system_prompt_answers_in_the_users_language(make_assistant):
@@ -45,28 +45,28 @@ def test_system_prompt_answers_in_the_users_language(make_assistant):
     assert "Reply language" in system
     assert "never decides the language" in system
     assert "Today is" in llm.calls[0]["system"]
-    assert {t.name for t in llm.calls[0]["tools"]} >= {"search_actions", "open_screen"}
+    assert {t.name for t in llm.calls[0]["tools"]} >= {"search_official_faq", "open_screen"}
 
 
 def test_parallel_calls_all_get_results(make_assistant):
     llm = ScriptedLLM(
         ModelTurn(
             tool_calls=(
-                ToolCall(id="a", name="get_action", args={"action_id": "arc"}),
+                ToolCall(id="a", name="get_official_faq", args={"faq_id": "nisa-934"}),
                 ToolCall(id="b", name="get_experience", args={"experience_id": "first-rental"}),
             )
         ),
-        answer("ok\nRELATED: action:arc, post:first-rental"),
+        answer("ok\nRELATED: faq:nisa-934, post:first-rental"),
     )
     reply = make_assistant(llm).reply(ask("ARC 和租屋"), USER)
     results = llm.calls[1]["history"][-1].results
     assert [r.id for r in results] == ["a", "b"]
-    assert {c.type for c in reply.cards} == {"action", "experience"}
+    assert {c.type for c in reply.cards} == {"faq", "experience"}
 
 
 def test_too_many_calls_in_one_round_are_refused(make_assistant):
     calls = tuple(
-        ToolCall(id=str(i), name="search_actions", args={"query": "arc"}) for i in range(8)
+        ToolCall(id=str(i), name="search_official_faq", args={"query": "arc"}) for i in range(8)
     )
     llm = ScriptedLLM(ModelTurn(tool_calls=calls), answer("ok"))
     make_assistant(llm).reply(ask("x"), USER)
@@ -77,7 +77,7 @@ def test_too_many_calls_in_one_round_are_refused(make_assistant):
 
 def test_model_error_returns_fallback_and_forgets_exchange(make_assistant):
     memory = ConversationStore()
-    llm = ScriptedLLM(call("search_actions", query="arc"), LLMError("quota"))
+    llm = ScriptedLLM(call("search_official_faq", query="arc"), LLMError("quota"))
     reply = make_assistant(llm, memory=memory).reply(ask("ARC?", conversation_id="c1"), USER)
 
     assert reply.fallback is True
@@ -93,29 +93,29 @@ def test_empty_answer_is_fallback(make_assistant):
 
 
 def test_tool_round_limit(make_assistant):
-    llm = ScriptedLLM(*[call("search_actions", query="arc") for _ in range(3)])
+    llm = ScriptedLLM(*[call("search_official_faq", query="arc") for _ in range(3)])
     reply = make_assistant(llm, max_tool_rounds=2).reply(ask("loop"), USER)
     assert reply.fallback is True
-    assert reply.tools_used == ["search_actions", "search_actions"]
+    assert reply.tools_used == ["search_official_faq", "search_official_faq"]
     assert len(llm.calls) == 3
 
 
 def test_screen_action_comes_from_validated_tool_call(make_assistant):
     llm = ScriptedLLM(
-        call("open_screen", screen="open_progress", target_id="arc"),
-        answer("已幫你打開 ARC 進度。"),
+        call("open_screen", screen="open_faq", target_id="nisa-934"),
+        answer("已幫你打開這一題。"),
     )
-    reply = make_assistant(llm).reply(ask("帶我去 ARC 進度"), USER)
+    reply = make_assistant(llm).reply(ask("帶我去那一題"), USER)
     assert [a.model_dump() for a in reply.screen_actions] == [
-        {"type": "open_progress", "target_id": "arc", "topic": None}
+        {"type": "open_faq", "target_id": "nisa-934", "topic": None}
     ]
 
 
 def test_memory_carries_follow_ups_and_is_per_account(make_assistant):
     assistant = make_assistant(
         ScriptedLLM(
-            call("search_actions", query="證明"),
-            answer("找到：1. 申請在學證明 2. 申請工作證"),
+            call("search_official_faq", query="證明"),
+            answer("找到：1. 在學證明 2. 健康證明"),
             answer("第二個是申請工作證。"),
             answer("你想問哪個流程？"),
         )
@@ -123,23 +123,25 @@ def test_memory_carries_follow_ups_and_is_per_account(make_assistant):
     first = assistant.reply(ask("有哪些證明要辦？"), USER)
     llm = assistant._llm
 
-    assistant.reply(ask("第二個要多久？", conversation_id=first.conversation_id), USER)
+    assistant.reply(ask("後面那個呢？", conversation_id=first.conversation_id), USER)
     follow_up_history = llm.calls[2]["history"]
     assert isinstance(follow_up_history[0], UserTurn)
     assert any(isinstance(t, ToolResultsTurn) for t in follow_up_history)
-    assert follow_up_history[-1] == as_sent("第二個要多久？")
+    assert follow_up_history[-1] == as_sent("後面那個呢？")
 
     # Another account reusing the id gets a fresh conversation, not u1's history.
-    assistant.reply(ask("第二個？", conversation_id=first.conversation_id), CurrentUser(id="u2"))
-    assert llm.calls[3]["history"] == [as_sent("第二個？")]
+    assistant.reply(
+        ask("剛剛那個呢？", conversation_id=first.conversation_id), CurrentUser(id="u2")
+    )
+    assert llm.calls[3]["history"] == [as_sent("剛剛那個呢？")]
 
 
 def test_clear_conversation(make_assistant):
     assistant = make_assistant(ScriptedLLM(answer("a"), answer("b")))
-    first = assistant.reply(ask("hi"), USER)
+    first = assistant.reply(ask("zzzz"), USER)
     assistant.clear(first.conversation_id, USER)
-    assistant.reply(ask("again", conversation_id=first.conversation_id), USER)
-    assert assistant._llm.calls[1]["history"] == [as_sent("again")]
+    assistant.reply(ask("qqqq", conversation_id=first.conversation_id), USER)
+    assert assistant._llm.calls[1]["history"] == [as_sent("qqqq")]
 
 
 def test_screen_context_is_passed_as_data(make_assistant):
@@ -161,23 +163,28 @@ def test_memory_trims_at_user_turns():
     store = ConversationStore(max_exchanges=2)
     turns = []
     for i in range(4):
-        turns += [UserTurn(f"q{i}"), call("search_actions", query="x"), ModelTurn(text=f"a{i}")]
+        turns += [
+            UserTurn(f"q{i}"),
+            call("search_official_faq", query="x"),
+            ModelTurn(text=f"a{i}"),
+        ]
     store.save("o", "c", turns)
     kept = store.load("o", "c")
     assert kept[0] == UserTurn("q2") and len(kept) == 6
 
 
-def test_searches_run_up_front_so_one_model_call_answers(make_assistant):
-    llm = ScriptedLLM(answer("依據「申請工作證」流程卡（已驗證）……"))
-    reply = make_assistant(llm).reply(ask("工作證要怎麼申請？"), USER)
+def test_searches_run_up_front_so_one_model_call_answers(make_assistant, data):
+    question = data.get_faq("nisa-934").question.zh
+    llm = ScriptedLLM(answer(f"「{question}」移民署回覆……"))
+    reply = make_assistant(llm).reply(ask("居留證逾期失效怎麼辦？"), USER)
 
     assert len(llm.calls) == 1 and reply.tools_used == []
     message = llm.calls[0]["history"][-1].text
     assert message.startswith("[Search results for this message")
-    assert message.endswith("工作證要怎麼申請？")
-    assert '"action_id": "work-permit"' in message and '"steps"' in message
-    # The answer names the procedure, so its card shows as if get_action had run.
-    assert [c.model_dump()["action_id"] for c in reply.cards] == ["work-permit"]
+    assert message.endswith("居留證逾期失效怎麼辦？")
+    assert '"faq_id": "nisa-934"' in message and '"answering_agency"' in message
+    # The answer quotes the question, so its card shows as if get_official_faq had run.
+    assert [c.model_dump()["faq_id"] for c in reply.cards] == ["nisa-934"]
 
 
 def test_prefetched_procedures_not_named_get_no_card(make_assistant):
@@ -251,19 +258,19 @@ def test_english_question_in_chinese_app_gets_english_cards(make_assistant):
 
 def test_cards_are_what_the_model_lists_as_related(make_assistant):
     llm = ScriptedLLM(
-        answer("看房前先問電費。\nRELATED: action:arc, post:first-rental, post:made-up")
+        answer("看房前先問電費。\nRELATED: faq:nisa-934, post:first-rental, post:made-up")
     )
     reply = make_assistant(llm).reply(ask("租屋的電費要注意什麼？"), USER)
     assert reply.text == "看房前先問電費。"  # the RELATED line is not shown
     kinds = [
-        (c.type, c.model_dump().get("action_id") or c.model_dump().get("experience_id"))
+        (c.type, c.model_dump().get("faq_id") or c.model_dump().get("experience_id"))
         for c in reply.cards
     ]
-    assert kinds == [("action", "arc"), ("experience", "first-rental")]  # made-up ids dropped
+    assert kinds == [("faq", "nisa-934"), ("experience", "first-rental")]  # made-up ids dropped
     post = [c for c in reply.cards if c.type == "experience"][0]
     assert post.title and post.excerpt
-    guide = [c for c in reply.cards if c.type == "action"][0]
-    assert guide.excerpt
+    official = [c for c in reply.cards if c.type == "faq"][0]
+    assert official.excerpt and official.url.startswith("https://")
 
 
 def test_no_related_line_or_none_shows_no_posts(make_assistant):
@@ -286,39 +293,41 @@ def test_at_most_two_of_each(make_assistant):
 def test_related_line_is_parsed_in_any_position_and_colon():
     from app.assistant.related import parse_related
 
-    r = parse_related("答案第一行\nrelated：action:arc-first, post:abc\n")
-    assert r.text == "答案第一行" and r.actions == ("arc-first",) and r.posts == ("abc",)
+    r = parse_related("答案第一行\nrelated：faq:nisa-934, post:abc\n")
+    assert r.text == "答案第一行" and r.faqs == ("nisa-934",) and r.posts == ("abc",)
     assert parse_related("no line here").listed is False
 
 
 def test_prompt_asks_for_the_related_line(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("hi"), None)
-    assert "RELATED: action:<action_id>, post:<experience_id>" in llm.calls[0]["system"]
+    assert "RELATED: faq:<faq_id>, post:<experience_id>" in llm.calls[0]["system"]
 
 
-def test_more_matching_guides_are_listed_briefly(make_assistant):
+def test_more_matching_questions_are_listed_briefly(make_assistant):
     import json
 
-    from app.assistant.prefetch import PROCEDURES
+    from app.assistant.prefetch import FAQS
 
     llm = ScriptedLLM(answer("ok"))
-    make_assistant(llm).reply(ask("申請"), USER)
+    make_assistant(llm).reply(ask("居留證"), USER)
     message = llm.calls[0]["history"][-1].text
     # The message is the header line, the JSON block, a blank line, then the question.
     payload = json.loads(message.split("\n", 1)[1].rsplit("\n\n", 1)[0])
-    assert len(payload["procedures"]) <= PROCEDURES
-    others = payload["other_matching_procedures"]
-    assert others, "guides beyond the top two are listed"
-    assert set(others[0]) == {"action_id", "title", "description"}
-    detailed = {p["action_id"] for p in payload["procedures"]}
-    assert not detailed & {o["action_id"] for o in others}
+    detailed = payload["official_faq"]["results"]
+    assert len(detailed) <= FAQS and "answer" in detailed[0]
+    others = payload["other_matching_official_questions"]
+    assert others, "questions beyond the top ones are listed"
+    assert set(others[0]) == {"faq_id", "question", "category"}
+    assert not {d["faq_id"] for d in detailed} & {o["faq_id"] for o in others}
 
 
-def test_prompt_says_to_fetch_a_better_fitting_guide(make_assistant):
+def test_prompt_says_to_fetch_a_better_fitting_question(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("hi"), None)
-    assert "other_matching_procedures" in llm.calls[0]["system"]
+    system = llm.calls[0]["system"]
+    assert "other_matching_official_questions" in system
+    assert "answering_agency" in system and "Recommend posts" in system
 
 
 def test_remembered_questions_leave_out_the_search_results(make_assistant):
