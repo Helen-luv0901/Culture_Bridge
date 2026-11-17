@@ -193,6 +193,14 @@ class FakeCultureRepository implements CultureRepository {
         question: Text2('在學期間可以打工嗎？', 'Can I work part-time while studying?'),
         excerpt: Text2('須先申請工作許可。', 'You need a work permit first.'),
         postedOn: '2026-07-01',
+        review: FaqReview(
+          kind: 'superseded',
+          note: Text2(
+            '規定已改，請看較新的回覆。',
+            'The rule changed; see the newer answer.',
+          ),
+          supersededBy: 'nisa-1070',
+        ),
       ),
       category: Text2('工作', 'Work'),
       answer: Text2(
@@ -221,7 +229,41 @@ class FakeCultureRepository implements CultureRepository {
       publisher: _publisher,
       url: 'https://www.nisa.moe.gov.tw/faq.new/view/sn/900/menu_sn/13',
     ),
+    'nisa-800': FaqDetail(
+      summary: FaqSummary(
+        id: 'nisa-800',
+        categoryId: 'visa-arc',
+        identities: ['foreign'],
+        question: Text2(
+          '學校如何查詢學生的居留資料？',
+          'How can schools look up students\' residence records?',
+        ),
+        excerpt: Text2('透過移民署系統查詢。', 'Use the immigration agency system.'),
+        postedOn: '2026-04-01',
+        audience: 'school',
+      ),
+      category: Text2('簽證與居留', 'Visas & residence'),
+      answer: Text2(
+        '承辦人可透過移民署系統查詢。',
+        'Staff can use the immigration agency system.',
+      ),
+      source: Text2('', ''),
+      agency: Text2('內政部移民署', 'National Immigration Agency'),
+      publisher: _publisher,
+      url: 'https://www.nisa.moe.gov.tw/faq.new/view/sn/800/menu_sn/13',
+    ),
   };
+
+  /// Official questions the server would suggest under each student post.
+  final Map<String, List<String>> postFaqs = {
+    'professor-see': ['nisa-1070'],
+  };
+
+  @override
+  Future<List<FaqSummary>> relatedFaqs(String postId) async => [
+    for (final id in postFaqs[postId] ?? const <String>[])
+      ?faqDetails[id]?.summary,
+  ];
 
   /// Student posts the server would suggest under each question.
   final Map<String, List<String>> faqPosts = {

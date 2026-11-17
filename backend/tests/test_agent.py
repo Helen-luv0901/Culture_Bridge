@@ -357,3 +357,49 @@ def test_memory_keeps_at_most_500_conversations_dropping_the_oldest():
     assert store.load("o", "c0") == []
     assert store.load("o", "c1") == [UserTurn("q1")]
     assert store.load("o", "c500") == [UserTurn("q500")]
+
+
+def test_keyword_and_meaning_rankings_are_fused(make_assistant, data, monkeypatch):
+    """A question only the semantic search finds still reaches the model with its answer, a
+    question both searches find comes first, and outdated answers go last."""
+    import json
+
+    from app.assistant.prefetch import fuse
+
+    keyword = data.search_faqs("居留證逾期", 8)
+    assert keyword[0].id == "nisa-934"
+    passages = {"official_faqs": [{"faq_id": "nisa-1076"}, {"faq_id": "nisa-923"}]}
+    ctx = type("Ctx", (), {"data": data})()
+    fused = [f.id for f in fuse(keyword, passages, ctx)]
+    assert fused.index("nisa-1076") < fused.index("nisa-934") or fused[0] == "nisa-934"
+    assert "nisa-923" in fused  # only the semantic search found it
+    assert "official_faqs" not in passages  # moved into the ranking, not repeated
+
+    outdated = data.get_faq("nisa-852")
+    assert outdated.demoted
+    fused = fuse([outdated, *keyword], {"official_faqs": [{"faq_id": "nisa-852"}]}, ctx)
+    assert fused[-1].id == "nisa-852"
+
+    monkeypatch.setattr(
+        data,
+        "semantic_search",
+        lambda q, limit, faq_limit=None: {"official_faqs": [{"faq_id": "nisa-923"}]},
+    )
+    llm = ScriptedLLM(answer("ok"))
+    make_assistant(llm).reply(ask("居留證逾期怎麼辦"), USER)
+    message = llm.calls[0]["history"][-1].text
+    payload = json.loads(message.split("\n", 1)[1].rsplit("\n\n", 1)[0])
+    ids = [f["faq_id"] for f in payload["official_faq"]["results"]] + [
+        f["faq_id"] for f in payload["other_matching_official_questions"]
+    ]
+    assert "nisa-923" in ids and "official_faqs" not in (payload["related_passages"] or {})
+
+
+def test_outdated_answers_reach_the_model_with_their_warning(ctx):
+    from tests.test_tools import run
+
+    faq = run(ctx, "get_official_faq", faq_id="nisa-852")["faq"]
+    assert faq["warning"]["kind"] == "superseded"
+    assert faq["warning"]["superseded_by"] == "nisa-1076"
+    # School administration is not shown at all (only FCU's own checked guidance may be).
+    assert run(ctx, "get_official_faq", faq_id="nisa-910") == {"found": False, "faq_id": "nisa-910"}

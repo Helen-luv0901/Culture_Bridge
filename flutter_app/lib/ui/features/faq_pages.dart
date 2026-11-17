@@ -21,6 +21,22 @@ String? noEnglishNote(BridgeViewModel vm, FaqSummary faq) =>
     ? 'Official English version not available'
     : null;
 
+/// The short label for a question whose answer may no longer hold.
+String faqReviewLabel(BridgeViewModel vm, String kind) => switch (kind) {
+  'superseded' => vm.pair('可能已過時', 'May be outdated'),
+  'time_limited' => vm.pair('已結束的措施', 'Ended measure'),
+  'conflict' => vm.pair('說法不一', 'Answers differ'),
+  _ => vm.pair('請留意', 'Check carefully'),
+};
+
+/// The notice title above an answer that may no longer hold.
+String _reviewTitle(BridgeViewModel vm, String kind) => switch (kind) {
+  'superseded' => vm.pair('已有較新的回覆', 'A newer answer exists'),
+  'time_limited' => vm.pair('這項措施已經結束', 'This measure has ended'),
+  'conflict' => vm.pair('回覆之間說法不一致', 'Official answers differ'),
+  _ => vm.pair('這則回覆請留意', 'Read this answer with care'),
+};
+
 const _intro = (
   '教育部 NISA 計畫整理的境外生常見問題，由內政部移民署、勞動部等政府機關回覆。辦理前請以最新公告為準。',
   'Common questions from international students, collected by the Ministry of Education '
@@ -121,9 +137,23 @@ class _FaqsPageState extends State<FaqsPage> {
 
   Widget _catalog(BuildContext context, BridgeViewModel vm, FaqCatalog all) {
     final wrap = AppLayout.of(context) != AppLayout.phone;
-    final category = all.category(_category) == null ? 'all' : _category;
-    final found = [
+    // School-administration questions are never listed: administrative guidance may appear only
+    // once checked and published by Feng Chia University itself. The server leaves them out;
+    // this also covers an older server that still sends them.
+    final visible = [
       for (final faq in all.items)
+        if (!faq.forSchool) faq,
+    ];
+    final counts = <String, int>{};
+    for (final faq in visible) {
+      counts.update(faq.categoryId, (n) => n + 1, ifAbsent: () => 1);
+    }
+    final category =
+        all.category(_category) == null || (counts[_category] ?? 0) == 0
+        ? 'all'
+        : _category;
+    final found = [
+      for (final faq in visible)
         if ((category == 'all' || faq.categoryId == category) &&
             (_identity == null || faq.identities.contains(_identity)) &&
             faq.matches(_search.text))
@@ -139,21 +169,19 @@ class _FaqsPageState extends State<FaqsPage> {
             NoteChip(
               key: const Key('faq-cat-all'),
               dense: true,
-              label: vm.pair(
-                '全部 ${all.items.length}',
-                'All ${all.items.length}',
-              ),
+              label: vm.pair('全部 ${visible.length}', 'All ${visible.length}'),
               selected: category == 'all',
               onTap: () => _set(() => _category = 'all'),
             ),
             for (final c in all.categories)
-              NoteChip(
-                key: Key('faq-cat-${c.id}'),
-                dense: true,
-                label: '${c.name.of(vm.english)} ${c.count}',
-                selected: category == c.id,
-                onTap: () => _set(() => _category = c.id),
-              ),
+              if ((counts[c.id] ?? 0) > 0)
+                NoteChip(
+                  key: Key('faq-cat-${c.id}'),
+                  dense: true,
+                  label: '${c.name.of(vm.english)} ${counts[c.id]}',
+                  selected: category == c.id,
+                  onTap: () => _set(() => _category = c.id),
+                ),
           ],
         ),
         if (all.identities.isNotEmpty) ...[
@@ -317,6 +345,20 @@ class _FaqRow extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(meta, style: mutedStyle.copyWith(fontSize: 13)),
                     ],
+                    if (faq.review case final review?) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          PaperTag(
+                            faqReviewLabel(vm, review.kind),
+                            key: Key('faq-review-tag-${faq.id}'),
+                            color: Palette.ochre,
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -340,8 +382,32 @@ class FaqDetailPage extends StatelessWidget {
     key: ValueKey(id),
     resource: (vm) => vm.faq(id),
     load: (vm) => vm.loadFaq(id),
-    builder: (context, detail) => _FaqDetail(detail: detail),
+    builder: (context, detail) => detail.summary.forSchool
+        ? const _NotShown()
+        : _FaqDetail(detail: detail),
   );
+}
+
+/// A school-administration question reached by an old link or an older server.
+class _NotShown extends StatelessWidget {
+  const _NotShown();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return FlowBody(
+      maxWidth: 760,
+      children: [
+        EmptyNote(
+          key: const Key('faq-not-shown'),
+          title: vm.pair('這則問答不提供', 'This question is not available'),
+          body: vm.pair(
+            '學校行政相關內容需經逢甲大學官方發布並確認後才會顯示。',
+            'School administration content appears only once Feng Chia University has published and checked it.',
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FaqDetail extends StatelessWidget {
@@ -413,6 +479,10 @@ class _FaqDetail extends StatelessWidget {
                   style: mutedStyle.copyWith(fontSize: 13),
                 ),
               ],
+              if (faq.review case final review?) ...[
+                const SizedBox(height: 16),
+                _ReviewNotice(review: review),
+              ],
               const SizedBox(height: 16),
               const DashedRule(),
               const SizedBox(height: 16),
@@ -440,6 +510,69 @@ class _FaqDetail extends StatelessWidget {
     'mainland' => vm.pair('陸生', 'Mainland Chinese Student'),
     _ => id,
   };
+}
+
+/// A warning that the answer may no longer hold, with a way to the newer answer.
+class _ReviewNotice extends StatelessWidget {
+  const _ReviewNotice({required this.review});
+  final FaqReview review;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    final newer = review.supersededBy;
+    final note = review.note.of(vm.english);
+    return Semantics(
+      container: true,
+      child: DecoratedBox(
+        key: const Key('faq-review'),
+        decoration: BoxDecoration(
+          color: Palette.ochre,
+          borderRadius: BorderRadius.circular(Radii.card),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  _reviewTitle(vm, review.kind),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Palette.ochreInk,
+                  ),
+                ),
+              ),
+              if (note.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  note,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: Palette.ochreInk,
+                  ),
+                ),
+              ],
+              if (newer != null && newer.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: OutlinedButton(
+                    key: const Key('faq-newer'),
+                    onPressed: () => openFaq(context, newer),
+                    child: Text(vm.pair('看較新的回覆', 'See the newer answer')),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Who answered, when, where the question came from, and the original page.

@@ -262,6 +262,7 @@ def semantic_search(
     limit: int = 4,
     max_distance: float | None = None,
     vector: list[float] | None = None,
+    faq_limit: int | None = None,
 ) -> dict[str, Any]:
     """Nearest official passages and student content; matches beyond max_distance are noise.
     `vector` is the query already embedded (the assistant starts that early)."""
@@ -313,7 +314,7 @@ def semantic_search(
         )
         .where(OfficialFaq.active.is_(True), faq_distance < cutoff)
         .order_by(faq_distance)
-        .limit(limit)
+        .limit(faq_limit or limit)
     ).all()
 
     return {

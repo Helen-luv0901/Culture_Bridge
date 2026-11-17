@@ -123,6 +123,25 @@ void main() {
     expect(faq.answer.of(true), '第一行\n第二行');
     expect(faq.summary.hasEnglish, isFalse);
     expect(faq.summary.postedOn, isNull);
+    // Older responses without audience or review still parse.
+    expect(faq.summary.audience, 'student');
+    expect(faq.summary.review, isNull);
+    final reviewed = FaqSummary.fromJson({
+      'id': 'nisa-2',
+      'category_id': 'work',
+      'question': {'zh': '問', 'en': 'Q'},
+      'excerpt': {'zh': '', 'en': ''},
+      'audience': 'school',
+      'review': {
+        'kind': 'superseded',
+        'note': {'zh': '已更新', 'en': 'Updated'},
+        'superseded_by': 'nisa-3',
+      },
+    });
+    expect(reviewed.forSchool, isTrue);
+    expect(reviewed.review!.kind, 'superseded');
+    expect(reviewed.review!.note.of(true), 'Updated');
+    expect(reviewed.review!.supersededBy, 'nisa-3');
     final reply = AssistantReply.fromJson({
       'conversation_id': 'c1',
       'text': 'ok',

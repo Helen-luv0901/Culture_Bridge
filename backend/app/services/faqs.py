@@ -11,12 +11,15 @@ other language, and `has_english` tells the app whether the English is the offic
 import threading
 import time
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy import text as sql
 from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser
+from app.core.config import get_settings
 from app.core.errors import not_found
 from app.core.text_search import relevant
 from app.models import ContentEmbedding, Experience, FaqCategory, FaqIdentity, OfficialFaq
@@ -38,6 +41,15 @@ class FaqCategoryOut(FaqLabel):
     count: int
 
 
+class FaqReview(BaseModel):
+    """A warning from the reviewed consistency pass (migration 0017)."""
+
+    kind: Literal["superseded", "conflict", "time_limited"]
+    note: Text2
+    # The newer question that replaced this answer, when there is one.
+    superseded_by: str | None = None
+
+
 class FaqSummary(BaseModel):
     id: str
     category_id: str
@@ -47,6 +59,10 @@ class FaqSummary(BaseModel):
     posted_on: date | None
     # False: the English text is the Chinese original (the site has no English version).
     has_english: bool
+    # "school": asked by international-office staff about school administration; ranked after
+    # student questions and labelled in the app.
+    audience: Literal["student", "school"] = "student"
+    review: FaqReview | None = None
 
 
 class FaqDetail(FaqSummary):
@@ -83,7 +99,20 @@ def summary(faq: OfficialFaq) -> FaqSummary:
         excerpt=both(_excerpt(faq.answer_zh), _excerpt(faq.answer_en)),
         posted_on=faq.posted_on,
         has_english=bool(faq.question_en and faq.answer_en),
+        audience=faq.audience or "student",
+        review=FaqReview(
+            kind=faq.review_kind,
+            note=both(faq.review_note_zh, faq.review_note_en),
+            superseded_by=faq.superseded_by,
+        )
+        if faq.review_kind
+        else None,
     )
+
+
+def demoted(faq: OfficialFaq) -> bool:
+    """School administration, or an answer a newer one replaced / a measure that ended."""
+    return faq.audience == "school" or faq.review_kind in ("superseded", "time_limited")
 
 
 def detail(faq: OfficialFaq, category: FaqCategory) -> FaqDetail:
@@ -172,17 +201,91 @@ def searchable(faq: OfficialFaq, category: FaqCategory) -> tuple[str, str]:
     return heading.lower(), f"{faq.answer_zh} {faq.answer_en}".lower()
 
 
+def demote_last[T](items: list[T], is_demoted) -> list[T]:
+    """Keep the order but move school-administration and outdated questions after the rest."""
+    return [i for i in items if not is_demoted(i)] + [i for i in items if is_demoted(i)]
+
+
 def search_faqs(db: Session, q: str, limit: int) -> list[FaqSummary]:
     rows = active_with_categories(db)
-    found = relevant([((f, c), *searchable(f, c)) for f, c in rows], q, limit)
-    return [summary(f) for f, _ in found]
+    found = relevant([((f, c), *searchable(f, c)) for f, c in rows], q, limit * 2)
+    return [summary(f) for f, _ in demote_last(found, lambda fc: demoted(fc[0]))[:limit]]
 
 
-# ---------- student posts close to a question ----------
+# ---------- questions and posts recommended for each other ----------
+#
+# Nearest-by-distance alone failed in production (2026-11-18): short student posts sit "close"
+# to almost every long official answer, so 224 of 227 questions showed the same six posts. A
+# pair is recommended only when it is mutual: the post is among the question's K_POSTS nearest
+# posts AND the question is among the post's K_FAQS nearest questions. A post can then appear
+# under a handful of questions at most, and no distance threshold has to be tuned.
 
 RELATED_POSTS = 3
-# Cosine distance; farther posts only share a few words with the question.
-RELATED_MAX_DISTANCE = 0.45
+K_POSTS = 10
+K_FAQS = 3
+
+_POSTS_FOR_FAQ = sql(
+    """
+    WITH f AS (
+      SELECT embedding FROM content_embeddings
+      WHERE content_type = 'official_faq' AND content_id = :faq_id
+    ), candidate AS (
+      SELECT e.content_id, e.embedding, e.embedding <=> f.embedding AS d
+      FROM content_embeddings e, f
+      WHERE e.content_type = 'experience'
+      ORDER BY d
+      LIMIT :k_posts
+    )
+    SELECT c.content_id,
+      (SELECT count(*) FROM content_embeddings o
+         JOIN official_faqs q ON q.id = o.content_id AND q.active
+       WHERE o.content_type = 'official_faq' AND (o.embedding <=> c.embedding) < c.d) AS rank
+    FROM candidate c
+    WHERE c.d < :max_distance
+    ORDER BY c.d
+    """
+)
+
+_FAQS_FOR_POST = sql(
+    """
+    WITH p AS (
+      SELECT embedding FROM content_embeddings
+      WHERE content_type = 'experience' AND content_id = :post_id
+    ), candidate AS (
+      SELECT o.content_id, o.embedding, o.embedding <=> p.embedding AS d
+      FROM content_embeddings o
+        JOIN official_faqs q ON q.id = o.content_id AND q.active, p
+      WHERE o.content_type = 'official_faq'
+      ORDER BY d
+      LIMIT :k_faqs
+    )
+    SELECT c.content_id,
+      (SELECT count(*) FROM content_embeddings e
+       WHERE e.content_type = 'experience' AND (e.embedding <=> c.embedding) < c.d) AS rank
+    FROM candidate c
+    WHERE c.d < :max_distance
+    ORDER BY c.d
+    """
+)
+
+
+def _active_faq(db: Session, faq_id: str) -> OfficialFaq:
+    faq = db.get(OfficialFaq, faq_id)
+    if faq is None or not faq.active:
+        raise not_found("faq_not_found")
+    return faq
+
+
+def _indexed(db: Session, content_type: str, content_id: str) -> bool:
+    return (
+        db.scalar(
+            select(ContentEmbedding.content_id).where(
+                ContentEmbedding.content_type == content_type,
+                ContentEmbedding.content_id == content_id,
+            )
+        )
+        is not None
+    )
 
 
 def related_posts(
@@ -192,32 +295,56 @@ def related_posts(
     locale: Locale | None,
     limit: int = RELATED_POSTS,
 ) -> list[PublicExperience]:
-    """Published posts nearest in meaning to this question (its stored embedding, so no AI
-    call per request). Blocks and visibility are applied as everywhere else."""
-    faq = db.get(OfficialFaq, faq_id)
-    if faq is None or not faq.active:
-        raise not_found("faq_not_found")
-    vector = db.scalar(
-        select(ContentEmbedding.embedding).where(
-            ContentEmbedding.content_type == EMBEDDING_TYPE, ContentEmbedding.content_id == faq_id
-        )
-    )
-    if vector is None:  # not indexed yet: fall back to the question's words
+    """Published posts that are about the same thing as this question (mutual nearest
+    neighbours of the stored embeddings, so no AI call per request). Blocks and visibility are
+    applied as everywhere else; none is better than an unrelated one."""
+    faq = _active_faq(db, faq_id)
+    if not _indexed(db, EMBEDDING_TYPE, faq_id):  # not embedded yet: the question's words
         from app.services.experiences import search
 
         return search(db, viewer, faq.question_zh or faq.question_en, locale, limit)
-    distance = ContentEmbedding.embedding.cosine_distance(vector)
-    ids = list(
-        db.scalars(
-            select(ContentEmbedding.content_id)
-            .where(ContentEmbedding.content_type == "experience", distance < RELATED_MAX_DISTANCE)
-            .order_by(distance)
-            .limit(limit * 3)  # some may be hidden from this viewer
-        )
-    )
+    found = db.execute(
+        _POSTS_FOR_FAQ,
+        {
+            "faq_id": faq_id,
+            "k_posts": K_POSTS,
+            "max_distance": get_settings().semantic_max_distance,
+        },
+    ).all()
+    ids = [post_id for post_id, rank in found if rank < K_FAQS]
     if not ids:
         return []
     rows = db.execute(_public_query(viewer).where(Experience.id.in_(ids))).all()
     order = {experience_id: i for i, experience_id in enumerate(ids)}
     rows.sort(key=lambda row: order[row[0].id])
     return _public_items(db, rows[:limit], viewer, locale)
+
+
+RELATED_FAQS = 3
+
+
+def related_faqs(
+    db: Session,
+    viewer: CurrentUser | None,
+    experience_id: str,
+    limit: int = RELATED_FAQS,
+) -> list[FaqSummary]:
+    """Official questions about what this post describes, by the same mutual rule; school
+    administration and outdated answers are left out (a student reading a post wants rules)."""
+    from app.services.experiences import get_public
+
+    get_public(db, viewer, experience_id, None)  # 404 when hidden, deleted or blocked
+    if not _indexed(db, "experience", experience_id):
+        return []
+    found = db.execute(
+        _FAQS_FOR_POST,
+        {
+            "post_id": experience_id,
+            "k_faqs": K_FAQS,
+            "max_distance": get_settings().semantic_max_distance,
+        },
+    ).all()
+    ids = [faq_id for faq_id, rank in found if rank < K_POSTS]
+    by_id = {f.id: f for f, _ in active_with_categories(db)}
+    faqs = [by_id[i] for i in ids if i in by_id and not demoted(by_id[i])]
+    return [summary(f) for f in faqs[:limit]]

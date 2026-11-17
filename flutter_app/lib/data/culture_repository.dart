@@ -33,6 +33,9 @@ abstract class CultureRepository {
     int limit = 3,
   });
 
+  /// Official questions related to the student post [postId] (up to 3).
+  Future<List<FaqSummary>> relatedFaqs(String postId);
+
   Future<ExperiencePage> explore({
     String? category,
     String? query,
@@ -159,6 +162,14 @@ class ApiCultureRepository implements CultureRepository {
       {'locale': ?locale, 'limit': '$limit'},
     ) as List)
       ExperienceItem.fromJson(item as Json),
+  ];
+
+  @override
+  Future<List<FaqSummary>> relatedFaqs(String postId) async => [
+    for (final item in await api.get(
+      '/experiences/${Uri.encodeComponent(postId)}/related-faqs',
+    ) as List)
+      FaqSummary.fromJson(item as Json),
   ];
 
   @override

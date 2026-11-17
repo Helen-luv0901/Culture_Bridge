@@ -452,6 +452,12 @@ class OfficialFaq(Base):
     updated_at: Mapped[datetime] = mapped_column(
         Timestamp, default=_utcnow, server_default=func.now()
     )
+    # Migration 0017: who the question is for, and a warning when the answer may be outdated.
+    audience: Mapped[str] = mapped_column(Text, default="student", server_default="student")
+    review_kind: Mapped[str | None] = mapped_column(Text)
+    review_note_zh: Mapped[str] = mapped_column(Text, default="", server_default="")
+    review_note_en: Mapped[str] = mapped_column(Text, default="", server_default="")
+    superseded_by: Mapped[str | None] = mapped_column(Text)
 
 
 class KbDocument(Base):

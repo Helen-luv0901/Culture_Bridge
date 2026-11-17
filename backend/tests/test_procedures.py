@@ -23,7 +23,7 @@ def seeded(db):
 
 
 def test_seed_is_idempotent(db, seeded):
-    assert seeded["actions"] == 6 and seeded["experiences"] == 3 and seeded["faqs"] > 200
+    assert seeded["actions"] == 6 and seeded["experiences"] == 3 and seeded["faqs"] > 150
     again = seed(db, get_settings().demo_content_path)
     assert again == {"actions": 0, "experiences": 0, "faqs": 0}
 

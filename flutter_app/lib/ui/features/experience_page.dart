@@ -6,6 +6,7 @@ import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 import 'browse_pages.dart';
+import 'faq_pages.dart';
 import 'legal.dart';
 import 'post_cards.dart';
 
@@ -69,7 +70,34 @@ class _Post extends StatelessWidget {
           ),
           PostList(items: detail.different),
         ],
+        _RelatedFaqs(postId: item.id),
         _Comments(post: item),
+      ],
+    );
+  }
+}
+
+/// Official questions on the same subject; hidden when there are none (or they can't load).
+class _RelatedFaqs extends StatelessWidget {
+  const _RelatedFaqs({required this.postId});
+  final String postId;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    if (vm.postFaqs(postId).needsLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (vm.postFaqs(postId).needsLoad) vm.loadPostFaqs(postId);
+      });
+    }
+    final faqs = vm.postFaqs(postId).data ?? const <FaqSummary>[];
+    if (faqs.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const Key('post-related-faqs'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionLabel(vm.pair('相關官方問答', 'Related official Q&A')),
+        const SizedBox(height: 10),
+        FaqList(items: faqs),
       ],
     );
   }

@@ -24,4 +24,14 @@ mixin _BridgeFaqs on _BridgeCore {
     (r) => _faqPosts[id] = r,
     () => repository.faqRelatedPosts(id, locale: locale),
   );
+
+  /// Official questions related to the student post [postId].
+  final Map<String, Resource<List<FaqSummary>>> _postFaqs = {};
+  Resource<List<FaqSummary>> postFaqs(String postId) =>
+      _postFaqs[postId] ?? const Resource();
+  Future<void> loadPostFaqs(String postId) => _load(
+    () => postFaqs(postId),
+    (r) => _postFaqs[postId] = r,
+    () => repository.relatedFaqs(postId),
+  );
 }

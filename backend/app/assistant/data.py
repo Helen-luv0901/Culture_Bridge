@@ -71,6 +71,17 @@ class FaqRecord:
     identities: tuple[str, ...] = ()
     # False: the English texts are the Chinese original (the site has no English version).
     has_english: bool = True
+    # Reviewed labels (migration 0017): "school" questions are about school administration;
+    # a review warns that a newer answer replaced this one, that answers conflict, or that a
+    # temporary measure ended.
+    audience: str = "student"
+    review_kind: str | None = None
+    review_note: Localized | None = None
+    superseded_by: str | None = None
+
+    @property
+    def demoted(self) -> bool:
+        return self.audience == "school" or self.review_kind in ("superseded", "time_limited")
 
 
 @dataclass(frozen=True)
@@ -128,8 +139,9 @@ class AssistantDataSource(Protocol):
 
     def get_in_progress(self, user_id: str) -> list[ProgressRecord]: ...
 
-    def semantic_search(self, query: str, limit: int) -> dict | None:
-        """Official passages and student content by meaning; None when unavailable."""
+    def semantic_search(self, query: str, limit: int, faq_limit: int | None = None) -> dict | None:
+        """Official Q&A (up to faq_limit, default limit), official passages and student content
+        by meaning; None when unavailable."""
         ...
 
     def release(self) -> None:
@@ -162,6 +174,7 @@ _DEMO_IDENTITY: dict[str, IdentityType] = {
 
 
 FAQ_PATH = Path(__file__).resolve().parents[1] / "content" / "nisa_faq.json"
+FAQ_REVIEW_PATH = FAQ_PATH.with_name("nisa_faq_review.json")
 
 
 @dataclass
@@ -176,11 +189,17 @@ class DemoDataSource:
         raw = json.loads(path.read_text(encoding="utf-8-sig"))
         actions = {card["id"]: _demo_action(card) for card in raw["actionCards"]}
         experiences = {item["id"]: _demo_experience(item) for item in raw["experiences"]}
-        faqs = faq_records(json.loads(faq_path.read_text(encoding="utf-8"))) if faq_path else {}
+        faqs = {}
+        if faq_path:
+            review_path = faq_path.with_name(FAQ_REVIEW_PATH.name)
+            review = (
+                json.loads(review_path.read_text(encoding="utf-8")) if review_path.is_file() else {}
+            )
+            faqs = faq_records(json.loads(faq_path.read_text(encoding="utf-8")), review)
         return cls(actions=actions, experiences=experiences, faqs=faqs)
 
     def search_faqs(self, query: str, limit: int) -> list[FaqRecord]:
-        return rank([(f, *faq_text(f)) for f in self.faqs.values()], query, limit)
+        return search_faq_records(self.faqs.values(), query, limit)
 
     def get_faq(self, faq_id: str) -> FaqRecord | None:
         return self.faqs.get(faq_id)
@@ -216,7 +235,7 @@ class DemoDataSource:
     def get_in_progress(self, user_id: str) -> list[ProgressRecord]:
         return list(self.progress.get(user_id, []))
 
-    def semantic_search(self, query: str, limit: int) -> dict | None:
+    def semantic_search(self, query: str, limit: int, faq_limit: int | None = None) -> dict | None:
         return None
 
     def release(self) -> None:
@@ -231,9 +250,23 @@ def both(zh: str, en: str) -> Localized:
     return Localized(zh=zh or en, en=en or zh)
 
 
-def faq_records(raw: dict) -> dict[str, FaqRecord]:
-    """The content file (app/content/nisa_faq.json) as records, for the demo source."""
+def faq_records(raw: dict, review: dict | None = None) -> dict[str, FaqRecord]:
+    """The content file (app/content/nisa_faq.json) and its reviewed labels
+    (nisa_faq_review.json) as records, for the demo source."""
     categories = {c["id"]: Localized(c["zh"], c["en"]) for c in raw["categories"]}
+    audience = (review or {}).get("audience", {})
+    notes = {r["id"]: r for r in (review or {}).get("reviews", [])}
+
+    def note(faq_id: str) -> dict:
+        r = notes.get(faq_id)
+        if not r:
+            return {}
+        return {
+            "review_kind": r["kind"],
+            "review_note": both(r["note_zh"], r.get("note_en", "")),
+            "superseded_by": r.get("superseded_by"),
+        }
+
     return {
         f["id"]: FaqRecord(
             id=f["id"],
@@ -246,9 +279,19 @@ def faq_records(raw: dict) -> dict[str, FaqRecord]:
             url=f["url"],
             identities=tuple(f["identities"]),
             has_english=bool(f["question_en"] and f["answer_en"]),
+            audience=audience.get(f["id"], "student"),
+            **note(f["id"]),
         )
         for f in raw["faqs"]
+        # School administration is not shown (see app.official_faq).
+        if audience.get(f["id"], "student") != "school"
     }
+
+
+def search_faq_records(faqs, query: str, limit: int) -> list[FaqRecord]:
+    """Keyword ranking; school-administration and outdated answers after the rest."""
+    found = rank([(f, *faq_text(f)) for f in faqs], query, limit * 2)
+    return ([f for f in found if not f.demoted] + [f for f in found if f.demoted])[:limit]
 
 
 def faq_text(faq: FaqRecord) -> tuple[str, str]:
