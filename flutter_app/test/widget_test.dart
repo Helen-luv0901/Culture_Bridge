@@ -44,6 +44,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Opens the filter menu [menu] and chooses [option].
+  Future<void> pick(WidgetTester tester, String menu, String option) async {
+    await tap(tester, find.byKey(Key(menu)));
+    await tap(tester, find.byKey(Key('$menu-$option')));
+  }
+
   Finder inDialog(String text) =>
       find.descendant(of: find.byType(AlertDialog), matching: find.text(text));
 
@@ -130,20 +136,25 @@ void main() {
     for (final id in ['nisa-1070', 'nisa-1001', 'nisa-900']) {
       expect(find.byKey(Key('faq-row-$id')), findsOneWidget);
     }
-    // Chips show each category's count.
+    // One menu per filter, not a row of chips; the menu shows each category's count.
+    expect(find.text('分類：全部 3'), findsOneWidget);
+    expect(find.text('適用身分：所有身分'), findsOneWidget);
+    expect(find.byKey(const Key('faq-cat-work')), findsNothing);
+    await tap(tester, find.byKey(const Key('faq-cat')));
     expect(find.text('工作 1'), findsOneWidget);
 
     await tap(tester, find.byKey(const Key('faq-cat-work')));
+    expect(find.text('分類：工作 1'), findsOneWidget);
     expect(find.text('共 1 則'), findsOneWidget);
     expect(find.byKey(const Key('faq-row-nisa-1001')), findsOneWidget);
     expect(find.byKey(const Key('faq-row-nisa-1070')), findsNothing);
 
-    await tap(tester, find.byKey(const Key('faq-cat-all')));
-    await tap(tester, find.byKey(const Key('faq-who-mainland')));
+    await pick(tester, 'faq-cat', 'all');
+    await pick(tester, 'faq-who', 'mainland');
     expect(find.byKey(const Key('faq-row-nisa-900')), findsOneWidget);
     expect(find.byKey(const Key('faq-row-nisa-1001')), findsNothing);
 
-    await tap(tester, find.byKey(const Key('faq-who-all')));
+    await pick(tester, 'faq-who', 'all');
     await tester.enterText(find.byKey(const Key('faq-search')), '延期');
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('faq-row-nisa-1070')), findsOneWidget);
@@ -157,8 +168,11 @@ void main() {
   testWidgets('School admin questions are never listed', (tester) async {
     await mount(tester, '/faqs', const Size(375, 1600));
     expect(find.text('共 3 則'), findsOneWidget);
-    expect(find.text('全部 3'), findsOneWidget);
+    expect(find.text('分類：全部 3'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('faq-cat')));
     expect(find.text('簽證與居留 1'), findsOneWidget);
+    await tester.tapAt(Offset.zero); // close the menu
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('faq-row-nisa-800')), findsNothing);
     // Questions with a review carry a label in the list.
     expect(find.byKey(const Key('faq-review-tag-nisa-1001')), findsOneWidget);
@@ -250,9 +264,9 @@ void main() {
 
   testWidgets('Category counts follow the identity filter', (tester) async {
     await mount(tester, '/faqs', const Size(375, 1600));
-    await tap(tester, find.byKey(const Key('faq-who-mainland')));
+    await pick(tester, 'faq-who', 'mainland');
     // Only the mainland question remains, so「全部」counts one.
-    expect(find.text('全部 1'), findsOneWidget);
+    expect(find.text('分類：全部 1'), findsOneWidget);
   });
 
   testWidgets('A post lists related official questions, or none', (
