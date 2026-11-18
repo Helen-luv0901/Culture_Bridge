@@ -219,36 +219,17 @@ def search_faqs(db: Session, q: str, limit: int) -> list[FaqSummary]:
 # pair is recommended only when it is mutual: the post is among the question's K_POSTS nearest
 # posts AND the question is among the post's K_FAQS nearest questions. A post can then appear
 # under a handful of questions at most, and no distance threshold has to be tuned.
-#
-# Mutual alone still paired unrelated things (production rescan, 2026-11-18): with few posts,
-# a post that is about nothing official ("Place to Go?", a prayer room) still has a nearest
-# question. So a pair must also stand out: the question has to be much closer to the post than
-# the post's other questions are, measured in standard deviations of the post's distances to
-# all questions (MIN_STANDOUT). A post about one official subject has one clear peak; a post
-# that is equally (un)like everything has none. The nearest of ~190 random distances already
-# sits about 2.8 deviations out, so the bar is set clearly above that. Being relative, it does
-# not depend on the embedding model's distance scale.
 
 RELATED_POSTS = 3
 K_POSTS = 10
 K_FAQS = 3
-MIN_STANDOUT = 3.5
-
-_ACTIVE_FAQS = """
-    faqs AS (
-      SELECT o.content_id, o.embedding FROM content_embeddings o
-        JOIN official_faqs q ON q.id = o.content_id AND q.active
-      WHERE o.content_type = 'official_faq'
-    )"""
 
 _POSTS_FOR_FAQ = sql(
     """
     WITH f AS (
       SELECT embedding FROM content_embeddings
       WHERE content_type = 'official_faq' AND content_id = :faq_id
-    ),"""
-    + _ACTIVE_FAQS
-    + """, candidate AS (
+    ), candidate AS (
       SELECT e.content_id, e.embedding, e.embedding <=> f.embedding AS d
       FROM content_embeddings e, f
       WHERE e.content_type = 'experience'
@@ -256,14 +237,10 @@ _POSTS_FOR_FAQ = sql(
       LIMIT :k_posts
     )
     SELECT c.content_id,
-      (SELECT count(*) FROM faqs o WHERE (o.embedding <=> c.embedding) < c.d) AS rank,
-      (s.mean - c.d) / NULLIF(s.sd, 0) AS standout
+      (SELECT count(*) FROM content_embeddings o
+         JOIN official_faqs q ON q.id = o.content_id AND q.active
+       WHERE o.content_type = 'official_faq' AND (o.embedding <=> c.embedding) < c.d) AS rank
     FROM candidate c
-    CROSS JOIN LATERAL (
-      SELECT avg(o.embedding <=> c.embedding) AS mean,
-        stddev_samp(o.embedding <=> c.embedding) AS sd
-      FROM faqs o
-    ) s
     WHERE c.d < :max_distance
     ORDER BY c.d
     """
@@ -274,23 +251,18 @@ _FAQS_FOR_POST = sql(
     WITH p AS (
       SELECT embedding FROM content_embeddings
       WHERE content_type = 'experience' AND content_id = :post_id
-    ),"""
-    + _ACTIVE_FAQS
-    + """, stats AS (
-      SELECT avg(o.embedding <=> p.embedding) AS mean,
-        stddev_samp(o.embedding <=> p.embedding) AS sd
-      FROM faqs o, p
     ), candidate AS (
       SELECT o.content_id, o.embedding, o.embedding <=> p.embedding AS d
-      FROM faqs o, p
+      FROM content_embeddings o
+        JOIN official_faqs q ON q.id = o.content_id AND q.active, p
+      WHERE o.content_type = 'official_faq'
       ORDER BY d
       LIMIT :k_faqs
     )
     SELECT c.content_id,
       (SELECT count(*) FROM content_embeddings e
-       WHERE e.content_type = 'experience' AND (e.embedding <=> c.embedding) < c.d) AS rank,
-      (s.mean - c.d) / NULLIF(s.sd, 0) AS standout
-    FROM candidate c, stats s
+       WHERE e.content_type = 'experience' AND (e.embedding <=> c.embedding) < c.d) AS rank
+    FROM candidate c
     WHERE c.d < :max_distance
     ORDER BY c.d
     """
@@ -339,7 +311,7 @@ def related_posts(
             "max_distance": get_settings().semantic_max_distance,
         },
     ).all()
-    ids = [post_id for post_id, rank, standout in found if rank < K_FAQS and _stands_out(standout)]
+    ids = [post_id for post_id, rank in found if rank < K_FAQS]
     if not ids:
         return []
     rows = db.execute(_public_query(viewer).where(Experience.id.in_(ids))).all()
@@ -349,10 +321,6 @@ def related_posts(
 
 
 RELATED_FAQS = 3
-
-
-def _stands_out(standout: float | None) -> bool:
-    return standout is not None and float(standout) >= MIN_STANDOUT
 
 
 def related_faqs(
@@ -376,7 +344,7 @@ def related_faqs(
             "max_distance": get_settings().semantic_max_distance,
         },
     ).all()
-    ids = [faq_id for faq_id, rank, standout in found if rank < K_POSTS and _stands_out(standout)]
+    ids = [faq_id for faq_id, rank in found if rank < K_POSTS]
     by_id = {f.id: f for f, _ in active_with_categories(db)}
     faqs = [by_id[i] for i in ids if i in by_id and not demoted(by_id[i])]
     return [summary(f) for f in faqs[:limit]]
