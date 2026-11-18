@@ -198,8 +198,12 @@ class Assistant:
         if not related.text:
             logger.warning("Assistant fallback: model returned an empty answer")
             return self._fallback(conversation_id, ctx.locale, tools_used)
-        cite_named_faqs(related.text, found, ctx)
-        related_cards(related, ctx)
+        try:
+            cite_named_faqs(related.text, found, ctx)
+            related_cards(related, ctx)
+        except Exception:  # a lookup failing now must not lose the answer; it goes without cards
+            logger.exception("Assistant: could not build the cards")
+            ctx.cards.clear()
         self._memory.save(owner, conversation_id, history)
         return AssistantReply(
             conversation_id=conversation_id,

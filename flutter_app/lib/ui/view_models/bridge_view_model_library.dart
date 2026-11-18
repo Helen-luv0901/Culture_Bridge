@@ -1,6 +1,6 @@
 part of 'bridge_view_model.dart';
 
-mixin _BridgeLibrary on _BridgeCore {
+mixin _BridgeLibrary on _BridgeCore, _BridgeFaqs {
   // ---------- read and bookmarked ----------
 
   late final Set<String> _read;
@@ -19,6 +19,19 @@ mixin _BridgeLibrary on _BridgeCore {
 
   /// Newest first.
   List<String> get savedFaqIds => _savedFaqs.toList().reversed.toList();
+
+  /// Saved questions that can still be shown, once the catalog is loaded: a question the
+  /// importer retired, or a school-administration one, no longer counts or appears. Its id stays
+  /// stored (nothing the user saved is deleted), so it returns if the question comes back.
+  List<String> get shownSavedFaqIds {
+    final catalog = faqs.data;
+    if (catalog == null) return savedFaqIds;
+    return [
+      for (final id in savedFaqIds)
+        if (catalog.item(id) case final faq? when !faq.forSchool) id,
+    ];
+  }
+
   void toggleSavedFaq(String id) {
     final on = _savedFaqs.add(id);
     if (!on) _savedFaqs.remove(id);

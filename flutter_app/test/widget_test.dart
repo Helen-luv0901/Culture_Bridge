@@ -205,6 +205,56 @@ void main() {
     expect(find.text('See the newer answer'), findsOneWidget);
   });
 
+  testWidgets('A question opened from a post keeps the tab it came from', (
+    tester,
+  ) async {
+    await mount(tester, '/explore', const Size(375, 2400));
+    int tab() =>
+        (tester.widget(
+              find.byWidgetPredicate(
+                (w) => w.runtimeType.toString() == '_BottomTabs',
+              ),
+            ) as dynamic).index
+            as int;
+    expect(tab(), 2);
+    final router = GoRouter.of(tester.element(find.byType(Scaffold).first));
+    router.go('/experiences/professor-see');
+    await tester.pumpAndSettle();
+    router.go('/faqs/nisa-1070');
+    await tester.pumpAndSettle();
+    expect(tab(), 2);
+
+    // Opened directly, a question belongs to Q&A.
+    await tester.pumpWidget(const SizedBox());
+    await mount(tester, '/faqs/nisa-1070', const Size(375, 2400));
+    expect(tab(), 1);
+  });
+
+  testWidgets(
+    'Saved questions that are gone neither count nor leave a blank tab',
+    (tester) async {
+      await mount(
+        tester,
+        '/profile?tab=saved',
+        const Size(375, 2400),
+        signedIn: false,
+        before: (app) async {
+          app.vm.toggleSavedFaq('nisa-retired'); // no longer in the catalog
+          app.vm.toggleSavedFaq('nisa-800'); // school administration
+        },
+      );
+      expect(find.text('還沒有收藏'), findsOneWidget);
+      expect(find.byKey(const Key('faq-row-nisa-800')), findsNothing);
+    },
+  );
+
+  testWidgets('Category counts follow the identity filter', (tester) async {
+    await mount(tester, '/faqs', const Size(375, 1600));
+    await tap(tester, find.byKey(const Key('faq-who-mainland')));
+    // Only the mainland question remains, so「全部」counts one.
+    expect(find.text('全部 1'), findsOneWidget);
+  });
+
   testWidgets('A post lists related official questions, or none', (
     tester,
   ) async {

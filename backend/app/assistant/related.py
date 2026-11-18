@@ -57,7 +57,8 @@ def related_cards(related: Related, ctx: ToolContext) -> None:
             ctx.cards[f"faq:{faq.id}"] = faq_card(faq, ctx.locale)
     # A question the answer quotes is relevant even if the model forgot to list it.
     for key, card in named.items():
-        if key[len("faq:") :] in related.faqs or _named_in(card.question, related.text):
+        listed = key[len("faq:") :] in related.faqs[:MAX_EACH]
+        if listed or _named_in(card.question, related.text):
             ctx.cards.setdefault(key, card)
     for post_id in related.posts[:MAX_EACH]:
         post = ctx.data.get_experience(post_id)

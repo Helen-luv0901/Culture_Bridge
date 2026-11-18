@@ -15,6 +15,7 @@ from typing import Any
 
 from app.assistant.data import FaqRecord
 from app.assistant.tools import (
+    ANSWER_CHARS,
     EXPERIENCE_NOTICE,
     FAQ_NOTICE,
     ToolContext,
@@ -79,7 +80,7 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     payload: dict[str, Any] = {
         "official_faq": {
             "notice": FAQ_NOTICE,
-            "results": [faq_detail(f, ctx.locale) for f in faqs],
+            "results": [faq_detail(f, ctx.locale, clip=ANSWER_CHARS) for f in faqs],
         },
         "other_matching_official_questions": [_brief(f, ctx.locale) for f in others],
         "student_experiences": {
@@ -88,11 +89,37 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         },
         "related_passages": passages,
     }
+    text = _shrink(payload, ctx)
+    return Prefetched(block=f"{_HEADER}\n{text}", faqs=tuple(faqs))
+
+
+def _shrink(payload: dict[str, Any], ctx: ToolContext) -> str:
+    """Fit the block in MAX_CHARS by leaving parts out, never by cutting the JSON: a cut string
+    is invalid and loses whatever comes after it (once, the student posts)."""
     text = _dump(payload)
     if len(text) > MAX_CHARS:
         payload["related_passages"] = None
-        text = _dump(payload)[:MAX_CHARS]
-    return Prefetched(block=f"{_HEADER}\n{text}", faqs=tuple(faqs))
+        text = _dump(payload)
+    results = payload["official_faq"]["results"]
+    for clip in (900, 500):
+        if len(text) <= MAX_CHARS:
+            break
+        for i, detail in enumerate(results):
+            if (faq := ctx.data.get_faq(detail["faq_id"])) is not None:
+                results[i] = faq_detail(faq, ctx.locale, clip=clip)
+        text = _dump(payload)
+    while len(text) > MAX_CHARS and results:
+        dropped = results.pop()
+        payload["other_matching_official_questions"].insert(
+            0,
+            {
+                "faq_id": dropped["faq_id"],
+                "question": _short(dropped.get("question")),
+                "category": dropped.get("category"),
+            },
+        )
+        text = _dump(payload)
+    return text
 
 
 RRF_K = 60  # the usual reciprocal-rank-fusion constant: rank 1 and rank 5 differ, but not hugely
@@ -123,9 +150,18 @@ def fuse(keyword: list[FaqRecord], passages: dict | None, ctx: ToolContext) -> l
 def _brief(faq: FaqRecord, locale) -> dict[str, str | None]:
     return {
         "faq_id": faq.id,
-        "question": faq.question.get(locale),
+        "question": _short(faq.question.get(locale)),
         "category": faq.category.get(locale),
     }
+
+
+BRIEF_QUESTION_CHARS = 160  # some English questions list three questions in one
+
+
+def _short(text: str | None) -> str | None:
+    if text is None or len(text) <= BRIEF_QUESTION_CHARS:
+        return text
+    return text[:BRIEF_QUESTION_CHARS].rstrip() + " …"
 
 
 def _semantic(query: str, ctx: ToolContext) -> dict | None:

@@ -144,8 +144,13 @@ class _FaqsPageState extends State<FaqsPage> {
       for (final faq in all.items)
         if (!faq.forSchool) faq,
     ];
+    // Counts follow the identity filter, so a category chip never leads to 「共 0 則」.
+    final forWho = [
+      for (final faq in visible)
+        if (_identity == null || faq.identities.contains(_identity)) faq,
+    ];
     final counts = <String, int>{};
-    for (final faq in visible) {
+    for (final faq in forWho) {
       counts.update(faq.categoryId, (n) => n + 1, ifAbsent: () => 1);
     }
     final category =
@@ -153,9 +158,8 @@ class _FaqsPageState extends State<FaqsPage> {
         ? 'all'
         : _category;
     final found = [
-      for (final faq in visible)
+      for (final faq in forWho)
         if ((category == 'all' || faq.categoryId == category) &&
-            (_identity == null || faq.identities.contains(_identity)) &&
             faq.matches(_search.text))
           faq,
     ];
@@ -169,7 +173,7 @@ class _FaqsPageState extends State<FaqsPage> {
             NoteChip(
               key: const Key('faq-cat-all'),
               dense: true,
-              label: vm.pair('全部 ${visible.length}', 'All ${visible.length}'),
+              label: vm.pair('全部 ${forWho.length}', 'All ${forWho.length}'),
               selected: category == 'all',
               onTap: () => _set(() => _category = 'all'),
             ),
@@ -288,11 +292,17 @@ class FaqList extends StatelessWidget {
       });
     }
     final names = catalog ?? vm.faqs.data;
+    // Never shown anywhere (see FaqsPage); the server leaves them out already.
+    final shown = [
+      for (final faq in items)
+        if (!faq.forSchool) faq,
+    ];
+    if (shown.isEmpty) return const SizedBox.shrink();
     return NoteCard(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          for (final (i, faq) in items.indexed) ...[
+          for (final (i, faq) in shown.indexed) ...[
             if (i > 0) const DashedRule(),
             _FaqRow(
               faq: faq,

@@ -118,6 +118,9 @@ class ReviewFile(BaseModel):
         named |= {r.superseded_by for r in self.reviews if r.superseded_by}
         if unknown := named - ids:
             raise ValueError(f"review file names unknown questions: {sorted(unknown)}")
+        school = {i for i, a in self.audience.items() if a == "school"}
+        if hidden := {r.superseded_by for r in self.reviews} & school:
+            raise ValueError(f"a review points to a hidden school question: {sorted(hidden)}")
         if len({r.id for r in self.reviews}) != len(self.reviews):
             raise ValueError("review file lists a question twice")
 

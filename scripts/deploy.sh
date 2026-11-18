@@ -201,10 +201,25 @@ fi
 note "流量已切到 ${new_rev}（上一版 ${old_rev}，要退回見 docs/runbooks/rollback-and-restore.md）。"
 
 bold "5/5 官方問答"
+# The last import run must also have succeeded: a run Gemini refused (free-tier quota) leaves
+# questions without embeddings, and the next deploy, seeing no file change, would never redo it.
+last_import_ok() {
+  local succeeded
+  succeeded="$(gc run jobs executions list --job=culture-bridge-import --region="${REGION}"     --limit=1 --format='value(status.succeededCount)' 2>/dev/null || true)"
+  [[ "${succeeded:-0}" =~ ^[1-9] ]]
+}
+unchanged=false
 if [[ "${live_tag}" == "${tag}" ]] || git diff --quiet "${live_tag}" HEAD -- "${FAQS[@]}" 2>/dev/null; then
-  note "官方問答與匯入程式沒有變更，不用重新匯入。"
+  unchanged=true
+fi
+if [[ "${unchanged}" == true ]] && last_import_ok; then
+  note "官方問答與匯入程式沒有變更，上次匯入也成功，不用重新匯入。"
 else
-  note "官方問答或匯入程式有變更（${live_tag} → ${tag}），匯入並建立 AI 搜尋用的向量（約 6 分鐘）。"
+  if [[ "${unchanged}" == true ]]; then
+    note "上次官方問答匯入沒有成功完成，重新匯入（只補還沒建立的向量）。"
+  else
+    note "官方問答或匯入程式有變更（${live_tag} → ${tag}），匯入並建立 AI 搜尋用的向量（約 6 分鐘）。"
+  fi
   # The job used to import procedure drafts; it now loads the NISA Q&A and needs the Gemini key
   # for the embeddings (same service account, which can already read that secret).
   gc run jobs update culture-bridge-import --image="${image}" --region="${REGION}" \

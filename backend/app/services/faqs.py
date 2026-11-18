@@ -197,9 +197,28 @@ def _copy[T](row: T) -> T:
 
 
 def forget_cache() -> None:
-    global _cache
+    global _cache, _docs
     with _lock:
         _cache = None
+        _docs = None
+
+
+# (id, heading, body) per active question for the related-posts keyword check: building it
+# lower-cases ~120 KB of answers, too much to repeat for every candidate post of every view.
+_docs: tuple[int, list[tuple[str, str, str]]] | None = None
+
+
+def _keyword_docs(db: Session) -> list[tuple[str, str, str]]:
+    global _docs
+    rows = active_with_categories(db)
+    with _lock:
+        cached = _docs
+    if cached is not None and cached[0] == id(rows):
+        return cached[1]
+    docs = [(f.id, *searchable(f, c)) for f, c in rows]
+    with _lock:
+        _docs = (id(rows), docs)
+    return docs
 
 
 def searchable(faq: OfficialFaq, category: FaqCategory) -> tuple[str, str]:
@@ -357,7 +376,7 @@ def _keyword_faqs(db: Session, experience_id: str) -> set[str]:
         )
     ):
         titles.append(title or (voice or "")[:TITLE_FALLBACK_CHARS])
-    docs = [(f.id, *searchable(f, c)) for f, c in active_with_categories(db)]
+    docs = _keyword_docs(db)
     found: set[str] = set()
     for title in titles:
         if title:
