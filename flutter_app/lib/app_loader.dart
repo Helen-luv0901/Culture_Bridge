@@ -107,23 +107,16 @@ class _LaunchScreen extends StatelessWidget {
   );
 }
 
+/// The team logo, the same mark as the app icon and the header.
 class _Mark extends StatelessWidget {
   const _Mark();
   @override
-  Widget build(BuildContext context) => Container(
-    width: 64,
-    height: 64,
-    alignment: Alignment.center,
-    decoration: const BoxDecoration(
-      color: Palette.moss,
-      shape: BoxShape.circle,
-    ),
-    child: const AppIcon(
-      'bridge',
-      size: 38,
-      color: Palette.onMoss,
-      strokeWidth: 2,
-    ),
+  Widget build(BuildContext context) => const Image(
+    key: Key('launch-logo'),
+    image: AssetImage('assets/images/logo-mark.png'),
+    width: 88,
+    height: 88,
+    semanticLabel: 'Culture Bridge',
   );
 }
 
