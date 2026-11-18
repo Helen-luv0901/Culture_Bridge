@@ -60,11 +60,32 @@ while True:
     page += 1
     time.sleep(0.5)
 
+# The English list leaves out many questions whose own page does have an English version
+# (2026-11-19: 104 listed, 126 with English). So in English mode every Chinese question's page
+# is opened too; one without an English version shows the Chinese text and is skipped below.
+english = LANG != "zh_TW"
+if english:
+    try:
+        with open(f"{OUT}/nisa_faq.json", encoding="utf-8") as f:
+            chinese = json.load(f)
+    except FileNotFoundError:
+        sys.exit("Scrape the Chinese version first: it lists the questions to open in English.")
+    for z in chinese:
+        if str(z["sn"]) not in seen:
+            seen.add(str(z["sn"]))
+            items.append({k: z[k] for k in ("sn", "category", "identity", "date", "url")} | {"question": ""})
+
 for n, it in enumerate(items, 1):
     s = get(it["url"])
     fields = dict()
+    labels = set()
     for label, val in re.findall(r"<tr>\s*<td>\s*(.*?)\s*</td>\s*<td>(.*?)</td>\s*</tr>", s, re.S):
+        labels.add(text(label))
         fields[ALIAS.get(text(label), text(label))] = val
+    it["has_version"] = not english or "Respond" in labels  # Chinese labels = no English version
+    heading = re.search(r"<h4>(.*?)</h4>", s, re.S)
+    if english and heading and it["has_version"]:
+        it["question"] = text(heading.group(1))
     it["answer"] = text(fields.get("答覆", ""))
     files = re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', fields.get("相關檔案", ""), re.S)
     it["files"] = [{"name": text(nm), "url": (BASE + h if h.startswith("/") else h)} for h, nm in files]
@@ -75,6 +96,7 @@ for n, it in enumerate(items, 1):
         print(f"detail {n}/{len(items)}", file=sys.stderr)
     time.sleep(0.4)
 
+items = [it for it in items if it.pop("has_version") and it["question"] and it["answer"]]
 SUF = "" if LANG == "zh_TW" else "_" + LANG
 with open(f"{OUT}/nisa_faq{SUF}.json", "w", encoding="utf-8") as f:
     json.dump(items, f, ensure_ascii=False, indent=2)

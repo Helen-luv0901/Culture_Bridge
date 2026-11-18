@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from app.assistant.llm import ToolCall
@@ -38,7 +40,8 @@ def test_search_official_faq_in_english(ctx):
     ctx.locale = "en"
     first = run(ctx, "search_official_faq", query="health insurance")["results"][0]
     assert first["category"] == "Health and Insurance"
-    assert first["question"].isascii()  # the site's English version
+    # The site's English version (it may use typographic quotes, so not "ASCII only").
+    assert not re.search(r"[一-鿿]", first["question"])
 
 
 def test_search_official_faq_no_match_is_empty(ctx):
