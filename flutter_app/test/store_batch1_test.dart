@@ -709,6 +709,8 @@ void main() {
       addTearDown(app.vm.dispose);
       await tester.pumpWidget(AppLoader(start: () => ready.future));
       expect(find.byKey(const Key('launch-screen')), findsOneWidget);
+      // The team logo, not the old bridge-in-a-circle mark.
+      expect(find.byKey(const Key('launch-logo')), findsOneWidget);
       expect(find.text('Culture Bridge'), findsWidgets);
       ready.complete(app.vm);
       await tester.pumpAndSettle();
