@@ -1,6 +1,6 @@
 # Google Play 商店頁文案（草稿，D-13）
 
-> 草稿。字數限制以 Play Console 為準（應用程式名稱 30、簡短說明 80、完整說明 4000 字元）。2026-11-18 改成官方問答版：「官方指南」流程卡已由教育部 NISA 官方問答取代。圖示與截圖（C-20 暫定版）：`docs/store/play-icon-512.png`、`docs/store/screenshots/{zh,en}/`（1080×1920；舊截圖拍的是流程卡，上架前要用「官方問答」分頁重拍；拍攝程式 `flutter_app/tool/store_screenshots.mjs`）。
+> 草稿。字數限制以 Play Console 為準（應用程式名稱 30、簡短說明 80、完整說明 4000 字元）。2026-11-18 改成官方問答版：「官方指南」流程卡已由教育部 NISA 官方問答取代。圖示與截圖（C-20 暫定版）：`docs/store/play-icon-512.png`、`docs/store/screenshots/{zh,en}/`（1080×1920，2026-11-19 以「官方問答」版重拍：首頁、官方問答列表、問答內容、看板、學生貼文、發文；拍攝程式 `flutter_app/tool/store_screenshots.mjs`）。
 
 ## 繁體中文
 

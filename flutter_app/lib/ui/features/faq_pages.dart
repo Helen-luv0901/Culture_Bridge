@@ -255,6 +255,7 @@ class _FilterMenu extends StatelessWidget {
         .firstWhere((o) => o.$1 == selected, orElse: () => options.first)
         .$2;
     final filtered = selected != 'all';
+    final colon = BridgeScope.of(context).pair('：', ': ');
     return PopupMenuButton<String>(
       tooltip: label,
       color: Palette.high,
@@ -277,7 +278,7 @@ class _FilterMenu extends StatelessWidget {
       ],
       child: Semantics(
         button: true,
-        label: '$label：$current',
+        label: '$label$colon$current',
         excludeSemantics: true,
         child: Container(
           constraints: const BoxConstraints(minHeight: 44),
@@ -295,7 +296,7 @@ class _FilterMenu extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  '$label：$current',
+                  '$label$colon$current',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,

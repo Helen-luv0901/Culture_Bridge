@@ -8,8 +8,8 @@
 // Then, with Playwright installed (npm install playwright):
 //   node flutter_app/tool/store_screenshots.mjs docs/store/screenshots
 //
-// It signs in with the development token dev:mei, starts the ARC procedure and ticks two steps
-// so Home shows progress. Re-shoot with real procedure cards before publishing.
+// It signs in with the development token dev:mei. The official Q&A pages come from the NISA
+// file the seed imports; posts are the demo ones.
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
 
@@ -18,27 +18,12 @@ const base = process.env.BASE_URL ?? 'http://localhost:8765';
 const token = 'dev:mei';
 const pages = [
   ['01-home', '/'],
-  ['02-procedure', '/actions/arc'],
-  ['03-progress', '/actions/arc/progress'],
+  ['02-faqs', '/faqs'],
+  ['03-faq', '/faqs/nisa-934'],
   ['04-explore', '/explore'],
   ['05-experience', '/experiences/class-invitation'],
   ['06-share', '/share'],
 ];
-
-async function api(method, path, body) {
-  const response = await fetch(base + '/api' + path, {
-    method,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: body && JSON.stringify(body),
-  });
-  if (!response.ok) throw new Error(`${method} ${path}: ${response.status}`);
-  return response.json();
-}
-
-const execution = await api('POST', '/actions/arc/executions', { identity_type: 'degree_student' });
-for (const step of execution.steps.slice(0, 2)) {
-  await api('PUT', `/executions/${execution.id}/steps/${step.step_id}`, { state: 'done' });
-}
 
 const browser = await chromium.launch();
 for (const lang of ['zh', 'en']) {
