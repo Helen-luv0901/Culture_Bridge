@@ -36,8 +36,9 @@ class _AppShellState extends State<AppShell> {
   int? get _tabOfPath {
     final path = widget.uri.path;
     if (path == '/') return 0;
-    // A question opened from elsewhere (an assistant card, a link) still belongs to Q&A.
-    if (path == '/faqs' || path.startsWith('/faqs/')) return 1;
+    // One question keeps the tab it was opened from (a post's related questions, Saved,
+    // Explore search), like a post does; opened directly, it belongs to Q&A (initState).
+    if (path == '/faqs') return 1;
     if (path.startsWith('/explore')) return 2;
     if (path.startsWith('/profile')) return 3;
     return null;
@@ -53,7 +54,7 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    _lastTab = _tabOfPath ?? 0;
+    _lastTab = _tabOfPath ?? (widget.uri.path.startsWith('/faqs/') ? 1 : 0);
   }
 
   @override

@@ -29,8 +29,8 @@ class ProfilePage extends StatelessWidget {
         ?.where((e) => e.status == 'published')
         .length;
     final savedCount = vm.signedIn
-        ? (vm.saved.data?.length ?? 0) + vm.savedFaqIds.length
-        : vm.savedFaqIds.length;
+        ? (vm.saved.data?.length ?? 0) + vm.shownSavedFaqIds.length
+        : vm.shownSavedFaqIds.length;
     return FlowBody(
       children: [
         Row(
@@ -383,7 +383,9 @@ class _Saved extends StatelessWidget {
               resource: (vm) => vm.faqs,
               load: (vm) => vm.loadFaqs(),
               builder: (context, catalog) {
-                final items = [for (final id in faqIds) ?catalog.item(id)];
+                final items = [
+                  for (final id in vm.shownSavedFaqIds) ?catalog.item(id),
+                ];
                 return items.isEmpty
                     ? const SizedBox.shrink()
                     : FaqList(items: items, catalog: catalog);
@@ -399,8 +401,10 @@ class _Saved extends StatelessWidget {
               builder: (context, items) => PostList(items: items),
             ),
           ];
+    // A saved question that was retired since no longer counts, so the note still shows.
     final nothing =
-        faqIds.isEmpty && (!vm.signedIn || (vm.saved.data?.isEmpty ?? false));
+        vm.shownSavedFaqIds.isEmpty &&
+        (!vm.signedIn || (vm.saved.data?.isEmpty ?? false));
     if (nothing) {
       return EmptyNote(
         title: vm.pair('還沒有收藏', 'Nothing saved yet'),

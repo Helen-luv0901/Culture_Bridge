@@ -131,10 +131,25 @@ def _faq_brief(faq: FaqRecord, locale: Locale) -> dict[str, Any]:
     }
 
 
-def faq_detail(faq: FaqRecord, locale: Locale) -> dict[str, Any]:
-    detail = {
-        **_faq_brief(faq, locale),
-        "answer": faq.answer.get(locale),
+# Some answers run to 3,000+ characters; past this the model gets the opening and the link.
+ANSWER_CHARS = 1500
+
+
+def faq_detail(faq: FaqRecord, locale: Locale, clip: int | None = None) -> dict[str, Any]:
+    answer = faq.answer.get(locale) or ""
+    detail: dict[str, Any] = _faq_brief(faq, locale)
+    # The warning goes before the answer, so nothing that shortens the block can lose it.
+    if faq.review_kind and faq.review_note:
+        detail["warning"] = {
+            "kind": faq.review_kind,
+            "note": faq.review_note.get(locale),
+            "superseded_by": faq.superseded_by,
+        }
+    if clip is not None and len(answer) > clip:
+        answer = answer[:clip].rstrip() + " …"
+        detail["answer_clipped"] = "Only the opening is shown; get_official_faq has the rest."
+    detail |= {
+        "answer": answer,
         "answering_agency": faq.agency.get(locale),
         "source": faq.source.get(locale),
         "url": faq.url,
@@ -142,12 +157,6 @@ def faq_detail(faq: FaqRecord, locale: Locale) -> dict[str, Any]:
     }
     if locale == "en" and not faq.has_english:
         detail["note"] = "Only the Chinese original exists; translate it in your answer."
-    if faq.review_kind and faq.review_note:
-        detail["warning"] = {
-            "kind": faq.review_kind,
-            "note": faq.review_note.get(locale),
-            "superseded_by": faq.superseded_by,
-        }
     return detail
 
 
@@ -296,6 +305,14 @@ def semantic_search(args: SemanticSearchArgs, ctx: ToolContext) -> dict[str, Any
     found = ctx.data.semantic_search(args.query, args.limit)
     if found is None:
         raise ToolError("Semantic search is unavailable right now; use the keyword tools.")
+    # Official answers go through the same record as everywhere else, so review warnings
+    # (superseded, time_limited) reach the model and outdated ones come last.
+    faqs = [ctx.data.get_faq(f["faq_id"]) for f in found.pop("official_faqs", None) or []]
+    faqs = [f for f in faqs if f is not None]
+    found["official_faqs"] = [
+        faq_detail(f, ctx.locale, clip=ANSWER_CHARS)
+        for f in [f for f in faqs if not f.demoted] + [f for f in faqs if f.demoted]
+    ]
     return {
         **found,
         "notice": "official_faqs are government answers: cite the answering agency and date. "
