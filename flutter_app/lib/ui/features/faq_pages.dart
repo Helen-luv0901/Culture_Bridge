@@ -4,7 +4,6 @@ import 'package:url_launcher/link.dart';
 
 import '../../domain/api_models.dart';
 import '../core/design_system.dart';
-import '../core/layout.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
 import 'post_cards.dart';
@@ -136,7 +135,6 @@ class _FaqsPageState extends State<FaqsPage> {
   }
 
   Widget _catalog(BuildContext context, BridgeViewModel vm, FaqCatalog all) {
-    final wrap = AppLayout.of(context) != AppLayout.phone;
     // School-administration questions are never listed: administrative guidance may appear only
     // once checked and published by Feng Chia University itself. The server leaves them out;
     // this also covers an older server that still sends them.
@@ -166,52 +164,38 @@ class _FaqsPageState extends State<FaqsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Chips(
-          label: vm.pair('分類', 'Categories'),
-          wrap: wrap,
-          chips: [
-            NoteChip(
-              key: const Key('faq-cat-all'),
-              dense: true,
-              label: vm.pair('全部 ${forWho.length}', 'All ${forWho.length}'),
-              selected: category == 'all',
-              onTap: () => _set(() => _category = 'all'),
+        // Two menus instead of 20-odd chips: the list starts right under the search box.
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _FilterMenu(
+              key: const Key('faq-cat'),
+              label: vm.pair('分類', 'Category'),
+              selected: category,
+              options: [
+                ('all', vm.pair('全部 ${forWho.length}', 'All ${forWho.length}')),
+                for (final c in all.categories)
+                  if ((counts[c.id] ?? 0) > 0)
+                    (c.id, '${c.name.of(vm.english)} ${counts[c.id]}'),
+              ],
+              onSelected: (id) => _set(() => _category = id),
             ),
-            for (final c in all.categories)
-              if ((counts[c.id] ?? 0) > 0)
-                NoteChip(
-                  key: Key('faq-cat-${c.id}'),
-                  dense: true,
-                  label: '${c.name.of(vm.english)} ${counts[c.id]}',
-                  selected: category == c.id,
-                  onTap: () => _set(() => _category = c.id),
-                ),
+            if (all.identities.isNotEmpty)
+              _FilterMenu(
+                key: const Key('faq-who'),
+                label: vm.pair('適用身分', 'Applies to'),
+                selected: _identity ?? 'all',
+                options: [
+                  ('all', vm.pair('所有身分', 'Everyone')),
+                  for (final who in all.identities)
+                    (who.id, who.name.of(vm.english)),
+                ],
+                onSelected: (id) =>
+                    _set(() => _identity = id == 'all' ? null : id),
+              ),
           ],
         ),
-        if (all.identities.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _Chips(
-            label: vm.pair('適用身分', 'Applies to'),
-            wrap: wrap,
-            chips: [
-              NoteChip(
-                key: const Key('faq-who-all'),
-                dense: true,
-                label: vm.pair('所有身分', 'Everyone'),
-                selected: _identity == null,
-                onTap: () => _set(() => _identity = null),
-              ),
-              for (final who in all.identities)
-                NoteChip(
-                  key: Key('faq-who-${who.id}'),
-                  dense: true,
-                  label: who.name.of(vm.english),
-                  selected: _identity == who.id,
-                  onTap: () => _set(() => _identity = who.id),
-                ),
-            ],
-          ),
-        ],
         const SizedBox(height: 16),
         // Only as wide as the words, so the paper behind them is not taken for the text's
         // background.
@@ -252,29 +236,86 @@ class _FaqsPageState extends State<FaqsPage> {
 }
 
 /// A row of choice chips that scrolls sideways on phones and wraps on wider screens.
-class _Chips extends StatelessWidget {
-  const _Chips({required this.label, required this.chips, required this.wrap});
+/// A filter as one pill showing its current choice; tapping it lists the choices.
+class _FilterMenu extends StatelessWidget {
+  const _FilterMenu({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.options,
+    required this.onSelected,
+  });
   final String label;
-  final List<Widget> chips;
-  final bool wrap;
+  final String selected;
+  final List<(String, String)> options;
+  final ValueChanged<String> onSelected;
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: label,
-    container: true,
-    child: wrap
-        ? Wrap(spacing: 8, runSpacing: 8, children: chips)
-        : SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final (i, chip) in chips.indexed) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  chip,
-                ],
-              ],
+  Widget build(BuildContext context) {
+    final current = options
+        .firstWhere((o) => o.$1 == selected, orElse: () => options.first)
+        .$2;
+    final filtered = selected != 'all';
+    return PopupMenuButton<String>(
+      tooltip: label,
+      color: Palette.high,
+      position: PopupMenuPosition.under,
+      initialValue: selected,
+      onSelected: onSelected,
+      constraints: const BoxConstraints(maxHeight: 420, minWidth: 200),
+      itemBuilder: (_) => [
+        for (final (id, text) in options)
+          PopupMenuItem(
+            key: Key('${(key as ValueKey<String>).value}-$id'),
+            value: id,
+            child: Text(
+              text,
+              style: TextStyle(
+                fontWeight: id == selected ? FontWeight.w700 : FontWeight.w400,
+              ),
             ),
           ),
-  );
+      ],
+      child: Semantics(
+        button: true,
+        label: '$label：$current',
+        excludeSemantics: true,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.only(left: 16, right: 10),
+          decoration: ShapeDecoration(
+            color: filtered ? Palette.moss : Palette.high,
+            shape: StadiumBorder(
+              side: BorderSide(
+                color: filtered ? Palette.moss : Palette.control,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  '$label：$current',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: filtered ? Palette.onMoss : Palette.ink,
+                    fontWeight: filtered ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              AppIcon(
+                'down',
+                size: 18,
+                color: filtered ? Palette.onMoss : Palette.muted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Official questions as one card of rows: the question, its category and date.

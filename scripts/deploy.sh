@@ -128,15 +128,28 @@ if ! live_image="$(gc run services describe "${SERVICE}" --region="${REGION}" \
 fi
 # The commit actually serving: a deploy that failed its health check leaves its image in the
 # service template without ever getting traffic, so the template can't say what is live.
-live_image="$(gc run revisions describe "$(serving_revision)" --region="${REGION}" \
-  --format='value(spec.containers[0].image)')"
-live_tag="${live_image##*:}"
-if [[ "${live_image}" == *@sha256:* ]]; then
+live_rev_json="$(gc run revisions describe "$(serving_revision)" --region="${REGION}" --format=json)"
+# Each deploy writes its commit into the revision (APP_COMMIT, below); the image name is only a
+# fallback for revisions from before that. Reading it from the image came back empty on every
+# deploy (Cloud Run records a digest and the tag lookup found nothing), so the Q&A files always
+# looked changed and the import ran each time.
+live_tag="$(printf '%s' "${live_rev_json}" | python3 -c '
+import json, sys
+spec = json.load(sys.stdin)["spec"]["containers"][0]
+print(next((e.get("value", "") for e in spec.get("env", []) if e.get("name") == "APP_COMMIT"), ""))')"
+live_image="$(printf '%s' "${live_rev_json}" | python3 -c '
+import json, sys
+print(json.load(sys.stdin)["spec"]["containers"][0]["image"])')"
+if [[ -z "${live_tag}" && "${live_image}" != *@sha256:* ]]; then
+  live_tag="${live_image##*:}"
+fi
+if [[ -z "${live_tag}" && "${live_image}" == *@sha256:* ]]; then
   # Cloud Run records the image by digest; the commit is the tag on that digest.
   live_tag="$(gcloud artifacts docker images list "${live_image%@*}" --include-tags \
     --filter="version=${live_image##*@}" --format='value(tags)' 2>/dev/null \
-    | tr ',' '\n' | grep -m1 -E '^[0-9a-f]{7,40}$' || true)"
+    | tr ',;' '\n\n' | grep -m1 -E '^[0-9a-f]{7,40}$' || true)"
 fi
+[[ -n "${live_tag}" ]] || note "讀不到正式站的版本（${live_image}），官方問答會當作有變更重新匯入。"
 
 if [[ -n "${PREVIEW}" ]]; then
   # A preview shares the production database, so it must run on the schema already there.
@@ -164,7 +177,7 @@ if [[ -n "${PREVIEW}" ]]; then
   live_rev="$(serving_revision)"
   # --no-traffic pins the live traffic to its revision, so users stay where they are.
   gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" \
-    --no-traffic --tag="${PREVIEW}" --quiet
+    --no-traffic --tag="${PREVIEW}" --update-env-vars="APP_COMMIT=${tag}" --quiet
   preview_url="$(tag_url "${PREVIEW}")" || die "找不到預覽版的網址；正式站仍是 ${live_rev}。"
   check_health "${preview_url}" || die "預覽版沒通過健康檢查；正式站仍是 ${live_rev}，不受影響。"
   [[ "$(serving_revision)" == "${live_rev}" ]] \
@@ -181,9 +194,10 @@ gc run jobs execute culture-bridge-migrate --region="${REGION}" --wait
 
 bold "4/5 部署（新版本先不給流量，健康檢查通過才切換）"
 old_rev="$(serving_revision)"
-# Only the image changes; secrets, Cloud SQL, environment and access stay as step 5 set them.
+# Only the image and APP_COMMIT (which commit this is) change; secrets, Cloud SQL, the rest of
+# the environment and access stay as step 5 set them.
 gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" \
-  --no-traffic --tag=candidate --quiet
+  --no-traffic --tag=candidate --update-env-vars="APP_COMMIT=${tag}" --quiet
 new_rev="$(tag_revision candidate)" || die "找不到剛部署的 candidate 版本，流量仍在 ${old_rev}。"
 candidate_url="$(tag_url candidate)"   || die "找不到新版本 ${new_rev} 的 candidate 網址，流量仍在 ${old_rev}。"
 if ! check_health "${candidate_url}"; then
