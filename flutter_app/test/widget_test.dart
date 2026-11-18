@@ -137,14 +137,14 @@ void main() {
       expect(find.byKey(Key('faq-row-$id')), findsOneWidget);
     }
     // One menu per filter, not a row of chips; the menu shows each category's count.
-    expect(find.text('分類：全部 3'), findsOneWidget);
+    expect(find.text('分類：全部'), findsOneWidget);
     expect(find.text('適用身分：所有身分'), findsOneWidget);
     expect(find.byKey(const Key('faq-cat-work')), findsNothing);
     await tap(tester, find.byKey(const Key('faq-cat')));
-    expect(find.text('工作 1'), findsOneWidget);
+    expect(find.text('工作'), findsOneWidget);
 
     await tap(tester, find.byKey(const Key('faq-cat-work')));
-    expect(find.text('分類：工作 1'), findsOneWidget);
+    expect(find.text('分類：工作'), findsOneWidget);
     expect(find.text('共 1 則'), findsOneWidget);
     expect(find.byKey(const Key('faq-row-nisa-1001')), findsOneWidget);
     expect(find.byKey(const Key('faq-row-nisa-1070')), findsNothing);
@@ -168,9 +168,9 @@ void main() {
   testWidgets('School admin questions are never listed', (tester) async {
     await mount(tester, '/faqs', const Size(375, 1600));
     expect(find.text('共 3 則'), findsOneWidget);
-    expect(find.text('分類：全部 3'), findsOneWidget);
+    expect(find.text('分類：全部'), findsOneWidget);
     await tap(tester, find.byKey(const Key('faq-cat')));
-    expect(find.text('簽證與居留 1'), findsOneWidget);
+    expect(find.text('簽證與居留'), findsOneWidget);
     await tester.tapAt(Offset.zero); // close the menu
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('faq-row-nisa-800')), findsNothing);
@@ -262,11 +262,13 @@ void main() {
     },
   );
 
-  testWidgets('Category counts follow the identity filter', (tester) async {
+  testWidgets('Categories follow the identity filter', (tester) async {
     await mount(tester, '/faqs', const Size(375, 1600));
     await pick(tester, 'faq-who', 'mainland');
-    // Only the mainland question remains, so「全部」counts one.
-    expect(find.text('分類：全部 1'), findsOneWidget);
+    expect(find.text('共 1 則'), findsOneWidget);
+    // A category with no question for this identity is not offered.
+    await tap(tester, find.byKey(const Key('faq-cat')));
+    expect(find.byKey(const Key('faq-cat-work')), findsNothing);
   });
 
   testWidgets('A post lists related official questions, or none', (

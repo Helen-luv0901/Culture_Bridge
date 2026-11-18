@@ -174,10 +174,9 @@ class _FaqsPageState extends State<FaqsPage> {
               label: vm.pair('分類', 'Category'),
               selected: category,
               options: [
-                ('all', vm.pair('全部 ${forWho.length}', 'All ${forWho.length}')),
+                ('all', vm.pair('全部', 'All')),
                 for (final c in all.categories)
-                  if ((counts[c.id] ?? 0) > 0)
-                    (c.id, '${c.name.of(vm.english)} ${counts[c.id]}'),
+                  if ((counts[c.id] ?? 0) > 0) (c.id, c.name.of(vm.english)),
               ],
               onSelected: (id) => _set(() => _category = id),
             ),
@@ -340,19 +339,19 @@ class FaqList extends StatelessWidget {
         if (!faq.forSchool) faq,
     ];
     if (shown.isEmpty) return const SizedBox.shrink();
-    return NoteCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          for (final (i, faq) in shown.indexed) ...[
-            if (i > 0) const DashedRule(),
-            _FaqRow(
+    // One card per question, spaced like the post list, so each stands apart.
+    return CardList(
+      gap: 8,
+      children: [
+        for (final faq in shown)
+          NoteCard(
+            padding: EdgeInsets.zero,
+            child: _FaqRow(
               faq: faq,
               category: names?.category(faq.categoryId)?.name.of(vm.english),
             ),
-          ],
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
