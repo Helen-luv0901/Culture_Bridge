@@ -177,12 +177,14 @@ def test_related_posts_are_the_posts_closest_to_the_question(api, db, faq_file):
             )
         )
 
-    # Make one question mean exactly what the rental post means, and the other post the opposite.
+    # Make a question that shares words with the rental post also mean exactly what it means,
+    # and the other post the opposite.
+    target = _worded(db, "first-rental")
     rental = list(vector("experience", "first-rental").embedding)
-    vector("official_faq", "nisa-934").embedding = rental
+    vector("official_faq", target).embedding = rental
     vector("experience", "professor-see").embedding = [-x for x in rental]
     db.commit()
-    posts = api.get("/api/faqs/nisa-934/related-posts").json()
+    posts = api.get(f"/api/faqs/{target}/related-posts").json()
     assert posts[0]["id"] == "first-rental"
     assert "professor-see" not in [p["id"] for p in posts]  # too far from the question
     assert all("author_id" not in p for p in posts)
@@ -190,7 +192,7 @@ def test_related_posts_are_the_posts_closest_to_the_question(api, db, faq_file):
     # A viewer who blocked the author doesn't get it.
     kai = {"Authorization": "Bearer dev:kai"}
     api.post("/api/blocks", json={"experience_id": "first-rental"}, headers=kai)
-    blocked = api.get("/api/faqs/nisa-934/related-posts", headers=kai).json()
+    blocked = api.get(f"/api/faqs/{target}/related-posts", headers=kai).json()
     assert "first-rental" not in [p["id"] for p in blocked]
     assert api.get("/api/faqs/nisa-0/related-posts").status_code == 404
 
@@ -347,14 +349,15 @@ def test_a_post_close_to_everything_is_recommended_only_where_it_fits_best(api, 
             select(ContentEmbedding.embedding).where(ContentEmbedding.content_id == "first-rental")
         )
     )
+    target = _worded(db, "first-rental")
     # The post sits exactly on one question and very close to every other one.
     others = db.scalars(
         select(ContentEmbedding.content_id).where(
             ContentEmbedding.content_type == "official_faq",
-            ContentEmbedding.content_id != "nisa-934",
+            ContentEmbedding.content_id != target,
         )
     ).all()
-    _set_vector(db, "official_faq", "nisa-934", rental)
+    _set_vector(db, "official_faq", target, rental)
     for i, faq_id in enumerate(others):
         nudged = rental.copy()
         nudged[i % len(nudged)] += 0.05 + 0.001 * i
@@ -363,16 +366,36 @@ def test_a_post_close_to_everything_is_recommended_only_where_it_fits_best(api, 
 
     showing = [
         faq_id
-        for faq_id in ["nisa-934", *others]
+        for faq_id in [target, *others]
         if api.get(f"/api/faqs/{faq_id}/related-posts").json()
     ]
-    assert "nisa-934" in showing
+    assert target in showing
     assert len(showing) <= 3  # K_FAQS: only where it fits best
 
     # The other direction: the post lists that question (it is a student question).
     related = api.get("/api/experiences/first-rental/related-faqs").json()
-    assert related[0]["id"] == "nisa-934"
+    assert related[0]["id"] == target
     assert api.get("/api/experiences/no-such-post/related-faqs").status_code == 404
+
+
+def test_a_pair_close_in_meaning_but_sharing_no_words_is_not_recommended(api, db, faq_file):
+    """Production rescan 2026-11-19: "Place to Go?" sat next to a work-permit question."""
+    from app.services.faqs import _keyword_faqs
+
+    seed(db, get_settings().demo_content_path)
+    loaded(db, faq_file)
+    embed_missing(db, EMBED)
+    sync_experience(db, EMBED, "first-rental")
+    assert "nisa-934" not in _keyword_faqs(db, "first-rental")
+    rental = db.scalar(
+        select(ContentEmbedding.embedding).where(ContentEmbedding.content_id == "first-rental")
+    )
+    _set_vector(db, "official_faq", "nisa-934", rental)
+    db.commit()
+    assert api.get("/api/faqs/nisa-934/related-posts").json() == []
+    assert "nisa-934" not in [
+        f["id"] for f in api.get("/api/experiences/first-rental/related-faqs").json()
+    ]
 
 
 def test_related_faqs_leave_out_outdated_questions(api, db, faq_file):
@@ -407,3 +430,14 @@ def shown(faq_file) -> int:
     """Questions the app shows: all but school administration."""
     school = {i for i, a in load_review().audience.items() if a == "school"}
     return sum(f.id not in school for f in faq_file.faqs)
+
+
+def _worded(db, experience_id: str) -> str:
+    """A student question the post's own words find (related pairs must share words)."""
+    from app.services.faqs import _keyword_faqs
+
+    review = load_review()
+    hidden = {r.id for r in review.reviews if r.kind != "conflict"}
+    found = sorted(_keyword_faqs(db, experience_id) - hidden)
+    assert found, "the demo post's words should find a question"
+    return found[0]

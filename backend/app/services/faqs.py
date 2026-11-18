@@ -22,7 +22,14 @@ from app.core.auth import CurrentUser
 from app.core.config import get_settings
 from app.core.errors import not_found
 from app.core.text_search import relevant
-from app.models import ContentEmbedding, Experience, FaqCategory, FaqIdentity, OfficialFaq
+from app.models import (
+    ContentEmbedding,
+    Experience,
+    ExperienceTranslation,
+    FaqCategory,
+    FaqIdentity,
+    OfficialFaq,
+)
 from app.services.common import Text2
 from app.services.experiences.queries import _public_items, _public_query
 from app.services.experiences.schemas import Locale, PublicExperience
@@ -220,9 +227,20 @@ def search_faqs(db: Session, q: str, limit: int) -> list[FaqSummary]:
 # posts AND the question is among the post's K_FAQS nearest questions. A post can then appear
 # under a handful of questions at most, and no distance threshold has to be tuned.
 
+#
+# Mutual alone still paired unrelated things in production (rescan 2026-11-19): of 17 posts
+# most are tests or food chat ("rrq bengek", "Place to Go?"), and each is still some question's
+# nearest. A pair must therefore also share words: the question has to be among the keyword
+# matches for the post's title (either language). Checked against all 17 production posts, this
+# kept 6 pairs that are about the same thing (national insurance within 6 months, an enrollment
+# certificate for the ARC, the language barrier) and dropped every unrelated one. Meaning finds
+# the candidates, words confirm them; no distance threshold to tune.
+
 RELATED_POSTS = 3
 K_POSTS = 10
 K_FAQS = 3
+KEYWORD_FAQS = 5  # keyword matches per post title that may confirm a pair
+TITLE_FALLBACK_CHARS = 80
 
 _POSTS_FOR_FAQ = sql(
     """
@@ -311,7 +329,9 @@ def related_posts(
             "max_distance": get_settings().semantic_max_distance,
         },
     ).all()
-    ids = [post_id for post_id, rank in found if rank < K_FAQS]
+    ids = [
+        post_id for post_id, rank in found if rank < K_FAQS and faq_id in _keyword_faqs(db, post_id)
+    ]
     if not ids:
         return []
     rows = db.execute(_public_query(viewer).where(Experience.id.in_(ids))).all()
@@ -321,6 +341,28 @@ def related_posts(
 
 
 RELATED_FAQS = 3
+
+
+def _keyword_faqs(db: Session, experience_id: str) -> set[str]:
+    """Questions the post's title finds by keywords, in its own language or its translation."""
+    experience = db.get(Experience, experience_id)
+    if experience is None:
+        return set()
+    # A post may have no title (older ones): its opening words say what it is about.
+    titles = [experience.title or (experience.original_voice or "")[:TITLE_FALLBACK_CHARS]]
+    for title, voice in db.execute(
+        select(ExperienceTranslation.title, ExperienceTranslation.original_voice).where(
+            ExperienceTranslation.experience_id == experience_id,
+            ExperienceTranslation.summary_id == experience.confirmed_summary_id,
+        )
+    ):
+        titles.append(title or (voice or "")[:TITLE_FALLBACK_CHARS])
+    docs = [(f.id, *searchable(f, c)) for f, c in active_with_categories(db)]
+    found: set[str] = set()
+    for title in titles:
+        if title:
+            found.update(relevant(docs, title, KEYWORD_FAQS))
+    return found
 
 
 def related_faqs(
@@ -344,7 +386,8 @@ def related_faqs(
             "max_distance": get_settings().semantic_max_distance,
         },
     ).all()
-    ids = [faq_id for faq_id, rank in found if rank < K_POSTS]
+    words = _keyword_faqs(db, experience_id)
+    ids = [faq_id for faq_id, rank in found if rank < K_POSTS and faq_id in words]
     by_id = {f.id: f for f, _ in active_with_categories(db)}
     faqs = [by_id[i] for i in ids if i in by_id and not demoted(by_id[i])]
     return [summary(f) for f in faqs[:limit]]
