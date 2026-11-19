@@ -18,8 +18,9 @@ from app.assistant.llm import (
 )
 
 logger = logging.getLogger(__name__)
-# Room for two models to run out of time (10 s each, Gemini's minimum) and the third to start.
-ROUND_BUDGET_SECONDS = 25.0
+# Every model is asked within a few seconds (one more each HEDGE_AFTER_SECONDS), so a round
+# lasts about the last one's start plus its timeout (20 s): 2 + 2 + 20 = 24 s, with room to spare.
+ROUND_BUDGET_SECONDS = 30.0
 
 
 def thinking_config(level: str) -> types.ThinkingConfig | None:

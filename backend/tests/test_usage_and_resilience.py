@@ -205,13 +205,17 @@ def test_the_assistant_waits_briefly_enough_for_a_backup_in_the_same_round(monke
     assistant_api.get_services.cache_clear()
     try:
         settings = get_settings()
-        # Normal answers take 1-3 s (Cloud Logging, 2026-10-27..11-01), and Gemini refuses a
-        # deadline under 10 s (400 INVALID_ARGUMENT, production 2026-11-05).
-        assert settings.assistant_model_timeout_seconds == GEMINI_MIN_DEADLINE_SECONDS == 10
-        # Every model but the last may run out of time and the last is still asked: a new
-        # attempt only starts while the round's budget lasts.
-        slow_before_last = len(settings.gemini_fallback_models)
-        assert slow_before_last * settings.assistant_model_timeout_seconds < ROUND_BUDGET_SECONDS
+        # Normal answers take 1-3 s (Cloud Logging, 2026-10-27..11-01), but a busy free tier
+        # took 10-20 s (2026-11-19, every model cut off at 10 s); Gemini refuses a deadline
+        # under 10 s (400 INVALID_ARGUMENT, production 2026-11-05).
+        assert settings.assistant_model_timeout_seconds == 20
+        assert settings.assistant_model_timeout_seconds > GEMINI_MIN_DEADLINE_SECONDS
+        # The assistant asks the models side by side (one more every HEDGE_AFTER_SECONDS), so
+        # the last one asked still has its whole timeout inside the round's budget.
+        from app.ai.calls import HEDGE_AFTER_SECONDS
+
+        last_start = len(settings.gemini_fallback_models) * HEDGE_AFTER_SECONDS
+        assert last_start + settings.assistant_model_timeout_seconds < ROUND_BUDGET_SECONDS
         assistant_api.get_services()
         assert built == [settings.assistant_model_timeout_seconds]
     finally:
@@ -297,7 +301,10 @@ def test_free_tier_limits_and_backup_model_by_default(monkeypatch):
         monkeypatch.delenv("GEMINI_FALLBACK_MODELS")
         get_settings.cache_clear()
         # gemini-2.5-flash-lite was retired (404) on 2026-11-19.
-        assert get_settings().gemini_fallback_models == ("gemini-3.1-flash-lite",)
+        assert get_settings().gemini_fallback_models == (
+            "gemini-3.1-flash-lite",
+            "gemini-3.8-flash",
+        )
         # One person's day (20 messages, at most 6 model calls each) fits many times over.
         assert settings.assistant_per_day * 6 < settings.assistant_daily_llm_calls <= 1000
     finally:

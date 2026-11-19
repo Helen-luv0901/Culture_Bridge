@@ -100,9 +100,10 @@ def get_settings() -> Settings:
         gemini_fallback_models=tuple(
             m.strip()
             for m in os.getenv(
-                # gemini-2.5-flash-lite was retired for new users on 2026-11-19 (404).
+                # gemini-2.5-flash-lite was retired for new users on 2026-11-19 (404). The last
+                # backup is another family: that night both Flash Lite models timed out together.
                 "GEMINI_FALLBACK_MODELS",
-                "gemini-3.1-flash-lite",
+                "gemini-3.1-flash-lite,gemini-3.8-flash",
             ).split(",")
             if m.strip()
         ),
@@ -111,7 +112,10 @@ def get_settings() -> Settings:
         ),
         assistant_model_timeout_seconds=max(
             GEMINI_MIN_DEADLINE_SECONDS,
-            float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "10")),
+            # 2026-11-19 the free tier took 10-20 s per answer for a whole evening; at 10 s every
+            # model was cut off (504) and nobody got an answer. Two backups x 20 s still fit the
+            # 45 s round budget, and the app waits 120 s.
+            float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "20")),
         ),
         gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "low").strip().lower(),
         assistant_max_tool_rounds=int(os.getenv("ASSISTANT_MAX_TOOL_ROUNDS", "5")),
