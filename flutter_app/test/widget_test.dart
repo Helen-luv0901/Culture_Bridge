@@ -318,24 +318,27 @@ void main() {
     expect(find.byKey(const Key('faq-related-posts')), findsNothing);
   });
 
-  testWidgets('English shows a note where the site has no English version', (
+  testWidgets('English shows no question that has only a Chinese answer', (
     tester,
   ) async {
-    final app = await mount(tester, '/faqs/nisa-900', const Size(375, 1600));
-    expect(find.byKey(const Key('faq-no-english')), findsNothing);
+    final app = await mount(tester, '/faqs', const Size(375, 1600));
+    expect(find.byKey(const Key('faq-row-nisa-900')), findsOneWidget);
     app.vm.setEnglish(true);
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('faq-no-english')), findsOneWidget);
-    expect(find.text('陸生可以加入全民健保嗎？'), findsOneWidget);
+    // nisa-900 has no official English: listed in Chinese mode only.
+    expect(find.byKey(const Key('faq-row-nisa-900')), findsNothing);
+    expect(find.byKey(const Key('faq-row-nisa-1070')), findsOneWidget);
+
+    // Opened by link in English: no Chinese text, an offer to switch instead.
     await tester.pumpWidget(const SizedBox());
-    await mount(
-      tester,
-      '/faqs/nisa-1070',
-      const Size(375, 1600),
-      before: (app) async => app.vm.setEnglish(true),
-    );
-    expect(find.text('How early can I renew my ARC?'), findsOneWidget);
-    expect(find.byKey(const Key('faq-no-english')), findsNothing);
+    final linked = await mount(tester, '/faqs/nisa-900', const Size(375, 1600));
+    linked.vm.setEnglish(true);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('faq-chinese-only')), findsOneWidget);
+    expect(find.byKey(const Key('faq-answer')), findsNothing);
+    await tap(tester, find.text('切換成中文'));
+    expect(linked.vm.english, isFalse);
+    expect(find.byKey(const Key('faq-answer')), findsOneWidget);
   });
 
   testWidgets('Saved questions are listed under Me › Saved', (tester) async {

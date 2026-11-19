@@ -191,6 +191,13 @@ def experience_card(experience: ExperienceRecord, locale: Locale) -> ExperienceC
     )
 
 
+def shows_card(faq: FaqRecord, locale: Locale) -> bool:
+    """A question card would be in Chinese in an English reply when the NISA site has no English
+    version; the app lists such questions in Chinese mode only, so no card is shown either
+    (the answer still uses what it says)."""
+    return locale != "en" or faq.has_english
+
+
 def faq_card(faq: FaqRecord, locale: Locale) -> FaqCard:
     return FaqCard(
         faq_id=faq.id,
@@ -224,7 +231,8 @@ def get_official_faq(args: GetFaqArgs, ctx: ToolContext) -> dict[str, Any]:
     faq = ctx.data.get_faq(args.faq_id)
     if faq is None:
         return {"found": False, "faq_id": args.faq_id}
-    ctx.cards[f"faq:{faq.id}"] = faq_card(faq, ctx.locale)
+    if shows_card(faq, ctx.locale):
+        ctx.cards[f"faq:{faq.id}"] = faq_card(faq, ctx.locale)
     return {"found": True, "notice": FAQ_NOTICE, "faq": faq_detail(faq, ctx.locale)}
 
 

@@ -10,7 +10,7 @@ shown, and an answer without the line shows no student posts.
 import re
 from dataclasses import dataclass
 
-from app.assistant.tools import ToolContext, experience_card, faq_card
+from app.assistant.tools import ToolContext, experience_card, faq_card, shows_card
 
 MAX_EACH = 2
 _LINE = re.compile(r"^[ \t]*RELATED[ \t]*[:：][^\n]*$", re.IGNORECASE | re.MULTILINE)
@@ -53,7 +53,7 @@ def related_cards(related: Related, ctx: ToolContext) -> None:
     ctx.cards.clear()
     for faq_id in related.faqs[:MAX_EACH]:
         faq = ctx.data.get_faq(faq_id)
-        if faq is not None:
+        if faq is not None and shows_card(faq, ctx.locale):
             ctx.cards[f"faq:{faq.id}"] = faq_card(faq, ctx.locale)
     # A question the answer quotes is relevant even if the model forgot to list it.
     for key, card in named.items():

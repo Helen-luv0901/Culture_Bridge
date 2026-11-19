@@ -22,6 +22,7 @@ from app.assistant.tools import (
     _experience_summary,
     faq_card,
     faq_detail,
+    shows_card,
 )
 
 logger = logging.getLogger(__name__)
@@ -185,4 +186,5 @@ def cite_named_faqs(answer: str, found: Prefetched, ctx: ToolContext) -> None:
     for faq in found.faqs:
         questions = {faq.question.zh, faq.question.en}
         if any(q and q in answer for q in questions):
-            ctx.cards.setdefault(f"faq:{faq.id}", faq_card(faq, ctx.locale))
+            if shows_card(faq, ctx.locale):
+                ctx.cards.setdefault(f"faq:{faq.id}", faq_card(faq, ctx.locale))
