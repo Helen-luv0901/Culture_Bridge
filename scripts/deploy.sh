@@ -194,10 +194,13 @@ gc run jobs execute culture-bridge-migrate --region="${REGION}" --wait
 
 bold "4/5 部署（新版本先不給流量，健康檢查通過才切換）"
 old_rev="$(serving_revision)"
-# Only the image and APP_COMMIT (which commit this is) change; secrets, Cloud SQL, the rest of
-# the environment and access stay as step 5 set them.
+# Only the image, APP_COMMIT (which commit this is) and the Groq key change; the other secrets,
+# Cloud SQL, the rest of the environment and access stay as step 5 set them. The groq-api-key
+# secret (the assistant's first model, 2026-11-19) must exist and be readable by the service
+# account, or the new revision does not start and traffic stays where it was.
 gc run deploy "${SERVICE}" --image="${image}" --region="${REGION}" \
-  --no-traffic --tag=candidate --update-env-vars="APP_COMMIT=${tag}" --quiet
+  --no-traffic --tag=candidate --update-env-vars="APP_COMMIT=${tag}" \
+  --update-secrets="GROQ_API_KEY=groq-api-key:latest" --quiet
 new_rev="$(tag_revision candidate)" || die "找不到剛部署的 candidate 版本，流量仍在 ${old_rev}。"
 candidate_url="$(tag_url candidate)"   || die "找不到新版本 ${new_rev} 的 candidate 網址，流量仍在 ${old_rev}。"
 if ! check_health "${candidate_url}"; then

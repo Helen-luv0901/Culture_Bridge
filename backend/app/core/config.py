@@ -27,6 +27,12 @@ class Settings:
     semantic_max_distance: float
     gemini_api_key: str | None
     gemini_model: str
+    # Groq (OpenAI-compatible, free tier, ~1 s answers): asked first by the assistant when a key
+    # is set, with Gemini as the backup. Empty key = Gemini only.
+    groq_api_key: str | None
+    groq_model: str
+    groq_base_url: str
+    groq_reasoning_effort: str
     # Tried in order when GEMINI_MODEL answers 429 (free quota used up) or runs out of time.
     gemini_fallback_models: tuple[str, ...]
     gemini_timeout_seconds: float
@@ -97,12 +103,17 @@ def get_settings() -> Settings:
         semantic_max_distance=float(os.getenv("SEMANTIC_MAX_DISTANCE", "0.6")),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+        groq_api_key=os.getenv("GROQ_API_KEY") or None,
+        groq_model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+        groq_base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+        groq_reasoning_effort=os.getenv("GROQ_REASONING_EFFORT", "low").strip().lower(),
         gemini_fallback_models=tuple(
             m.strip()
             for m in os.getenv(
-                # gemini-2.5-flash-lite was retired for new users on 2026-11-19 (404).
+                # gemini-2.5-flash-lite was retired for new users on 2026-11-19 (404). The last
+                # backup is another family: that night both Flash Lite models timed out together.
                 "GEMINI_FALLBACK_MODELS",
-                "gemini-3.1-flash-lite",
+                "gemini-3.1-flash-lite,gemini-3.8-flash",
             ).split(",")
             if m.strip()
         ),
@@ -111,7 +122,10 @@ def get_settings() -> Settings:
         ),
         assistant_model_timeout_seconds=max(
             GEMINI_MIN_DEADLINE_SECONDS,
-            float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "10")),
+            # 2026-11-19 the free tier took 10-20 s per answer for a whole evening; at 10 s every
+            # model was cut off (504) and nobody got an answer. Two backups x 20 s still fit the
+            # 45 s round budget, and the app waits 120 s.
+            float(os.getenv("ASSISTANT_MODEL_TIMEOUT_SECONDS", "20")),
         ),
         gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "low").strip().lower(),
         assistant_max_tool_rounds=int(os.getenv("ASSISTANT_MAX_TOOL_ROUNDS", "5")),

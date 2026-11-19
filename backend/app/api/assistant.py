@@ -10,6 +10,7 @@ from app.assistant.gemini import GeminiLLM
 from app.assistant.limits import BudgetedLLM, DailyBudget, RateLimited, UsageLimiter
 from app.assistant.llm import LLM, UnavailableLLM
 from app.assistant.memory import ConversationStore
+from app.assistant.openai_compat import FallbackLLM, OpenAICompatibleLLM
 from app.assistant.operations import OperationError
 from app.assistant.pg_data import PostgresAssistantData
 from app.assistant.schemas import AssistantMessageRequest, AssistantReply, PendingOperationOut
@@ -20,6 +21,9 @@ from app.core.db import DbSession
 from app.core.errors import ApiError
 from app.core.usage import DatabaseCounter
 from app.services import assistant_reports
+
+# Groq normally answers in 1-2 s; one still silent after this is stuck, and Gemini is asked.
+GROQ_TIMEOUT_SECONDS = 15.0
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -45,6 +49,18 @@ def get_services() -> AssistantServices:
         if settings.gemini_api_key
         else UnavailableLLM()
     )
+    if settings.groq_api_key:
+        # Groq first (fast free tier); Gemini answers when Groq can't (openai_compat.py).
+        llm = FallbackLLM(
+            OpenAICompatibleLLM(
+                settings.groq_api_key,
+                settings.groq_model,
+                settings.groq_base_url,
+                GROQ_TIMEOUT_SECONDS,
+                settings.groq_reasoning_effort,
+            ),
+            llm,
+        )
     assistant = Assistant(
         llm=BudgetedLLM(
             llm, DailyBudget(settings.assistant_daily_llm_calls, counter=DatabaseCounter())
