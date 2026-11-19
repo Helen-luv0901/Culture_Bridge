@@ -34,12 +34,16 @@ logger = logging.getLogger(__name__)
 _BUSY_STATUS = {500, 502, 503}
 _QUOTA_STATUS = 429
 _DEADLINE_STATUS = 504
+_GONE_STATUS = 404
 BUSY_RETRIES = 2  # per model, after a 5xx; these answers come back fast
 BUDGET_SECONDS = 45.0  # one request: every model and retry together
 REST_SECONDS = 60.0  # long enough for a per-minute quota; a used-up day is tried again then
 # A slow model stays slow for a while (all of 2026-11-04): skip it for ten minutes, then one
 # request finds out whether it has recovered.
 SLOW_REST_SECONDS = 600.0
+# A model Google has retired answers 404 at once (2026-11-19: gemini-2.5-flash-lite "is no longer
+# available to new users"). It will not come back, so it rests for a day; the others still answer.
+GONE_REST_SECONDS = 86400.0
 # A person is waiting (the assistant): normal answers take 1-3 s, so a model silent after 2 s
 # gets company from the next one, and the first answer wins (call_gemini_hedged).
 HEDGE_AFTER_SECONDS = 2.0
@@ -58,6 +62,11 @@ def _out_of_quota(exc: Exception) -> bool:
 
 def _busy(exc: Exception) -> bool:
     return isinstance(exc, genai_errors.APIError) and exc.code in _BUSY_STATUS
+
+
+def _gone(exc: Exception) -> bool:
+    """The model itself is unavailable (retired or renamed), not the request at fault."""
+    return isinstance(exc, genai_errors.APIError) and exc.code == _GONE_STATUS
 
 
 def _too_slow(exc: Exception) -> bool:
@@ -111,6 +120,12 @@ def call_gemini[T](
                 result = request(model)
             except Exception as exc:  # the SDK raises several error types
                 last = exc
+                if _gone(exc):
+                    _rest(model, now, GONE_REST_SECONDS)
+                    logger.error("Gemini %s is unavailable (404): %s", model, exc)
+                    if model != models[-1]:
+                        break
+                    raise
                 if _out_of_quota(exc) or _too_slow(exc):
                     _rest(model, now, SLOW_REST_SECONDS if _too_slow(exc) else REST_SECONDS)
                     if model != models[-1]:
@@ -146,7 +161,7 @@ def call_gemini[T](
 
 def _hands_over(exc: Exception) -> bool:
     """Whether another model may answer where this one failed (not an invalid request)."""
-    return _out_of_quota(exc) or _too_slow(exc) or _busy(exc) or _worth_retrying(exc)
+    return _out_of_quota(exc) or _too_slow(exc) or _busy(exc) or _gone(exc) or _worth_retrying(exc)
 
 
 def call_gemini_hedged[T](
@@ -238,7 +253,9 @@ def call_gemini_hedged[T](
                         raise exc  # an invalid request fails the same on any model
                     continue
                 logger.warning("Gemini %s failed: %s", model, exc)
-                if _out_of_quota(exc) or _too_slow(exc):
+                if _gone(exc):
+                    _rest(model, now, GONE_REST_SECONDS)
+                elif _out_of_quota(exc) or _too_slow(exc):
                     _rest(model, now, SLOW_REST_SECONDS if _too_slow(exc) else REST_SECONDS)
                 elif winner is None and _busy(exc) and busy.get(model, 0) < BUSY_RETRIES:
                     busy[model] = busy.get(model, 0) + 1

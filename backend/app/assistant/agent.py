@@ -39,9 +39,9 @@ TAIPEI = timezone(timedelta(hours=8))
 MAX_CALLS_PER_ROUND = 6
 
 FALLBACK_TEXT: dict[Locale, str] = {
-    "zh-Hant": "助理暫時無法回答，請稍後再試，或直接到流程頁查看步驟與來源。",
-    "en": "The assistant can't answer right now. Please try again later, or open the procedure "
-    "page to see its steps and sources.",
+    "zh-Hant": "助理暫時無法回答，請稍後再試，或直接到「官方問答」查詢。",
+    "en": "The assistant can't answer right now. Please try again later, or look it up in "
+    "the Official Q&A.",
 }
 
 

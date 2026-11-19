@@ -296,10 +296,8 @@ def test_free_tier_limits_and_backup_model_by_default(monkeypatch):
         assert settings.gemini_fallback_models == ("gemini-3.1-flash-lite", "other")
         monkeypatch.delenv("GEMINI_FALLBACK_MODELS")
         get_settings.cache_clear()
-        assert get_settings().gemini_fallback_models == (
-            "gemini-3.1-flash-lite",
-            "gemini-2.5-flash-lite",
-        )
+        # gemini-2.5-flash-lite was retired (404) on 2026-11-19.
+        assert get_settings().gemini_fallback_models == ("gemini-3.1-flash-lite",)
         # One person's day (20 messages, at most 6 model calls each) fits many times over.
         assert settings.assistant_per_day * 6 < settings.assistant_daily_llm_calls <= 1000
     finally:
