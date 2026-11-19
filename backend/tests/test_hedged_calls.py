@@ -172,3 +172,34 @@ def test_running_out_of_budget_rests_the_silent_model(release):
     with pytest.raises(TimeoutError):
         call_gemini_hedged(silent, ("only-model",), hedge_after=HEDGE, budget=0.3)
     assert calls._resting_until["only-model"] - time.monotonic() > calls.REST_SECONDS
+
+
+def test_a_retired_model_does_not_end_the_request(release):
+    """Production 2026-11-19: the third model answered 404 (retired) at once while the first two
+    were still thinking, and the whole message failed. The others are now awaited."""
+
+    def answer(model: str) -> str:
+        if model == "last-model":
+            raise _api_error(404)
+        if model == "main-model":
+            release.wait(5)
+        time.sleep(HEDGE * 2.5)  # backup answers after last-model has failed
+        return f"from {model}"
+
+    assert call_gemini_hedged(answer, MODELS, hedge_after=HEDGE) == (
+        "from backup-model",
+        "backup-model",
+    )
+    # Retired: left out of the next requests for a day.
+    assert calls._resting_until["last-model"] > time.monotonic() + 3600
+
+
+def test_a_retired_model_is_skipped_in_plain_calls():
+    from app.ai.calls import call_gemini
+
+    def answer(model: str) -> str:
+        if model == "main-model":
+            raise _api_error(404)
+        return f"from {model}"
+
+    assert call_gemini(answer, MODELS) == ("from backup-model", "backup-model")
