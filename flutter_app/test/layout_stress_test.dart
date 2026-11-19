@@ -20,6 +20,7 @@ void main() {
     '/faqs',
     '/faqs/nisa-1070',
     '/faqs/nisa-900',
+    '/actions/arc',
     '/welcome',
     '/profile/settings',
     '/profile?tab=saved',

@@ -21,6 +21,7 @@ part 'bridge_view_model_faqs.dart';
 part 'bridge_view_model_library.dart';
 part 'bridge_view_model_moderation.dart';
 part 'bridge_view_model_posts.dart';
+part 'bridge_view_model_procedures.dart';
 part 'bridge_view_model_share.dart';
 
 /// Data loaded from the API: the last value, whether a load is running, and the last error.
@@ -53,6 +54,7 @@ class Resource<T> {
 class BridgeViewModel extends _BridgeCore
     with
         _BridgeFaqs,
+        _BridgeProcedures,
         _BridgePosts,
         _BridgeLibrary,
         _BridgeComments,
@@ -78,6 +80,13 @@ class BridgeViewModel extends _BridgeCore
     auth.addListener(_onAuthChanged);
   }
 
+  /// What an "I'm stuck" reason is filed under on the server.
+  static const stuckCategories = {
+    'dontUnderstandStep': 'process',
+    'documentsDifferent': 'documents',
+    'websiteDoesNotWork': 'website',
+  };
+
   static const maxTagLength = 12;
   static const maxTags = 8;
 
@@ -101,6 +110,7 @@ class BridgeViewModel extends _BridgeCore
     _profileRetry?.cancel();
     // A reply still on its way belongs to the person who asked.
     _forgetChat();
+    executions = const Resource();
     mine = const Resource();
     blocks = const Resource();
     saved = const Resource();

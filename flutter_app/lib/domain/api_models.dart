@@ -98,6 +98,186 @@ String clipText(String text, int count) {
   return chars.length > count ? '${chars.take(count)}…' : text;
 }
 
+// ---------- procedures ----------
+
+class ActionSummary {
+  const ActionSummary({
+    required this.id,
+    required this.versionNumber,
+    required this.title,
+    required this.description,
+    required this.applicableTo,
+    required this.location,
+    required this.verificationStatus,
+    required this.lastVerifiedAt,
+    required this.recentSuccessCount,
+    this.slug = '',
+    this.publishedAt,
+  });
+  factory ActionSummary.fromJson(Json json) => ActionSummary(
+    id: json['id'] as String,
+    slug: json['slug'] as String? ?? '',
+    versionNumber: json['version_number'] as int,
+    title: Text2.fromJson(json['title'] as Json),
+    description: Text2.fromJson(json['description'] as Json),
+    applicableTo: Text2.fromJson(json['applicable_to'] as Json),
+    location: json['location'] == null
+        ? null
+        : Text2.fromJson(json['location'] as Json),
+    verificationStatus: json['verification_status'] as String,
+    lastVerifiedAt: _date(json['last_verified_at']),
+    publishedAt: _date(json['published_at']),
+    recentSuccessCount: json['recent_success_count'] as int,
+  );
+  final String id;
+  final String slug;
+  final int versionNumber;
+  final Text2 title;
+  final Text2 description;
+  final Text2 applicableTo;
+  final Text2? location;
+  final String verificationStatus;
+  final DateTime? lastVerifiedAt;
+
+  /// When this version went public; the feed sorts official guides by it.
+  final DateTime? publishedAt;
+  final int recentSuccessCount;
+}
+
+class ActionStepInfo {
+  const ActionStepInfo({
+    required this.id,
+    required this.position,
+    required this.title,
+    required this.notes,
+    required this.recentStuckCount,
+    this.notesEn,
+  });
+  factory ActionStepInfo.fromJson(Json json) => ActionStepInfo(
+    id: json['id'] as String,
+    position: json['position'] as int,
+    title: Text2.fromJson(json['title'] as Json),
+    notes: json['notes'] as String?,
+    notesEn: json['notes_en'] as String?,
+    recentStuckCount: json['recent_stuck_count'] as int,
+  );
+  final String id;
+  final int position;
+  final Text2 title;
+  final String? notes;
+  final String? notesEn;
+  final int recentStuckCount;
+
+  /// The notes in the reader's language; English falls back to Chinese.
+  String? notesFor(bool english) =>
+      english && (notesEn ?? '').trim().isNotEmpty ? notesEn : notes;
+}
+
+class SourceInfo {
+  const SourceInfo({
+    required this.title,
+    required this.url,
+    required this.publisher,
+    required this.kind,
+    required this.evidenceNote,
+    this.publisherEn = '',
+  });
+  factory SourceInfo.fromJson(Json json) => SourceInfo(
+    title: json['title'] as String,
+    url: json['url'] as String,
+    publisher: json['publisher'] as String,
+    kind: json['kind'] as String,
+    evidenceNote: json['evidence_note'] as String,
+    publisherEn: json['publisher_en'] as String? ?? '',
+  );
+  final String title;
+  final String url;
+  final String publisher;
+  final String publisherEn;
+  final String kind;
+  final String evidenceNote;
+
+  /// The publisher's name in the reader's language.
+  String publisherFor(bool english) =>
+      english && publisherEn.isNotEmpty ? publisherEn : publisher;
+}
+
+class ActionDetail {
+  const ActionDetail({
+    required this.summary,
+    required this.steps,
+    required this.sources,
+    this.documents = const [],
+  });
+  factory ActionDetail.fromJson(Json json) => ActionDetail(
+    summary: ActionSummary.fromJson(json),
+    steps: _list(json['steps'], ActionStepInfo.fromJson),
+    sources: _list(json['sources'], SourceInfo.fromJson),
+    documents: _list(json['documents'], Text2.fromJson),
+  );
+  final ActionSummary summary;
+  final List<ActionStepInfo> steps;
+  final List<SourceInfo> sources;
+
+  /// What to bring, shown as a checklist the student ticks before going.
+  final List<Text2> documents;
+}
+
+class ExecutionStepState {
+  const ExecutionStepState({
+    required this.stepId,
+    required this.position,
+    required this.title,
+    required this.state,
+  });
+  factory ExecutionStepState.fromJson(Json json) => ExecutionStepState(
+    stepId: json['step_id'] as String,
+    position: json['position'] as int,
+    title: Text2.fromJson(json['title'] as Json),
+    state: json['state'] as String,
+  );
+  final String stepId;
+  final int position;
+  final Text2 title;
+  final String state;
+}
+
+class Execution {
+  const Execution({
+    required this.id,
+    required this.actionId,
+    required this.versionNumber,
+    required this.title,
+    required this.startedAt,
+    required this.finishedAt,
+    required this.outcome,
+    required this.steps,
+    required this.newerVersionAvailable,
+  });
+  factory Execution.fromJson(Json json) => Execution(
+    id: json['id'] as String,
+    actionId: json['action_id'] as String,
+    versionNumber: json['version_number'] as int,
+    title: Text2.fromJson(json['title'] as Json),
+    startedAt: _date(json['started_at'])!,
+    finishedAt: _date(json['finished_at']),
+    outcome: json['outcome'] as String?,
+    steps: _list(json['steps'], ExecutionStepState.fromJson),
+    newerVersionAvailable: json['newer_version_available'] as bool,
+  );
+  final String id;
+  final String actionId;
+  final int versionNumber;
+  final Text2 title;
+  final DateTime startedAt;
+  final DateTime? finishedAt;
+  final String? outcome;
+  final List<ExecutionStepState> steps;
+  final bool newerVersionAvailable;
+  int get doneCount => steps.where((s) => s.state == 'done').length;
+  bool get finished => finishedAt != null;
+}
+
 // ---------- official Q&A ----------
 
 /// One of the official site's question categories, with how many questions it holds.

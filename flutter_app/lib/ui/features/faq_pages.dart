@@ -6,6 +6,7 @@ import '../../domain/api_models.dart';
 import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
+import 'action_pages.dart';
 import 'post_cards.dart';
 
 /// Opens an official question and remembers it was read.
@@ -43,8 +44,9 @@ const _intro = (
       'Agency. Check the latest notices before you apply.',
 );
 
-/// Official Q&A: every question the MOE NISA site lists, filtered by its categories and
-/// by who it applies to, and searched on the device.
+/// The 問答 tab: the step-by-step procedures first, then the official Q&A, every question
+/// the MOE NISA site lists, filtered by its categories and by who it applies to, and
+/// searched on the device.
 class FaqsPage extends StatefulWidget {
   const FaqsPage({super.key, this.category});
 
@@ -87,6 +89,8 @@ class _FaqsPageState extends State<FaqsPage> {
     return FlowBody(
       gap: 18,
       children: [
+        const ProcedureSection(),
+        const SizedBox(height: 8),
         Column(
           key: const Key('faqs-intro'),
           crossAxisAlignment: CrossAxisAlignment.start,

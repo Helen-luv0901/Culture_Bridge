@@ -237,10 +237,47 @@ void main() {
     addTearDown(app.vm.dispose);
     await app.vm.loadProfile();
     await app.vm.loadSaved();
+    await app.vm.startAction('arc');
+    await app.vm.loadExecutions();
     expect(app.vm.saved.data, isNotNull);
+    expect(app.vm.executions.data, isNotEmpty);
     await app.vm.signOut();
     expect(app.vm.saved.data, isNull);
+    expect(app.vm.executions.data, isNull);
     expect(app.vm.profile, isNull);
+  });
+
+  test('Starting twice resumes the same execution', () async {
+    final app = TestApp();
+    addTearDown(app.vm.dispose);
+    final first = await app.vm.startAction('work-permit');
+    final again = await app.vm.startAction('work-permit');
+    expect(again!.id, first!.id);
+    await app.vm.setStepDone(first, first.steps.first.stepId, true);
+    expect(app.vm.openExecution('work-permit')!.doneCount, 1);
+    expect(app.vm.openExecution('arc'), isNull);
+  });
+
+  test('Documents checklist counts what is ready', () {
+    final app = TestApp();
+    addTearDown(app.vm.dispose);
+    app.vm.toggleDocument('arc', 0);
+    app.vm.toggleDocument('arc', 1);
+    app.vm.toggleDocument('arc', 0);
+    expect(app.vm.documentsReady('arc'), 1);
+    expect(app.vm.documentReady('arc', 1), isTrue);
+  });
+
+  test('A procedure loads its related official questions', () async {
+    final app = TestApp();
+    addTearDown(app.vm.dispose);
+    await app.vm.loadActionFaqs('arc');
+    expect(app.vm.actionFaqs('arc').data!.map((f) => f.id), [
+      'nisa-1070',
+      'nisa-800',
+    ]);
+    await app.vm.loadActionFaqs('bank');
+    expect(app.vm.actionFaqs('bank').data, isEmpty);
   });
 
   test('Key mapping round-trips', () {

@@ -356,13 +356,163 @@ void main() {
       '/official',
       '/guide/welcome',
       '/guides',
-      '/actions/arc',
+      '/actions',
       '/explore?cat=official',
     ]) {
       await mount(tester, route, const Size(375, 812));
       expect(find.byKey(const Key('faqs-intro')), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     }
+  });
+
+  testWidgets('The Q&A tab lists the procedures, then the official Q&A', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/faqs', const Size(375, 2400));
+    final procedures = find.byKey(const Key('procedures-section'));
+    final faqs = find.byKey(const Key('faqs-intro'));
+    expect(procedures, findsOneWidget);
+    expect(faqs, findsOneWidget);
+    expect(find.text('辦證件步驟'), findsOneWidget);
+    expect(
+      tester.getTopLeft(procedures).dy,
+      lessThan(tester.getTopLeft(faqs).dy),
+    );
+    // Five procedures first, the rest behind "see all"; the Q&A list stays as it was.
+    expect(find.byKey(const Key('procedure-row-work-permit')), findsOneWidget);
+    expect(find.byKey(const Key('procedure-row-transport')), findsNothing);
+    await tap(tester, find.byKey(const Key('procedures-more')));
+    expect(find.byKey(const Key('procedure-row-transport')), findsOneWidget);
+    expect(find.byKey(const Key('faq-search')), findsOneWidget);
+    expect(find.byKey(const Key('faq-cat')), findsOneWidget);
+    expect(find.byKey(const Key('faq-who')), findsOneWidget);
+    expect(find.byKey(const Key('faq-row-nisa-1070')), findsOneWidget);
+    // Titles follow the language.
+    app.vm.setEnglish(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Step-by-step procedures'), findsOneWidget);
+  });
+
+  testWidgets('A procedure opens with its steps and keeps the Q&A tab', (
+    tester,
+  ) async {
+    await mount(tester, '/faqs', const Size(375, 2400));
+    await tap(tester, find.byKey(const Key('procedure-row-arc')));
+    expect(find.byKey(const Key('guide-key-facts')), findsOneWidget);
+    expect(find.text('步驟'.toUpperCase()), findsOneWidget);
+    expect(find.text('先線上預約。'), findsOneWidget);
+    expect(find.byKey(const Key('start-action')), findsOneWidget);
+    expect(find.textContaining('資料來源（'), findsOneWidget);
+    expect(find.text('辦證件步驟'), findsWidgets); // the header names it
+    bool selected(int i) =>
+        tester
+            .widget<Semantics>(
+              find
+                  .ancestor(
+                    of: find.byKey(Key('nav-$i')),
+                    matching: find.byType(Semantics),
+                  )
+                  .first,
+            )
+            .properties
+            .selected ??
+        false;
+    expect(selected(1), isTrue);
+    expect(selected(0), isFalse);
+  });
+
+  testWidgets('Guide steps show English notes in English', (tester) async {
+    final app = await mount(tester, '/actions/arc', const Size(1280, 1600));
+    expect(find.text('先線上預約。'), findsOneWidget);
+    app.vm.setEnglish(true);
+    await tester.pumpAndSettle();
+    expect(find.text('Book online first.'), findsOneWidget);
+    expect(find.text('先線上預約。'), findsNothing);
+    // Sources are folded under one line; open, they show English names.
+    expect(find.textContaining('Sources ('), findsOneWidget);
+    await tap(tester, find.byKey(const Key('guide-sources')));
+    expect(find.textContaining('Example Agency'), findsWidgets);
+  });
+
+  testWidgets('A procedure lists its related official questions', (
+    tester,
+  ) async {
+    await mount(tester, '/actions/arc', const Size(375, 2400));
+    final related = find.byKey(const Key('procedure-related-faqs'));
+    expect(related, findsOneWidget);
+    expect(find.text('相關官方問答'.toUpperCase()), findsOneWidget);
+    expect(
+      find.descendant(
+        of: related,
+        matching: find.byKey(const Key('faq-row-nisa-1070')),
+      ),
+      findsOneWidget,
+    );
+    // A school-administration question is never shown.
+    expect(find.byKey(const Key('faq-row-nisa-800')), findsNothing);
+    await tap(tester, find.byKey(const Key('faq-row-nisa-1070')));
+    expect(find.byKey(const Key('faq-answer')), findsOneWidget);
+  });
+
+  testWidgets('A procedure without related questions shows no such section', (
+    tester,
+  ) async {
+    await mount(tester, '/actions/bank', const Size(375, 2400));
+    expect(find.byKey(const Key('guide-key-facts')), findsOneWidget);
+    expect(find.byKey(const Key('procedure-related-faqs')), findsNothing);
+  });
+
+  testWidgets('Procedure: documents checklist', (tester) async {
+    await mount(tester, '/actions/arc', const Size(375, 2400));
+    expect(find.text('已備妥 0 / 2'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('document-1')));
+    expect(find.text('已備妥 1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('Starting a procedure shows progress, also in the list', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/actions/arc', const Size(375, 2400));
+    await tap(tester, find.byKey(const Key('start-action')));
+    expect(find.byKey(const Key('step-0')), findsOneWidget);
+    await tap(tester, find.byKey(const Key('step-0')));
+    expect(find.text('進度: 1 / 5'), findsOneWidget);
+    expect(app.repository.executions.single.steps.first.state, 'done');
+    await tap(tester, find.byKey(const Key('nav-1')));
+    expect(find.text('辦理中 · 1 / 5'), findsOneWidget);
+  });
+
+  testWidgets('Step interaction and stuck report reach the API', (
+    tester,
+  ) async {
+    final app = await mount(
+      tester,
+      '/actions/arc/progress',
+      const Size(375, 1400),
+      before: (app) => app.vm.startAction('arc'),
+    );
+    await tap(tester, find.byKey(const Key('step-0')));
+    expect(find.text('進度: 1 / 5'), findsOneWidget);
+
+    await tap(tester, find.byKey(const Key('stuck-1')));
+    await tap(tester, find.text('需要的文件不同'));
+    await tap(tester, find.text('送出'));
+    expect(app.repository.feedback.single['category'], 'documents');
+    expect(app.repository.executions.single.steps[1].state, 'stuck');
+  });
+
+  testWidgets('Completion sends the outcome', (tester) async {
+    final app = await mount(
+      tester,
+      '/actions/arc/complete',
+      const Size(1280, 1400),
+      before: (app) => app.vm.startAction('arc'),
+    );
+    await tap(tester, find.text('流程和原本不同'));
+    await tap(tester, find.text('費用'));
+    await tap(tester, find.byKey(const Key('send-outcome')));
+    expect(app.repository.feedback.single['category'], 'fee');
+    expect(app.repository.executions, isEmpty);
   });
 
   testWidgets('A whole card opens its post, not just the title', (

@@ -22,6 +22,24 @@ abstract class CultureRepository {
   /// Accept the terms of use [version]; answers with the updated profile.
   Future<Profile> acceptTerms(int version);
 
+  /// Official procedures (步驟卡) and the student's progress through them.
+  Future<List<ActionSummary>> actions();
+  Future<ActionDetail> action(String id);
+  Future<Execution> startExecution(String actionId, String identityType);
+  Future<List<Execution>> myExecutions({bool includeFinished = false});
+  Future<Execution> setStep(String executionId, String stepId, String state);
+  Future<Execution> finishExecution(String executionId, String outcome);
+  Future<void> sendFeedback(
+    String executionId, {
+    required String kind,
+    String? stepId,
+    String? category,
+    String? text,
+  });
+
+  /// Official questions related to the procedure [actionId] (up to 3).
+  Future<List<FaqSummary>> actionRelatedFaqs(String actionId);
+
   /// Every official question (MOE NISA) with its categories; the app filters it locally.
   Future<FaqCatalog> faqs();
   Future<FaqDetail> faq(String id);
@@ -144,6 +162,66 @@ class ApiCultureRepository implements CultureRepository {
   @override
   Future<Profile> acceptTerms(int version) async =>
       Profile.fromJson(await api.post('/me/terms', {'version': version}));
+
+  @override
+  Future<List<ActionSummary>> actions() async => [
+    for (final item in await api.get('/actions') as List)
+      ActionSummary.fromJson(item as Json),
+  ];
+  @override
+  Future<ActionDetail> action(String id) async => ActionDetail.fromJson(
+    await api.get('/actions/${Uri.encodeComponent(id)}'),
+  );
+  @override
+  Future<Execution> startExecution(
+    String actionId,
+    String identityType,
+  ) async => Execution.fromJson(
+    await api.post('/actions/${Uri.encodeComponent(actionId)}/executions', {
+      'identity_type': identityType,
+    }),
+  );
+  @override
+  Future<List<Execution>> myExecutions({bool includeFinished = false}) async =>
+      [
+        for (final item in await api.get('/me/executions', {
+          if (includeFinished) 'include_finished': 'true',
+        }) as List)
+          Execution.fromJson(item as Json),
+      ];
+  @override
+  Future<Execution> setStep(
+    String executionId,
+    String stepId,
+    String state,
+  ) async => Execution.fromJson(
+    await api.put('/executions/$executionId/steps/$stepId', {'state': state}),
+  );
+  @override
+  Future<Execution> finishExecution(String executionId, String outcome) async =>
+      Execution.fromJson(
+        await api.post('/executions/$executionId/finish', {'outcome': outcome}),
+      );
+  @override
+  Future<void> sendFeedback(
+    String executionId, {
+    required String kind,
+    String? stepId,
+    String? category,
+    String? text,
+  }) => api.post('/executions/$executionId/feedback', {
+    'kind': kind,
+    'step_id': ?stepId,
+    'category': ?category,
+    if (text != null && text.trim().isNotEmpty) 'original_voice': text.trim(),
+  });
+  @override
+  Future<List<FaqSummary>> actionRelatedFaqs(String actionId) async => [
+    for (final item in await api.get(
+      '/actions/${Uri.encodeComponent(actionId)}/related-faqs',
+    ) as List)
+      FaqSummary.fromJson(item as Json),
+  ];
 
   @override
   Future<FaqCatalog> faqs() async =>

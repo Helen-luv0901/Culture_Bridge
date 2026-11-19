@@ -41,3 +41,10 @@ def related_faqs(
     """Official questions about what this post describes (school administration and outdated
     answers left out)."""
     return svc.related_faqs(db, viewer, experience_id, limit)
+
+
+@router.get("/actions/{action_id}/related-faqs")
+def procedure_faqs(action_id: str, db: DbSession) -> list[svc.FaqSummary]:
+    """Official questions related to a procedure card, picked by hand
+    (app/content/procedure_faqs.json); hidden or outdated ones are left out."""
+    return svc.procedure_faqs(db, action_id)

@@ -8,9 +8,11 @@ Some questions exist only in Chinese and two only in English: each text falls ba
 other language, and `has_english` tells the app whether the English is the official one.
 """
 
+import json
 import threading
 import time
 from datetime import date
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel
@@ -410,3 +412,26 @@ def related_faqs(
     by_id = {f.id: f for f, _ in active_with_categories(db)}
     faqs = [by_id[i] for i in ids if i in by_id and not demoted(by_id[i])]
     return [summary(f) for f in faqs[:limit]]
+
+
+# ---------- official questions under each procedure card ----------
+#
+# Picked by hand (app/content/procedure_faqs.json): keyword matching paired the Feng Chia-only
+# cards (MyFCU, dormitory, leave) with unrelated questions. Hidden, retired or outdated questions
+# in the file are skipped, so the file never has to change when the Q&A does.
+
+PROCEDURE_FAQS_PATH = Path(__file__).resolve().parent.parent / "content" / "procedure_faqs.json"
+
+
+def _procedure_faq_ids() -> dict[str, list[str]]:
+    data = json.loads(PROCEDURE_FAQS_PATH.read_text(encoding="utf-8"))
+    return {k: list(v) for k, v in data.get("procedures", {}).items()}
+
+
+def procedure_faqs(db: Session, action_id: str) -> list[FaqSummary]:
+    from app.services.actions import latest_version
+
+    latest_version(db, action_id)  # 404 for an unknown or unpublished procedure
+    by_id = {f.id: f for f, _ in active_with_categories(db)}
+    ids = _procedure_faq_ids().get(action_id, [])
+    return [summary(by_id[i]) for i in ids if i in by_id and not demoted(by_id[i])]

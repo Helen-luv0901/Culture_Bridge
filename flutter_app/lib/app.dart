@@ -6,6 +6,7 @@ import 'domain/keys.dart';
 import 'ui/core/app_shell.dart';
 import 'ui/core/design_system.dart';
 import 'ui/features/account_pages.dart';
+import 'ui/features/action_pages.dart';
 import 'ui/features/admin_pages.dart';
 import 'ui/features/assistant_page.dart';
 import 'ui/features/browse_pages.dart';
@@ -52,9 +53,9 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
     // The old "review the AI summary" step is gone: posts publish as written.
     redirect: (context, state) => switch (state.uri.path) {
       '/review' => '/share',
-      // The official account and the procedure guides became the official Q&A.
-      '/official' || '/guide/welcome' || '/guides' => '/faqs',
-      final path when path.startsWith('/actions/') => '/faqs',
+      // The official account and the guides list became the 問答 tab (procedures, then
+      // the official Q&A); one procedure still has its own page under /actions/:id.
+      '/official' || '/guide/welcome' || '/guides' || '/actions' => '/faqs',
       '/explore' when state.uri.queryParameters['cat'] == 'official' => '/faqs',
       _ => null,
     },
@@ -119,6 +120,21 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
           _page(
             '/experiences/:id',
             (state) => ExperienceDetailPage(id: state.pathParameters['id']!),
+          ),
+          _page(
+            '/actions/:id',
+            (state) => ActionDetailPage(id: state.pathParameters['id']!),
+            routes: [
+              _page(
+                'progress',
+                (state) => ActionProgressPage(id: state.pathParameters['id']!),
+              ),
+              _page(
+                'complete',
+                (state) =>
+                    ActionCompletionPage(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
         ],
       ),
