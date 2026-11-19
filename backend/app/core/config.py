@@ -27,6 +27,12 @@ class Settings:
     semantic_max_distance: float
     gemini_api_key: str | None
     gemini_model: str
+    # Groq (OpenAI-compatible, free tier, ~1 s answers): asked first by the assistant when a key
+    # is set, with Gemini as the backup. Empty key = Gemini only.
+    groq_api_key: str | None
+    groq_model: str
+    groq_base_url: str
+    groq_reasoning_effort: str
     # Tried in order when GEMINI_MODEL answers 429 (free quota used up) or runs out of time.
     gemini_fallback_models: tuple[str, ...]
     gemini_timeout_seconds: float
@@ -97,6 +103,10 @@ def get_settings() -> Settings:
         semantic_max_distance=float(os.getenv("SEMANTIC_MAX_DISTANCE", "0.6")),
         gemini_api_key=os.getenv("GEMINI_API_KEY") or None,
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+        groq_api_key=os.getenv("GROQ_API_KEY") or None,
+        groq_model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+        groq_base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+        groq_reasoning_effort=os.getenv("GROQ_REASONING_EFFORT", "low").strip().lower(),
         gemini_fallback_models=tuple(
             m.strip()
             for m in os.getenv(
