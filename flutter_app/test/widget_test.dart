@@ -473,6 +473,10 @@ void main() {
     tester,
   ) async {
     final app = await mount(tester, '/actions/arc', const Size(375, 2400));
+    // Before 我要辦理 nothing about progress shows.
+    expect(find.text('我要辦理'), findsOneWidget);
+    expect(find.byKey(const Key('action-progress-note')), findsNothing);
+    expect(find.text('辦理中 · 0 / 5'), findsNothing);
     await tap(tester, find.byKey(const Key('start-action')));
     expect(find.byKey(const Key('step-0')), findsOneWidget);
     await tap(tester, find.byKey(const Key('step-0')));
@@ -480,6 +484,13 @@ void main() {
     expect(app.repository.executions.single.steps.first.state, 'done');
     await tap(tester, find.byKey(const Key('nav-1')));
     expect(find.text('辦理中 · 1 / 5'), findsOneWidget);
+
+    // Back on the procedure: where they got to, and Continue.
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/actions/arc');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('action-progress-note')), findsOneWidget);
+    expect(find.text('你上次做到第 1 / 5 步，按「繼續辦理」接著做。'), findsOneWidget);
+    expect(find.text('繼續辦理'), findsOneWidget);
   });
 
   testWidgets('Step interaction and stuck report reach the API', (

@@ -60,9 +60,9 @@ class _ProcedureSectionState extends State<ProcedureSection> {
             const SizedBox(height: 6),
             Text(
               vm.pair(
-                '居留證、健保、工作許可、開戶等，從官方公告整理成一步一步的清單，還會記下你做到哪一步。',
+                '居留證、健保、工作許可、開戶等，從官方公告整理成一步一步的清單。',
                 'Residence permit, health insurance, work permit, a bank account and more, '
-                    'laid out step by step from official notices. Your progress is kept.',
+                    'laid out step by step from official notices.',
               ),
               style: const TextStyle(fontSize: 15, height: 1.7),
             ),
@@ -272,7 +272,8 @@ class _ActionDetailState extends State<_ActionDetail> {
       action.description.of(vm.english),
       detail.sources,
     );
-    final doing = vm.openExecution(action.id) != null;
+    final execution = vm.openExecution(action.id);
+    final doing = execution != null;
     return FlowBody(
       maxWidth: 760,
       children: [
@@ -300,18 +301,23 @@ class _ActionDetailState extends State<_ActionDetail> {
               child: Text(
                 doing
                     ? vm.t('continueAction')
-                    : vm.pair('開始逐步辦理', 'Start, step by step'),
+                    : vm.pair('我要辦理', 'I want to do this'),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              vm.pair(
-                '會記下你做到哪一步，下次回來接著做。',
-                'Your progress is kept, so you can pick up where you left off.',
+            // Progress is only mentioned once the student chose to do this procedure
+            // (pressed 我要辦理); before that the page just shows the steps.
+            if (execution case final e?) ...[
+              const SizedBox(height: 6),
+              Text(
+                vm.pair(
+                  '你上次做到第 ${e.doneCount} / ${e.steps.length} 步，按「繼續辦理」接著做。',
+                  'You got to step ${e.doneCount} of ${e.steps.length}. Tap Continue to pick up.',
+                ),
+                key: const Key('action-progress-note'),
+                style: mutedStyle,
+                textAlign: TextAlign.center,
               ),
-              style: mutedStyle,
-              textAlign: TextAlign.center,
-            ),
+            ],
           ],
         ),
         if (detail.steps.isNotEmpty)
