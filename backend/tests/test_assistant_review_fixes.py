@@ -62,3 +62,16 @@ def test_at_most_two_listed_question_cards(ctx):
         Related(text="see these", listed=True, faqs=("nisa-934", "nisa-1076", "nisa-1077")), ctx
     )
     assert [k for k in ctx.cards if k.startswith("faq:")] == ["faq:nisa-934", "faq:nisa-1076"]
+
+
+def test_english_replies_show_no_card_for_a_question_with_only_a_chinese_answer(data):
+    """2026-11-19: English mode shows no Chinese; Chinese-only questions appear in Chinese only."""
+    zh_only = next(f for f in data.faqs.values() if not f.has_english)
+    bilingual = next(f for f in data.faqs.values() if f.has_english)
+    en = ToolContext(data=data, locale="en", user=CurrentUser(id="u1"))
+    run(en, "get_official_faq", faq_id=zh_only.id)
+    run(en, "get_official_faq", faq_id=bilingual.id)
+    assert list(en.cards) == [f"faq:{bilingual.id}"]
+    zh = ToolContext(data=data, locale="zh-Hant", user=CurrentUser(id="u1"))
+    run(zh, "get_official_faq", faq_id=zh_only.id)
+    assert list(zh.cards) == [f"faq:{zh_only.id}"]

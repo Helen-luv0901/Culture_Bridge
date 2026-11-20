@@ -6,6 +6,7 @@ import '../../domain/api_models.dart';
 import '../core/design_system.dart';
 import '../core/loading.dart';
 import '../view_models/bridge_view_model.dart';
+import 'action_pages.dart';
 import 'post_cards.dart';
 
 /// Opens an official question and remembers it was read.
@@ -43,8 +44,9 @@ const _intro = (
       'Agency. Check the latest notices before you apply.',
 );
 
-/// Official Q&A: every question the MOE NISA site lists, filtered by its categories and
-/// by who it applies to, and searched on the device.
+/// The 問答 tab: the step-by-step procedures first, then the official Q&A, every question
+/// the MOE NISA site lists, filtered by its categories and by who it applies to, and
+/// searched on the device.
 class FaqsPage extends StatefulWidget {
   const FaqsPage({super.key, this.category});
 
@@ -87,6 +89,8 @@ class _FaqsPageState extends State<FaqsPage> {
     return FlowBody(
       gap: 18,
       children: [
+        const ProcedureSection(),
+        const SizedBox(height: 8),
         Column(
           key: const Key('faqs-intro'),
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,9 +142,10 @@ class _FaqsPageState extends State<FaqsPage> {
     // School-administration questions are never listed: administrative guidance may appear only
     // once checked and published by Feng Chia University itself. The server leaves them out;
     // this also covers an older server that still sends them.
+    // In English, questions without an official English version are left out too.
     final visible = [
       for (final faq in all.items)
-        if (!faq.forSchool) faq,
+        if (vm.faqShown(faq)) faq,
     ];
     // Counts follow the identity filter, so a category chip never leads to 「共 0 則」.
     final forWho = [
@@ -336,7 +341,7 @@ class FaqList extends StatelessWidget {
     // Never shown anywhere (see FaqsPage); the server leaves them out already.
     final shown = [
       for (final faq in items)
-        if (!faq.forSchool) faq,
+        if (vm.faqShown(faq)) faq,
     ];
     if (shown.isEmpty) return const SizedBox.shrink();
     // One card per question, spaced like the post list, so each stands apart.
@@ -435,7 +440,9 @@ class FaqDetailPage extends StatelessWidget {
     load: (vm) => vm.loadFaq(id),
     builder: (context, detail) => detail.summary.forSchool
         ? const _NotShown()
-        : _FaqDetail(detail: detail),
+        : BridgeScope.of(context).faqShown(detail.summary)
+        ? _FaqDetail(detail: detail)
+        : const _ChineseOnly(),
   );
 }
 
@@ -455,6 +462,28 @@ class _NotShown extends StatelessWidget {
             '學校行政相關內容需經逢甲大學官方發布並確認後才會顯示。',
             'School administration content appears only once Feng Chia University has published and checked it.',
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A question the NISA site answers only in Chinese, opened in English (an old link, a saved
+/// question): English shows no Chinese text, so it offers to switch to Chinese.
+class _ChineseOnly extends StatelessWidget {
+  const _ChineseOnly();
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    return FlowBody(
+      maxWidth: 760,
+      children: [
+        EmptyNote(
+          key: const Key('faq-chinese-only'),
+          title: 'Available in Chinese only',
+          body: 'The official answer to this question has no English version yet. Switch to Chinese to read it.',
+          action: '切換成中文',
+          onAction: () => vm.setEnglish(false),
         ),
       ],
     );

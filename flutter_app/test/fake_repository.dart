@@ -7,8 +7,16 @@ import 'package:culture_bridge/data/auth_service.dart';
 import 'package:culture_bridge/data/culture_repository.dart';
 import 'package:culture_bridge/domain/api_models.dart';
 
-/// An in-memory backend: student posts from assets/data/content.json and a few official
-/// questions, behaving like the real API for the flows the screens use.
+/// The production slugs of the sample procedures.
+const _slugs = {
+  'arc': 'arc-first',
+  'insurance': 'nhi',
+  'bank': 'bank-account',
+  'certificate': 'enrollment-certificate',
+};
+
+/// An in-memory backend: procedures and student posts from assets/data/content.json and a
+/// few official questions, behaving like the real API for the flows the screens use.
 class FakeCultureRepository implements CultureRepository {
   FakeCultureRepository(this.auth) {
     final raw =
@@ -47,6 +55,176 @@ class FakeCultureRepository implements CultureRepository {
         tags: const ['#居留證'],
       );
     }
+    for (final card in raw['actionCards'] as List) {
+      final c = card as Json;
+      final en = (c['translations'] as Json)['en'] as Json;
+      final steps = List<String>.from(c['steps'] as List);
+      final enSteps = List<String>.from(en['steps'] as List);
+      _actions[c['id'] as String] = ActionDetail(
+        summary: ActionSummary(
+          id: c['id'] as String,
+          slug: _slugs[c['id']] ?? c['id'] as String,
+          versionNumber: 1,
+          title: Text2(c['title'] as String, en['title'] as String),
+          description: Text2(
+            c['description'] as String,
+            en['description'] as String,
+          ),
+          applicableTo: Text2(
+            c['applicableTo'] as String,
+            en['applicableTo'] as String,
+          ),
+          location: Text2(c['location'] as String, en['location'] as String),
+          verificationStatus: switch (c['status']) {
+            'Needs Review' => 'needs_review',
+            'Community Supported' => 'community_supported',
+            _ => 'verified',
+          },
+          lastVerifiedAt: DateTime.parse(c['verifiedAt'] as String),
+          publishedAt: DateTime.parse(c['verifiedAt'] as String),
+          recentSuccessCount: c['recentCompletions'] as int,
+        ),
+        documents: const [
+          Text2('護照正本', 'Passport'),
+          Text2('在學證明', 'Certificate of enrollment'),
+        ],
+        steps: [
+          for (final (i, title) in steps.indexed)
+            ActionStepInfo(
+              id: '${c['id']}-step-$i',
+              position: i + 1,
+              title: Text2(title, enSteps[i]),
+              notes: i == 0 ? '先線上預約。' : null,
+              notesEn: i == 0 ? 'Book online first.' : null,
+              recentStuckCount: 0,
+            ),
+        ],
+        sources: [
+          for (final title in c['sources'] as List)
+            SourceInfo(
+              title: title as String,
+              url: 'https://example.gov.tw/${c['id']}',
+              publisher: title,
+              publisherEn: 'Example Agency',
+              kind: 'official',
+              evidenceNote: 'demo',
+            ),
+        ],
+      );
+    }
+  }
+
+  final Map<String, ActionDetail> _actions = {};
+  final List<Execution> executions = [];
+
+  @override
+  Future<List<ActionSummary>> actions() async => [
+    for (final a in _actions.values) a.summary,
+  ];
+
+  @override
+  Future<ActionDetail> action(String id) async =>
+      _actions[id] ?? (throw const ApiException(404, 'action_not_found'));
+
+  /// Official questions the server would suggest under each procedure.
+  final Map<String, List<String>> actionFaqs = {
+    'arc': ['nisa-1070', 'nisa-800'],
+  };
+
+  @override
+  Future<List<FaqSummary>> actionRelatedFaqs(String actionId) async => [
+    for (final id in actionFaqs[actionId] ?? const <String>[])
+      ?faqDetails[id]?.summary,
+  ];
+
+  Execution _execution(String id, String actionId, Map<String, String> states) {
+    final detail = _actions[actionId]!;
+    return Execution(
+      id: id,
+      actionId: actionId,
+      versionNumber: 1,
+      title: detail.summary.title,
+      startedAt: DateTime(2026, 10, 13),
+      finishedAt: null,
+      outcome: null,
+      steps: [
+        for (final s in detail.steps)
+          ExecutionStepState(
+            stepId: s.id,
+            position: s.position,
+            title: s.title,
+            state: states[s.id] ?? 'pending',
+          ),
+      ],
+      newerVersionAvailable: false,
+    );
+  }
+
+  @override
+  Future<Execution> startExecution(String actionId, String identityType) async {
+    _requireLogin();
+    final existing = executions
+        .where((e) => e.actionId == actionId)
+        .firstOrNull;
+    if (existing != null) return existing;
+    final execution = _execution('exec-${_ids++}', actionId, const {});
+    executions.add(execution);
+    return execution;
+  }
+
+  @override
+  Future<List<Execution>> myExecutions({bool includeFinished = false}) async {
+    _requireLogin();
+    return [...executions];
+  }
+
+  @override
+  Future<Execution> setStep(
+    String executionId,
+    String stepId,
+    String state,
+  ) async {
+    final index = executions.indexWhere((e) => e.id == executionId);
+    final old = executions[index];
+    final states = {
+      for (final s in old.steps) s.stepId: s.state,
+      stepId: state,
+    };
+    return executions[index] = _execution(old.id, old.actionId, states);
+  }
+
+  @override
+  Future<Execution> finishExecution(String executionId, String outcome) async {
+    final old = executions.firstWhere((e) => e.id == executionId);
+    executions.remove(old);
+    return Execution(
+      id: old.id,
+      actionId: old.actionId,
+      versionNumber: 1,
+      title: old.title,
+      startedAt: old.startedAt,
+      finishedAt: DateTime(2026, 10, 14),
+      outcome: outcome,
+      steps: old.steps,
+      newerVersionAvailable: false,
+    );
+  }
+
+  @override
+  Future<void> sendFeedback(
+    String executionId, {
+    required String kind,
+    String? stepId,
+    String? category,
+    String? text,
+  }) async {
+    feedback.add({
+      'kind': kind,
+      'step': stepId,
+      'category': category,
+      'text': text,
+    });
+    if (kind == 'stuck') await setStep(executionId, stepId!, 'stuck');
   }
 
   final AuthService auth;
@@ -139,6 +317,7 @@ class FakeCultureRepository implements CultureRepository {
   Future<void> deleteAccount() async {
     _requireLogin();
     mine.clear();
+    executions.clear();
   }
 
   /// Official questions, newest first (like the API).

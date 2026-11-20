@@ -54,7 +54,11 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    _lastTab = _tabOfPath ?? (widget.uri.path.startsWith('/faqs/') ? 1 : 0);
+    // A question or procedure opened directly (a link) belongs to the 問答 tab.
+    final path = widget.uri.path;
+    _lastTab =
+        _tabOfPath ??
+        (path.startsWith('/faqs/') || path.startsWith('/actions/') ? 1 : 0);
   }
 
   @override
@@ -70,7 +74,7 @@ class _AppShellState extends State<AppShell> {
     if (path == '/') return phone ? 'Culture Bridge' : '';
     // On wider screens the brand and sidebar are already there, so the tabs
     // need no page name beside the brand; phones keep it.
-    if (path == '/faqs') return phone ? vm.pair('官方問答', 'Official Q&A') : '';
+    if (path == '/faqs') return phone ? vm.pair('問答', 'Q&A') : '';
     if (path == '/explore') return phone ? vm.pair('看板', 'Boards') : '';
     if (path == '/share') return phone ? vm.pair('分享', 'Share') : '';
     if (path == '/profile') return phone ? vm.pair('我的', 'Me') : '';
@@ -80,6 +84,11 @@ class _AppShellState extends State<AppShell> {
       return vm.pair('學生分享', 'Student post');
     }
     if (path.startsWith('/faqs/')) return vm.pair('官方問答', 'Official Q&A');
+    if (path.startsWith('/actions/')) {
+      if (path.endsWith('/progress')) return vm.t('myActionProgress');
+      if (path.endsWith('/complete')) return vm.t('actionCompletion');
+      return vm.pair('辦證件步驟', 'Procedure');
+    }
     if (path == '/signin') return vm.t('signIn');
     if (path == '/welcome') return vm.t('profileNames');
     if (path.startsWith('/admin')) return vm.pair('審查與管理', 'Review & admin');
@@ -92,6 +101,11 @@ class _AppShellState extends State<AppShell> {
       return;
     }
     final path = widget.uri.path;
+    if (path.startsWith('/actions/') &&
+        (path.endsWith('/progress') || path.endsWith('/complete'))) {
+      context.go('/actions/${widget.uri.pathSegments[1]}');
+      return;
+    }
     if (path.startsWith('/profile/')) {
       context.go('/profile');
       return;

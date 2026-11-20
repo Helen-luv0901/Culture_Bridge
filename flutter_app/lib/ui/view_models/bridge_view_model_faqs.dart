@@ -3,6 +3,13 @@ part of 'bridge_view_model.dart';
 mixin _BridgeFaqs on _BridgeCore {
   // ---------- official Q&A (MOE NISA) ----------
 
+  /// Whether a question may be listed now: never school administration (only checked guidance
+  /// published by Feng Chia University may cover it), and in English only questions the NISA
+  /// site answers in English; the others show in Chinese mode only, so English never shows a
+  /// Chinese question (2026-11-19).
+  bool faqShown(FaqSummary faq) =>
+      !faq.forSchool && (!english || faq.hasEnglish);
+
   /// Every official question with its categories; the list page filters it on the device.
   Resource<FaqCatalog> faqs = const Resource();
   Future<void> loadFaqs() =>

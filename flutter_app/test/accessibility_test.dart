@@ -21,6 +21,7 @@ void main() {
     '/experiences/first-rental',
     '/faqs',
     '/faqs/nisa-1070',
+    '/actions/arc',
     '/profile/settings',
     '/official',
     '/assistant',

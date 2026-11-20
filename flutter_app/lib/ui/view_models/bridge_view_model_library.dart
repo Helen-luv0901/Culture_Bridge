@@ -28,7 +28,7 @@ mixin _BridgeLibrary on _BridgeCore, _BridgeFaqs {
     if (catalog == null) return savedFaqIds;
     return [
       for (final id in savedFaqIds)
-        if (catalog.item(id) case final faq? when !faq.forSchool) id,
+        if (catalog.item(id) case final faq? when faqShown(faq)) id,
     ];
   }
 

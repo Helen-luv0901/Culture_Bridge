@@ -1,0 +1,15 @@
+{
+  "note": "Official NISA questions shown under each procedure card, picked by hand on 2026-11-20 (keyword matching paired unrelated questions with the Feng Chia-only cards). Only student questions that are not outdated; cards with no related question are left out. Edit freely: an id the Q&A file no longer has, or one hidden or outdated, is simply not shown.",
+  "procedures": {
+    "visitor-to-resident-visa": ["nisa-933", "nisa-929", "nisa-999"],
+    "student-medical-insurance": ["nisa-1110", "nisa-1052", "nisa-902"],
+    "nhi": ["nisa-1110", "nisa-1053", "nisa-1038"],
+    "arc-replacement": ["nisa-1002", "nisa-1103"],
+    "arc-extension": ["nisa-1077", "nisa-974", "nisa-1076"],
+    "arc-first": ["nisa-1073", "nisa-895", "nisa-936"],
+    "health-check": ["nisa-1050"],
+    "work-permit": ["nisa-1095", "nisa-1093", "nisa-1009"],
+    "enrollment-certificate": ["nisa-974"],
+    "post-graduation-stay": ["nisa-1062", "nisa-976", "nisa-1001"]
+  }
+}
