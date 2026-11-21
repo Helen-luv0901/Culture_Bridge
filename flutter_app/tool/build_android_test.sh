@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Builds an Android APK for trying the app on your own phone (signed with this computer's
-# debug key, so it is NOT the Play Store build).
+# Builds the Android app with the Firebase settings it needs to sign in.
 #
-#   bash tool/build_android_test.sh
+#   bash tool/build_android_test.sh          # APK for your own phone (debug key, not for Play)
+#   bash tool/build_android_test.sh --play   # signed app bundle (.aab) to upload to Google Play
+#
+# Always build the Play bundle with --play: without FIREBASE_ANDROID_APP_ID the app stops at
+# "Sign-in is not set up in this build" on start. --play needs android/key.properties and the
+# upload key; bump the version code in pubspec.yaml first (Play never takes one twice).
 #
 # Needs android/app/google-services.json from the Firebase console (Project settings → your
 # Android app). Firebase settings are read from it and passed as --dart-define, so the app
@@ -44,6 +48,12 @@ PY
 )
 
 API_BASE_URL=${API_BASE_URL:-https://culture-bridge-z7gcp33vjq-de.a.run.app}
+if [[ "${1:-}" == "--play" ]]; then
+  echo "建置 Play 上架用 AAB（伺服器：$API_BASE_URL）…"
+  "$flutter" build appbundle --release --obfuscate --split-debug-info=build/symbols     --dart-define=API_BASE_URL="$API_BASE_URL" "${defines[@]}"
+  echo "完成：build/app/outputs/bundle/release/app-release.aab（build/symbols 請另外保存）"
+  exit 0
+fi
 echo "建置測試用 APK（伺服器：$API_BASE_URL）…"
 CB_ALLOW_DEBUG_SIGNING=1 "$flutter" build apk --release \
   --dart-define=API_BASE_URL="$API_BASE_URL" "${defines[@]}"
