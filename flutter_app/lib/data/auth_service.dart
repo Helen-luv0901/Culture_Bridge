@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MissingPluginException;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Who is signed in. The backend identifies people by the token this produces; it never sees
@@ -161,6 +163,49 @@ class FirebaseAuthService extends AuthService {
   static bool isCancelled(String code) =>
       code == 'popup-closed-by-user' || code.contains('cancel');
 
+  /// The Firebase project's web OAuth client (from google-services.json). Google issues the
+  /// ID token for it, which Firebase accepts. Public, not a secret.
+  static const googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: '689086323045-otlis4c7nopjonmn8caitvur5criut4r.apps.googleusercontent.com',
+  );
+
+  /// Android shows Google's own account sheet from the bottom of the screen: pick an account
+  /// and you are signed in, without leaving the app for a browser page.
+  static bool get usesAccountSheet =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<void>? _sheetReady;
+  Future<void> _initSheet() => _sheetReady ??= GoogleSignIn.instance
+      .initialize(serverClientId: googleServerClientId)
+      .catchError((Object e) {
+        _sheetReady = null; // try again next time
+        throw e;
+      });
+
+  /// A Google credential from the account sheet, or null when the sheet can't be used on
+  /// this phone (then the browser sign-in is used instead).
+  Future<fb.AuthCredential?> _sheetCredential() async {
+    if (!usesAccountSheet) return null;
+    try {
+      await _initSheet();
+      if (!GoogleSignIn.instance.supportsAuthenticate()) return null;
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) return null;
+      return fb.GoogleAuthProvider.credential(idToken: idToken);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        throw const SignInCancelled();
+      }
+      debugPrint('Google account sheet unavailable (${e.code}): $e');
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
   @override
   Future<void> signInWithGoogle() async {
     final provider = fb.GoogleAuthProvider()
@@ -168,6 +213,11 @@ class FirebaseAuthService extends AuthService {
     try {
       if (kIsWeb) {
         await _auth.signInWithPopup(provider);
+        return;
+      }
+      final credential = await _sheetCredential();
+      if (credential != null) {
+        await _auth.signInWithCredential(credential);
       } else {
         await _auth.signInWithProvider(provider);
       }
@@ -183,8 +233,22 @@ class FirebaseAuthService extends AuthService {
         'Development login is off when Firebase is set up',
       );
 
+  /// Also forgets the account chosen on the sheet, so the next sign-in asks again.
+  Future<void> _signOutOfSheet() async {
+    if (!usesAccountSheet) return;
+    try {
+      await _initSheet();
+      await GoogleSignIn.instance.signOut();
+    } catch (e) {
+      debugPrint('Google sign-out: $e');
+    }
+  }
+
   @override
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    await _signOutOfSheet();
+    await _auth.signOut();
+  }
 
   @override
   Future<void> deleteLogin() async {
@@ -200,14 +264,22 @@ class FirebaseAuthService extends AuthService {
           if (kIsWeb) {
             await user.reauthenticateWithPopup(provider);
           } else {
-            await user.reauthenticateWithProvider(provider);
+            final credential = await _sheetCredential();
+            if (credential != null) {
+              await user.reauthenticateWithCredential(credential);
+            } else {
+              await user.reauthenticateWithProvider(provider);
+            }
           }
           await user.delete();
         } on fb.FirebaseAuthException {
           // Cancelled or failed: signing out still ends the session.
+        } on SignInCancelled {
+          // Same.
         }
       }
     }
+    await _signOutOfSheet();
     await _auth.signOut();
   }
 }
