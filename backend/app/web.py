@@ -42,7 +42,8 @@ def legal_page(name: str) -> HTMLResponse:
 
 def mount_web_app(app: FastAPI, web_dir: Path | None) -> None:
     # Public pages the app stores require (B-17): how to delete an account and its data, the
-    # privacy policy, and the terms of use with the community guidelines and AI notice.
+    # privacy policy, the terms of use with the community guidelines and AI notice, and the
+    # child safety standards.
     @app.get("/account-deletion", include_in_schema=False)
     def account_deletion() -> HTMLResponse:
         return legal_page("account-deletion.html")
@@ -54,6 +55,11 @@ def mount_web_app(app: FastAPI, web_dir: Path | None) -> None:
     @app.get("/terms", include_in_schema=False)
     def terms() -> HTMLResponse:
         return legal_page("terms.html")
+
+    # Google Play asks social apps for a public page on child sexual abuse and exploitation.
+    @app.get("/child-safety", include_in_schema=False)
+    def child_safety() -> HTMLResponse:
+        return legal_page("child-safety.html")
 
     if web_dir is None or not (web_dir / "index.html").is_file():
         return

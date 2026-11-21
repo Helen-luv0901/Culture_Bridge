@@ -117,7 +117,7 @@ def test_terms_from_an_older_version_must_be_accepted_again(api, db, monkeypatch
 # ---------- §2 public pages ----------
 
 
-@pytest.mark.parametrize("path", ["/privacy", "/terms", "/account-deletion"])
+@pytest.mark.parametrize("path", ["/privacy", "/terms", "/account-deletion", "/child-safety"])
 def test_legal_pages_show_the_support_email(api, monkeypatch, path):
     from app.core.config import get_settings
 
@@ -626,3 +626,21 @@ def test_safety_posts_and_names_are_not_mistaken_for_abuse(text):
     from app.services.content_filter import contains_blocked_words
 
     assert not contains_blocked_words(text), text
+
+
+def test_child_safety_page_covers_what_play_asks(api):
+    page = api.get("/child-safety").text
+    for words in (
+        "CSAM",
+        "零容忍",
+        "檢舉",
+        "停權",
+        "通報",
+        "zero tolerance",
+        "Report",
+        "suspended",
+        "law enforcement",
+        "/terms",
+        "/privacy",
+    ):
+        assert words in page, words
