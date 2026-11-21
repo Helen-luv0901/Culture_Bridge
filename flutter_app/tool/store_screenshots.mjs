@@ -18,6 +18,8 @@ const base = process.env.BASE_URL ?? 'http://localhost:8765';
 const token = 'dev:mei';
 const pages = [
   ['01-home', '/'],
+  // Procedure cards on top, official Q&A below. No procedure detail page: the demo procedures
+  // name one school, and the store listing must not suggest a school partnership.
   ['02-faqs', '/faqs'],
   ['03-faq', '/faqs/nisa-934'],
   ['04-explore', '/explore'],
