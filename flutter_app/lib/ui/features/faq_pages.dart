@@ -44,16 +44,83 @@ const _intro = (
       'Agency. Check the latest notices before you apply.',
 );
 
-/// The 問答 tab: the step-by-step procedures first, then the official Q&A, every question
-/// the MOE NISA site lists, filtered by its categories and by who it applies to, and
-/// searched on the device.
+/// The 問答 tab, two pages a switch at the top moves between: the official Q&A (every
+/// question the MOE NISA site lists, filtered by its categories and by who it applies to,
+/// and searched on the device) and 辦理證件, the step-by-step procedures (/faqs?view=procedures).
 class FaqsPage extends StatefulWidget {
-  const FaqsPage({super.key, this.category});
+  const FaqsPage({super.key, this.category, this.procedures = false});
 
   /// A category id to start on (/faqs?cat=visa-arc).
   final String? category;
+
+  /// Opens on the 辦理證件 page instead of the official Q&A.
+  final bool procedures;
   @override
   State<FaqsPage> createState() => _FaqsPageState();
+}
+
+/// The switch between the two pages of the 問答 tab: 官方問答 and 辦理證件.
+class _QaSwitch extends StatelessWidget {
+  const _QaSwitch({required this.procedures});
+  final bool procedures;
+  @override
+  Widget build(BuildContext context) {
+    final vm = BridgeScope.of(context);
+    Widget side(String key, String label, bool selected, String to) => Expanded(
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: InkWell(
+          key: Key(key),
+          borderRadius: BorderRadius.circular(Radii.pill),
+          onTap: selected ? null : () => context.go(to),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? Palette.moss : Colors.transparent,
+              borderRadius: BorderRadius.circular(Radii.pill),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: selected ? Palette.onMoss : Palette.inkSoft,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return Container(
+      key: const Key('qa-switch'),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Palette.chip,
+        borderRadius: BorderRadius.circular(Radii.pill),
+        border: Border.all(color: Palette.oat),
+      ),
+      child: Row(
+        children: [
+          side(
+            'qa-switch-faqs',
+            vm.pair('官方問答', 'Official Q&A'),
+            !procedures,
+            '/faqs',
+          ),
+          side(
+            'qa-switch-procedures',
+            vm.pair('辦理證件', 'Procedures'),
+            procedures,
+            '/faqs?view=procedures',
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _FaqsPageState extends State<FaqsPage> {
@@ -86,11 +153,16 @@ class _FaqsPageState extends State<FaqsPage> {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
+    if (widget.procedures) {
+      return const FlowBody(
+        gap: 18,
+        children: [_QaSwitch(procedures: true), ProcedureSection()],
+      );
+    }
     return FlowBody(
       gap: 18,
       children: [
-        const ProcedureSection(),
-        const SizedBox(height: 8),
+        const _QaSwitch(procedures: false),
         Column(
           key: const Key('faqs-intro'),
           crossAxisAlignment: CrossAxisAlignment.start,

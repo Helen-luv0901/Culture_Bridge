@@ -21,6 +21,7 @@ from app.assistant.tools import (
     _experience_summary,
     faq_card,
     faq_detail,
+    procedure_brief,
     shows_card,
 )
 
@@ -34,6 +35,7 @@ FAQS = 2  # answers for the best matches, clipped to PREFETCH_ANSWER_CHARS
 # (many questions mention 居留證) and can't tell a general question from a special case.
 OTHER_FAQS = 3
 EXPERIENCES = 3
+PROCEDURES = 2  # titles only; get_procedure has the steps
 PASSAGES = 3
 SEMANTIC_FAQS = 8  # candidates for the fused ranking
 MAX_QUERY = 200
@@ -67,6 +69,7 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
     try:
         matches = ctx.data.search_faqs(query, FAQS + OTHER_FAQS)
         experiences = ctx.data.search_experiences(query, None, None, EXPERIENCES)
+        procedures = ctx.data.search_actions(query, PROCEDURES)
     except Exception:  # never let a search problem stop the assistant; the tools remain
         logger.exception("Assistant prefetch failed")
         return Prefetched(block="")
@@ -79,7 +82,7 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
         keywords_done - started,
         time.monotonic() - keywords_done,
     )
-    if not faqs and not experiences and not _has_passages(passages):
+    if not faqs and not experiences and not procedures and not _has_passages(passages):
         return Prefetched(block="")  # nothing to add; follow-ups like 「第二個」 stay as written
     payload: dict[str, Any] = {
         "official_faq": {
@@ -87,6 +90,7 @@ def prefetch(message: str, ctx: ToolContext) -> Prefetched:
             "results": [faq_detail(f, ctx.locale, clip=PREFETCH_ANSWER_CHARS) for f in faqs],
         },
         "other_matching_official_questions": [_brief(f, ctx.locale) for f in others],
+        "matching_procedures": [procedure_brief(a, ctx.locale) for a in procedures],
         "student_experiences": {
             "notice": EXPERIENCE_NOTICE,
             "results": [_experience_summary(e, ctx.locale) for e in experiences],

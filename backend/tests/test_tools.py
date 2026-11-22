@@ -17,6 +17,8 @@ def test_specs_are_plain_json_schema():
     assert set(specs) == {
         "search_official_faq",
         "get_official_faq",
+        "search_procedures",
+        "get_procedure",
         "search_experiences",
         "get_experience",
         "open_screen",
@@ -88,16 +90,34 @@ def test_unknown_tool_and_bad_args_become_error_results(ctx):
     missing = run(ctx, "get_official_faq")
     assert missing["error"] == "Invalid arguments"
     assert run(ctx, "search_official_faq", query="x", sql="drop")["error"] == "Invalid arguments"
-    # The procedure tools are gone with the procedure guides.
+    # Procedures are read, never started from the assistant.
     assert "Unknown tool" in run(ctx, "search_actions", query="ARC")["error"]
     assert "Unknown tool" in run(ctx, "propose_start_action", action_id="arc")["error"]
+
+
+def test_procedure_tools_find_and_read_a_card(ctx):
+    found = run(ctx, "search_procedures", query="ARC")
+    assert found["count"] >= 1 and found["results"][0]["procedure_id"] == "arc"
+    assert set(found["results"][0]) == {"procedure_id", "title"}
+    detail = run(ctx, "get_procedure", procedure_id="arc")
+    assert detail["found"] is True and detail["procedure"]["steps"]
+    assert "辦理證件" in detail["notice"]
+    assert run(ctx, "get_procedure", procedure_id="nope") == {
+        "found": False,
+        "procedure_id": "nope",
+    }
+    # Reading a card does not show it: the model names the cards it recommends.
+    assert ctx.cards == {}
 
 
 def test_open_screen_whitelist_and_target_checks(ctx):
     assert "error" in run(ctx, "open_screen", screen="open_admin")
     assert "error" in run(ctx, "open_screen", screen="open_faq", target_id="nope")
     assert "error" in run(ctx, "open_screen", screen="open_faq")
-    assert "error" in run(ctx, "open_screen", screen="open_action", target_id="arc")
+    assert "error" in run(ctx, "open_screen", screen="open_action", target_id="nope")
+    assert "error" in run(ctx, "open_screen", screen="open_progress", target_id="arc")
+    assert run(ctx, "open_screen", screen="open_action", target_id="arc")["ok"] is True
+    ctx.screen_actions.clear()
 
     assert run(ctx, "open_screen", screen="open_faq", target_id="nisa-934")["ok"] is True
     run(ctx, "open_screen", screen="open_faq", target_id="nisa-934")

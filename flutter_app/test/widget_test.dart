@@ -365,38 +365,46 @@ void main() {
     }
   });
 
-  testWidgets('The Q&A tab lists the procedures, then the official Q&A', (
+  testWidgets('The Q&A tab switches between the official Q&A and procedures', (
     tester,
   ) async {
     final app = await mount(tester, '/faqs', const Size(375, 2400));
-    final procedures = find.byKey(const Key('procedures-section'));
-    final faqs = find.byKey(const Key('faqs-intro'));
-    expect(procedures, findsOneWidget);
-    expect(faqs, findsOneWidget);
-    expect(find.text('辦理證件'), findsOneWidget);
-    expect(
-      tester.getTopLeft(procedures).dy,
-      lessThan(tester.getTopLeft(faqs).dy),
-    );
-    // Five procedures first, the rest behind "see all"; the Q&A list stays as it was.
-    expect(find.byKey(const Key('procedure-row-work-permit')), findsOneWidget);
-    expect(find.byKey(const Key('procedure-row-transport')), findsNothing);
-    await tap(tester, find.byKey(const Key('procedures-more')));
-    expect(find.byKey(const Key('procedure-row-transport')), findsOneWidget);
+    // Page one: the official Q&A, without the procedures.
+    expect(find.byKey(const Key('qa-switch')), findsOneWidget);
+    expect(find.byKey(const Key('faqs-intro')), findsOneWidget);
+    expect(find.byKey(const Key('procedures-section')), findsNothing);
     expect(find.byKey(const Key('faq-search')), findsOneWidget);
     expect(find.byKey(const Key('faq-cat')), findsOneWidget);
     expect(find.byKey(const Key('faq-who')), findsOneWidget);
     expect(find.byKey(const Key('faq-row-nisa-1070')), findsOneWidget);
-    // Titles follow the language.
+    expect(
+      tester.getTopLeft(find.byKey(const Key('qa-switch-faqs'))).dx,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('qa-switch-procedures'))).dx,
+      ),
+    );
+
+    // Page two: every procedure, as cards like the questions.
+    await tap(tester, find.byKey(const Key('qa-switch-procedures')));
+    expect(find.byKey(const Key('procedures-section')), findsOneWidget);
+    expect(find.byKey(const Key('faqs-intro')), findsNothing);
+    expect(find.byKey(const Key('procedure-row-work-permit')), findsOneWidget);
+    expect(find.byKey(const Key('procedure-row-transport')), findsOneWidget);
+    expect(find.byKey(const Key('procedures-more')), findsNothing);
+    expect(find.textContaining('辦理證件 ·'), findsWidgets);
+
+    // Titles follow the language, and the switch goes back.
     app.vm.setEnglish(true);
     await tester.pumpAndSettle();
     expect(find.text('Step-by-step procedures'), findsOneWidget);
+    await tap(tester, find.byKey(const Key('qa-switch-faqs')));
+    expect(find.byKey(const Key('faqs-intro')), findsOneWidget);
   });
 
   testWidgets('A procedure opens with its steps and keeps the Q&A tab', (
     tester,
   ) async {
-    await mount(tester, '/faqs', const Size(375, 2400));
+    await mount(tester, '/faqs?view=procedures', const Size(375, 2400));
     await tap(tester, find.byKey(const Key('procedure-row-arc')));
     expect(find.byKey(const Key('guide-key-facts')), findsOneWidget);
     expect(find.text('步驟'.toUpperCase()), findsOneWidget);
@@ -1111,6 +1119,27 @@ void main() {
     );
   }
 
+  testWidgets('A procedure card from the assistant opens the procedure', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812));
+    app.repository.assistantReply = (message) => const AssistantReply(
+      conversationId: 'c1',
+      text: '可以照著辦理證件的步驟做。',
+      cards: [AssistantCard(type: 'procedure', id: 'arc', title: '首次申請居留證')],
+      screenActions: [],
+      fallback: false,
+    );
+    await tap(tester, find.byKey(const Key('assistant-button')));
+    await tester.enterText(find.byType(TextField).last, '居留證怎麼辦？');
+    await tester.testTextInput.receiveAction(TextInputAction.send);
+    await tester.pumpAndSettle();
+    expect(find.text('辦理證件'), findsWidgets);
+    await tap(tester, find.byKey(const Key('assistant-post-arc')));
+    expect(app.vm.assistantOpen, isFalse);
+    expect(find.text('先線上預約。'), findsOneWidget); // the procedure's steps
+  });
+
   testWidgets('Assistant on a phone covers the page and hides the bubble', (
     tester,
   ) async {
@@ -1202,9 +1231,13 @@ void main() {
       screenActionPath(const ScreenAction('open_faq', 'nisa-1070', null)),
       '/faqs/nisa-1070',
     );
-    // Procedure guides are gone: older replies' links are dropped.
     expect(
       screenActionPath(const ScreenAction('open_action', 'arc', null)),
+      '/actions/arc',
+    );
+    // Procedures are not tracked: an older reply's progress link is dropped.
+    expect(
+      screenActionPath(const ScreenAction('open_progress', 'arc', null)),
       isNull,
     );
     expect(

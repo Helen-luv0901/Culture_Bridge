@@ -146,7 +146,7 @@ void main() {
       'conversation_id': 'c1',
       'text': 'ok',
       'cards': [
-        {'type': 'action', 'action_id': 'arc', 'title': 'old'},
+        {'type': 'action', 'action_id': 'arc', 'title': '首次申請居留證'},
         {
           'type': 'faq',
           'faq_id': 'nisa-1',
@@ -165,8 +165,11 @@ void main() {
       'pending_operations': [],
       'fallback': false,
     });
-    expect(reply.cards.single.type, 'faq');
-    expect(reply.cards.single.agency, '內政部移民署');
+    // Procedure cards and questions; kinds this build doesn't know are left out.
+    expect([for (final c in reply.cards) c.type], ['procedure', 'faq']);
+    expect(reply.cards.first.id, 'arc');
+    expect(reply.cards.first.title, '首次申請居留證');
+    expect(reply.cards.last.agency, '內政部移民署');
   });
 
   test('Reactions update every cached copy', () async {

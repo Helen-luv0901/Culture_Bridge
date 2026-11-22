@@ -754,11 +754,16 @@ class _Entry extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final reply = entry.reply;
-    // Official questions first, then student posts: each a card that opens it.
+    // Official questions, then procedure cards, then student posts: each a card that
+    // opens it.
     final cards = reply?.cards ?? const <AssistantCard>[];
     final faqs = [
       for (final card in cards)
         if (card.type == 'faq') card,
+    ];
+    final procedures = [
+      for (final card in cards)
+        if (card.type == 'procedure') card,
     ];
     final posts = [
       for (final card in cards)
@@ -817,6 +822,7 @@ class _Entry extends StatelessWidget {
             faqs,
             vm.pair('官方問答（政府機關回覆）', 'Official Q&A (answered by agencies)'),
           ),
+          (procedures, vm.pair('辦理證件', 'Procedures')),
           (posts, vm.pair('同學的經驗分享', 'Student posts')),
         ])
           if (group.isNotEmpty) ...[
@@ -827,11 +833,11 @@ class _Entry extends StatelessWidget {
             for (final card in group)
               _PostCard(
                 card: card,
-                onTap: () => onNavigate(
-                  card.type == 'faq'
-                      ? '/faqs/${Uri.encodeComponent(card.id)}'
-                      : '/experiences/${Uri.encodeComponent(card.id)}',
-                ),
+                onTap: () => onNavigate(switch (card.type) {
+                  'faq' => '/faqs/${Uri.encodeComponent(card.id)}',
+                  'procedure' => '/actions/${Uri.encodeComponent(card.id)}',
+                  _ => '/experiences/${Uri.encodeComponent(card.id)}',
+                }),
               ),
           ],
       ],
@@ -841,6 +847,7 @@ class _Entry extends StatelessWidget {
   String _actionLabel(BridgeViewModel vm, ScreenAction action) =>
       switch (action.type) {
         'open_faq' => vm.pair('看這則官方問答', 'Read this official answer'),
+        'open_action' => vm.pair('看這張辦理證件', 'Read this procedure'),
         'open_experience' => vm.pair('看這篇學生分享', 'Read this student post'),
         'open_explore' => vm.pair('去看板看看', 'Go to Boards'),
         'open_share' => vm.pair('去分享', 'Go to Share'),
@@ -855,6 +862,7 @@ String? screenActionPath(ScreenAction action) {
       : Uri.encodeComponent(action.targetId!);
   return switch (action.type) {
     'open_faq' when id != null => '/faqs/$id',
+    'open_action' when id != null => '/actions/$id',
     'open_experience' when id != null => '/experiences/$id',
     'open_explore' => switch (action.topic) {
       'life_adaptation' => '/explore?cat=life',
@@ -868,8 +876,8 @@ String? screenActionPath(ScreenAction action) {
   };
 }
 
-/// An official question or student post the assistant found, as a small card that opens
-/// it. Questions say who answered and when; posts show their board.
+/// An official question, procedure card or student post the assistant found, as a small
+/// card that opens it. Questions say who answered and when; posts show their board.
 class _PostCard extends StatelessWidget {
   const _PostCard({required this.card, required this.onTap});
   final AssistantCard card;
@@ -879,6 +887,7 @@ class _PostCard extends StatelessWidget {
     final vm = BridgeScope.of(context);
     final category = card.category;
     final faq = card.type == 'faq';
+    final procedure = card.type == 'procedure';
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -899,14 +908,18 @@ class _PostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (faq)
+                      if (faq || procedure)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
                             [
-                              vm.pair('官方問答', 'Official Q&A'),
-                              if (card.agency.isNotEmpty) card.agency,
-                              ?card.postedOn,
+                              if (procedure)
+                                vm.pair('辦理證件', 'Procedure')
+                              else ...[
+                                vm.pair('官方問答', 'Official Q&A'),
+                                if (card.agency.isNotEmpty) card.agency,
+                                ?card.postedOn,
+                              ],
                             ].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
