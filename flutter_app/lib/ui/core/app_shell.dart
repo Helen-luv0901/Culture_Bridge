@@ -84,11 +84,7 @@ class _AppShellState extends State<AppShell> {
       return vm.pair('學生分享', 'Student post');
     }
     if (path.startsWith('/faqs/')) return vm.pair('官方問答', 'Official Q&A');
-    if (path.startsWith('/actions/')) {
-      if (path.endsWith('/progress')) return vm.t('myActionProgress');
-      if (path.endsWith('/complete')) return vm.t('actionCompletion');
-      return vm.pair('辦證件步驟', 'Procedure');
-    }
+    if (path.startsWith('/actions/')) return vm.pair('辦理證件', 'Procedure');
     if (path == '/signin') return vm.t('signIn');
     if (path == '/welcome') return vm.t('profileNames');
     if (path.startsWith('/admin')) return vm.pair('審查與管理', 'Review & admin');
@@ -101,11 +97,6 @@ class _AppShellState extends State<AppShell> {
       return;
     }
     final path = widget.uri.path;
-    if (path.startsWith('/actions/') &&
-        (path.endsWith('/progress') || path.endsWith('/complete'))) {
-      context.go('/actions/${widget.uri.pathSegments[1]}');
-      return;
-    }
     if (path.startsWith('/profile/')) {
       context.go('/profile');
       return;

@@ -110,7 +110,6 @@ class BridgeViewModel extends _BridgeCore
     _profileRetry?.cancel();
     // A reply still on its way belongs to the person who asked.
     _forgetChat();
-    executions = const Resource();
     mine = const Resource();
     blocks = const Resource();
     saved = const Resource();

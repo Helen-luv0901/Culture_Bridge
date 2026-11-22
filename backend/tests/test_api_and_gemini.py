@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from google.genai import types
 
 from app.api.assistant import get_services
-from app.assistant.gemini import from_response, to_contents
+from app.assistant.gemini import FOREIGN_CALL_SIGNATURE, from_response, to_contents
 from app.assistant.llm import LLMError, ModelTurn, ToolCall, ToolResult, ToolResultsTurn, UserTurn
 from app.main import app
 from tests.conftest import ScriptedLLM, answer, call
@@ -75,6 +75,25 @@ def test_gemini_history_conversion_keeps_ids_and_raw_content():
     response = contents[2].parts[0].function_response
     assert (response.id, response.name, response.response) == ("x1", "get_action", {"found": True})
     assert contents[3].parts[0].text == "done"
+
+
+def test_gemini_history_signs_tool_calls_another_model_made():
+    # Groq's tool calls carry no thought signature; Gemini 3 answers 400 without one.
+    contents = to_contents(
+        [
+            UserTurn("work after graduation?"),
+            ModelTurn(
+                tool_calls=(
+                    ToolCall(id="g1", name="get_official_faq", args={"faq_id": "a"}),
+                    ToolCall(id="g2", name="get_official_faq", args={"faq_id": "b"}),
+                )
+            ),
+            ToolResultsTurn((ToolResult(id="g1", name="get_official_faq", result={}),)),
+        ]
+    )
+    first, second = contents[1].parts
+    assert first.thought_signature == FOREIGN_CALL_SIGNATURE
+    assert second.thought_signature is None
 
 
 def test_gemini_response_parsing():

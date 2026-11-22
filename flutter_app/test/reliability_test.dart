@@ -308,49 +308,4 @@ void main() {
       expect(app.vm.chat.last.failed, isFalse);
     });
   });
-  test('Sending "I am stuck" twice sends one report', () async {
-    final app = await _App.create();
-    final execution = (await app.vm.startAction('arc'))!;
-    app.repository.holdFeedback = Completer();
-    final step = execution.steps.first.stepId;
-    final first = app.vm.reportStuck(execution, step, 'dontUnderstandStep', '');
-    final second = app.vm.reportStuck(
-      execution,
-      step,
-      'dontUnderstandStep',
-      '',
-    );
-    expect(app.vm.reportingStuck, isTrue);
-    app.repository.holdFeedback!.complete();
-    await Future.wait([first, second]);
-    expect(app.repository.feedbackCalls, 1);
-    expect(app.vm.reportingStuck, isFalse);
-  });
-
-  test('Undoing a failed tick leaves a later tick alone', () async {
-    final app = await _App.create();
-    final execution = (await app.vm.startAction('arc'))!;
-    final a = execution.steps[0].stepId;
-    final b = execution.steps[1].stepId;
-    app.repository.failStep = a;
-    app.repository.holdFailingStep = Completer();
-    final tickA = app.vm.setStepDone(execution, a, true);
-    await app.vm.setStepDone(app.vm.openExecution('arc')!, b, true); // succeeds
-    app.repository.holdFailingStep!.complete();
-    await tickA;
-    final steps = app.vm.openExecution('arc')!.steps;
-    expect(steps[0].state, isNot('done')); // A put back
-    expect(steps[1].state, 'done'); // B kept
-  });
-
-  test('A ticked step shows as done before the server answers', () async {
-    final app = await _App.create();
-    final execution = (await app.vm.startAction('arc'))!;
-    final step = execution.steps.first.stepId;
-    final done = app.vm.setStepDone(execution, step, true);
-    final shown = app.vm.openExecution('arc')!.steps.first;
-    expect(shown.state, 'done');
-    await done;
-    expect(app.vm.openExecution('arc')!.steps.first.state, 'done');
-  });
 }
