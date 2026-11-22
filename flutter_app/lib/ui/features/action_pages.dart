@@ -15,17 +15,19 @@ void openProcedure(BuildContext context, String id) {
   context.push('/actions/${Uri.encodeComponent(id)}');
 }
 
-/// 辦理證件: every official procedure as one compact card of rows. Shown at the top of the 問答 tab, above the official Q&A.
+/// 辦理證件: every official procedure as one compact card of rows, one of the two pages
+/// of the 問答 tab. [folded] keeps the first few with "see all" below them.
 class ProcedureSection extends StatefulWidget {
-  const ProcedureSection({super.key});
+  const ProcedureSection({super.key, this.folded = false});
+  final bool folded;
   @override
   State<ProcedureSection> createState() => _ProcedureSectionState();
 }
 
 class _ProcedureSectionState extends State<ProcedureSection> {
-  /// Rows shown before "see all", so the official Q&A stays close below.
+  /// Rows shown before "see all" when folded.
   static const _folded = 5;
-  bool _all = false;
+  late bool _all = !widget.folded;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +113,8 @@ class ProcedureList extends StatelessWidget {
   );
 }
 
+/// One procedure in the same post form as an official question: the title, then a line
+/// saying what it is, when it was published and whether it was read.
 class _ProcedureRow extends StatelessWidget {
   const _ProcedureRow({required this.action});
   final ActionSummary action;
@@ -118,13 +122,18 @@ class _ProcedureRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final read = vm.isRead('guide:${action.id}');
+    final meta = [
+      vm.pair('辦理證件', 'Procedure'),
+      if (action.publishedAt != null) formatDate(action.publishedAt),
+      if (read) vm.pair('已看過', 'Read'),
+    ].join(' · ');
     return InkWell(
       key: Key('procedure-row-${action.id}'),
       onTap: () => openProcedure(context, action.id),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 56),
+        constraints: const BoxConstraints(minHeight: 60),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               Expanded(
@@ -133,19 +142,15 @@ class _ProcedureRow extends StatelessWidget {
                   children: [
                     Text(
                       action.title.of(vm.english),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: displayStyle(
                         16,
                         color: read ? Palette.muted : Palette.ink,
                       ).copyWith(height: 1.5),
                     ),
-                    if (read)
-                      Text(
-                        vm.pair('已看過', 'Read'),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Palette.muted,
-                        ),
-                      ),
+                    const SizedBox(height: 4),
+                    Text(meta, style: mutedStyle.copyWith(fontSize: 13)),
                   ],
                 ),
               ),

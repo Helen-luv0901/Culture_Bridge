@@ -1,8 +1,9 @@
-"""Which official questions and student posts appear as cards under an answer.
+"""Which official questions, procedure cards and student posts appear as cards under an answer.
 
 The model judges relevance, not a search score: short posts often look "close" to unrelated
 questions by wording or meaning alone. It ends its answer with one line naming what directly
-helps, e.g. ``RELATED: faq:nisa-1070, post:3f2a…`` or ``RELATED: none``. That line is removed
+helps, e.g. ``RELATED: faq:nisa-1070, procedure:arc-first, post:3f2a…`` or
+``RELATED: none``. That line is removed
 from the text the user sees. Every id is checked against real data, at most two of each kind are
 shown, and an answer without the line shows no student posts.
 """
@@ -10,11 +11,17 @@ shown, and an answer without the line shows no student posts.
 import re
 from dataclasses import dataclass
 
-from app.assistant.tools import ToolContext, experience_card, faq_card, shows_card
+from app.assistant.tools import (
+    ToolContext,
+    experience_card,
+    faq_card,
+    procedure_card,
+    shows_card,
+)
 
 MAX_EACH = 2
 _LINE = re.compile(r"^[ \t]*RELATED[ \t]*[:：][^\n]*$", re.IGNORECASE | re.MULTILINE)
-_ITEM = re.compile(r"\b(faq|post)\s*:\s*([A-Za-z0-9_-]+)", re.IGNORECASE)
+_ITEM = re.compile(r"\b(faq|procedure|post)\s*:\s*([A-Za-z0-9_-]+)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -23,6 +30,7 @@ class Related:
     listed: bool  # whether the model wrote the line at all
     faqs: tuple[str, ...] = ()
     posts: tuple[str, ...] = ()
+    procedures: tuple[str, ...] = ()
 
 
 def parse_related(answer: str) -> Related:
@@ -30,13 +38,18 @@ def parse_related(answer: str) -> Related:
     text = _LINE.sub("", answer).strip()
     if not lines:
         return Related(text=text, listed=False)
-    faqs: list[str] = []
-    posts: list[str] = []
+    found: dict[str, list[str]] = {"faq": [], "procedure": [], "post": []}
     for kind, item_id in _ITEM.findall(" ".join(lines)):
-        target = faqs if kind.lower() == "faq" else posts
+        target = found[kind.lower()]
         if item_id not in target:
             target.append(item_id)
-    return Related(text=text, listed=True, faqs=tuple(faqs), posts=tuple(posts))
+    return Related(
+        text=text,
+        listed=True,
+        faqs=tuple(found["faq"]),
+        posts=tuple(found["post"]),
+        procedures=tuple(found["procedure"]),
+    )
 
 
 def related_cards(related: Related, ctx: ToolContext) -> None:
@@ -60,6 +73,10 @@ def related_cards(related: Related, ctx: ToolContext) -> None:
         listed = key[len("faq:") :] in related.faqs[:MAX_EACH]
         if listed or _named_in(card.question, related.text):
             ctx.cards.setdefault(key, card)
+    for procedure_id in related.procedures[:MAX_EACH]:
+        action = ctx.data.get_action(procedure_id)
+        if action is not None:
+            ctx.cards[f"action:{action.id}"] = procedure_card(action, ctx.locale)
     for post_id in related.posts[:MAX_EACH]:
         post = ctx.data.get_experience(post_id)
         if post is not None:

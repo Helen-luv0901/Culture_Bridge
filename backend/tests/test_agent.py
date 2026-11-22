@@ -194,6 +194,18 @@ def test_prefetched_procedures_not_named_get_no_card(make_assistant):
     assert reply.cards == []
 
 
+def test_a_named_procedure_shows_as_a_card(make_assistant):
+    llm = ScriptedLLM(
+        answer("可以看「辦理證件」的流程卡。\nRELATED: procedure:arc, procedure:nope")
+    )
+    reply = make_assistant(llm).reply(ask("居留證要怎麼辦？"), USER)
+    cards = [c.model_dump() for c in reply.cards]
+    assert [(c["type"], c["action_id"]) for c in cards] == [("action", "arc")]
+    assert cards[0]["title"] and "RELATED" not in reply.text
+    # The prefetched titles let the model name the card without a tool call.
+    assert '"matching_procedures"' in llm.calls[0]["history"][-1].text
+
+
 def test_nothing_found_leaves_the_message_as_written(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("zzzz qqqq"), USER)
@@ -301,7 +313,10 @@ def test_related_line_is_parsed_in_any_position_and_colon():
 def test_prompt_asks_for_the_related_line(make_assistant):
     llm = ScriptedLLM(answer("hi"))
     make_assistant(llm).reply(ask("hi"), None)
-    assert "RELATED: faq:<faq_id>, post:<experience_id>" in llm.calls[0]["system"]
+    assert (
+        "RELATED: faq:<faq_id>, procedure:<procedure_id>, post:<experience_id>"
+        in llm.calls[0]["system"]
+    )
 
 
 def test_more_matching_questions_are_listed_briefly(make_assistant):

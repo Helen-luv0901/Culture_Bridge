@@ -815,7 +815,7 @@ class AssistantCard {
     this.url = '',
   });
 
-  /// Null for kinds this app doesn't show (older procedure cards, anything new).
+  /// Null for kinds this app doesn't show (anything newer than this build).
   static AssistantCard? fromJson(Json json) => switch (json['type']) {
     'faq' => AssistantCard(
       type: 'faq',
@@ -826,6 +826,12 @@ class AssistantCard {
       agency: json['answering_agency'] as String? ?? '',
       postedOn: json['posted_on'] as String?,
       url: json['url'] as String? ?? '',
+    ),
+    'action' => AssistantCard(
+      type: 'procedure',
+      id: json['action_id'] as String,
+      title: json['title'] as String? ?? '',
+      excerpt: json['excerpt'] as String? ?? '',
     ),
     'experience' => AssistantCard(
       type: 'experience',
@@ -838,7 +844,7 @@ class AssistantCard {
     _ => null,
   };
 
-  /// 'faq' or 'experience'.
+  /// 'faq', 'procedure' or 'experience'.
   final String type;
   final String id;
 

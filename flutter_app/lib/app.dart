@@ -90,7 +90,10 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
           ),
           _page(
             '/faqs',
-            (state) => FaqsPage(category: state.uri.queryParameters['cat']),
+            (state) => FaqsPage(
+              category: state.uri.queryParameters['cat'],
+              procedures: state.uri.queryParameters['view'] == 'procedures',
+            ),
             routes: [
               _page(
                 ':id',

@@ -13,6 +13,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.assistant.data import (
+    ActionRecord,
     AssistantDataSource,
     ExperienceRecord,
     FaqRecord,
@@ -23,7 +24,14 @@ from app.assistant.data import (
 from app.assistant.knowledge import default_knowledge_base
 from app.assistant.llm import ToolCall, ToolResult, ToolSpec
 from app.assistant.operations import OperationStore, PendingOperation
-from app.assistant.schemas import Card, ExperienceCard, FaqCard, ScreenAction, ScreenActionType
+from app.assistant.schemas import (
+    ActionCard,
+    Card,
+    ExperienceCard,
+    FaqCard,
+    ScreenAction,
+    ScreenActionType,
+)
 from app.core.auth import CurrentUser
 
 logger = logging.getLogger(__name__)
@@ -33,6 +41,11 @@ FAQ_NOTICE = (
     "Official answers from government agencies, published on the Ministry of Education NISA "
     "site. Cite the answering agency and date. Questions were asked by school staff, so some "
     "answers talk about what schools must do."
+)
+PROCEDURE_NOTICE = (
+    "Step-by-step procedure cards (辦理證件) Culture Bridge put together from official notices. "
+    "Some are still being checked: when verification_status is not verified, point to the "
+    "sources for the final word."
 )
 
 
@@ -210,6 +223,38 @@ def faq_card(faq: FaqRecord, locale: Locale) -> FaqCard:
     )
 
 
+def procedure_brief(action: ActionRecord, locale: Locale) -> dict[str, Any]:
+    return {"procedure_id": action.id, "title": action.title.get(locale)}
+
+
+def procedure_detail(action: ActionRecord, locale: Locale) -> dict[str, Any]:
+    return {
+        **procedure_brief(action, locale),
+        "description": action.description.get(locale),
+        "applies_to": action.applicable_to.get(locale),
+        "where": action.location.get(locale),
+        "steps": [s.get(locale) for s in action.steps],
+        "sources": [
+            {"title": s.title.get(locale), "url": s.url, "publisher": s.publisher}
+            for s in action.sources
+        ],
+        "verification_status": action.verification_status,
+    }
+
+
+def procedure_card(action: ActionRecord, locale: Locale) -> ActionCard:
+    """A 辦理證件 card the reader can open, like a post."""
+    return ActionCard(
+        action_id=action.id,
+        title=action.title.get(locale),
+        verification_status=action.verification_status,
+        last_verified_at=action.last_verified_at,
+        recent_success_count=action.recent_success_count,
+        sources=[s.title.get(locale) for s in action.sources],
+        excerpt=_excerpt(action.description.get(locale)),
+    )
+
+
 # ---------- tools ----------
 
 
@@ -234,6 +279,31 @@ def get_official_faq(args: GetFaqArgs, ctx: ToolContext) -> dict[str, Any]:
     if shows_card(faq, ctx.locale):
         ctx.cards[f"faq:{faq.id}"] = faq_card(faq, ctx.locale)
     return {"found": True, "notice": FAQ_NOTICE, "faq": faq_detail(faq, ctx.locale)}
+
+
+class SearchProceduresArgs(ToolArgs):
+    query: str = Field(min_length=1, max_length=200, description="Keywords, e.g. 居留證 or bank")
+    limit: int = Field(default=3, ge=1, le=6)
+
+
+def search_procedures(args: SearchProceduresArgs, ctx: ToolContext) -> dict[str, Any]:
+    found = ctx.data.search_actions(args.query, args.limit)
+    return {"count": len(found), "results": [procedure_brief(a, ctx.locale) for a in found]}
+
+
+class GetProcedureArgs(ToolArgs):
+    procedure_id: str = Field(min_length=1, max_length=100)
+
+
+def get_procedure(args: GetProcedureArgs, ctx: ToolContext) -> dict[str, Any]:
+    action = ctx.data.get_action(args.procedure_id)
+    if action is None:
+        return {"found": False, "procedure_id": args.procedure_id}
+    return {
+        "found": True,
+        "notice": PROCEDURE_NOTICE,
+        "procedure": procedure_detail(action, ctx.locale),
+    }
 
 
 class SearchExperiencesArgs(ToolArgs):
@@ -280,15 +350,19 @@ class OpenScreenArgs(ToolArgs):
     target_id: str | None = Field(
         default=None,
         max_length=100,
-        description="faq_id for open_faq, experience_id for open_experience",
+        description="faq_id for open_faq, procedure_id for open_action, "
+        "experience_id for open_experience",
     )
     topic: TopicId | None = Field(default=None, description="Optional filter for open_explore")
 
 
 def open_screen(args: OpenScreenArgs, ctx: ToolContext) -> dict[str, Any]:
-    if args.screen in ("open_action", "open_progress"):
-        raise ToolError("Procedure guides were replaced by the official Q&A; use open_faq")
-    if args.screen == "open_faq":
+    if args.screen == "open_progress":
+        raise ToolError("Procedures are not tracked; use open_action to open one")
+    if args.screen == "open_action":
+        if not args.target_id or ctx.data.get_action(args.target_id) is None:
+            raise ToolError("open_action needs an existing procedure_id from search_procedures")
+    elif args.screen == "open_faq":
         if not args.target_id or ctx.data.get_faq(args.target_id) is None:
             raise ToolError("open_faq needs an existing faq_id from search_official_faq")
     elif args.screen == "open_experience":
@@ -359,6 +433,19 @@ TOOLS: list[Tool] = [
         "Read one official question in full: the answer, answering agency, date, source and link.",
         GetFaqArgs,
         get_official_faq,
+    ),
+    Tool(
+        "search_procedures",
+        "Find step-by-step procedure cards (辦理證件) by keyword: ARC, health insurance, work "
+        "permit, bank account, enrollment certificate...",
+        SearchProceduresArgs,
+        search_procedures,
+    ),
+    Tool(
+        "get_procedure",
+        "Read one procedure card: who it is for, where to go, its steps and official sources.",
+        GetProcedureArgs,
+        get_procedure,
     ),
     Tool(
         "search_experiences",
