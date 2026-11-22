@@ -373,7 +373,7 @@ void main() {
     final faqs = find.byKey(const Key('faqs-intro'));
     expect(procedures, findsOneWidget);
     expect(faqs, findsOneWidget);
-    expect(find.text('辦證件步驟'), findsOneWidget);
+    expect(find.text('辦理證件'), findsOneWidget);
     expect(
       tester.getTopLeft(procedures).dy,
       lessThan(tester.getTopLeft(faqs).dy),
@@ -401,9 +401,9 @@ void main() {
     expect(find.byKey(const Key('guide-key-facts')), findsOneWidget);
     expect(find.text('步驟'.toUpperCase()), findsOneWidget);
     expect(find.text('先線上預約。'), findsOneWidget);
-    expect(find.byKey(const Key('start-action')), findsOneWidget);
+    expect(find.byKey(const Key('start-action')), findsNothing);
     expect(find.textContaining('資料來源（'), findsOneWidget);
-    expect(find.text('辦證件步驟'), findsWidgets); // the header names it
+    expect(find.text('辦理證件'), findsWidgets); // the header names it
     bool selected(int i) =>
         tester
             .widget<Semantics>(
@@ -469,61 +469,19 @@ void main() {
     expect(find.text('已備妥 1 / 2'), findsOneWidget);
   });
 
-  testWidgets('Starting a procedure shows progress, also in the list', (
+  testWidgets('A procedure is a card to read, with nothing to start', (
     tester,
   ) async {
-    final app = await mount(tester, '/actions/arc', const Size(375, 2400));
-    // Before 我要辦理 nothing about progress shows.
-    expect(find.text('我要辦理'), findsOneWidget);
-    expect(find.byKey(const Key('action-progress-note')), findsNothing);
-    expect(find.text('辦理中 · 0 / 5'), findsNothing);
-    await tap(tester, find.byKey(const Key('start-action')));
-    expect(find.byKey(const Key('step-0')), findsOneWidget);
-    await tap(tester, find.byKey(const Key('step-0')));
-    expect(find.text('進度: 1 / 5'), findsOneWidget);
-    expect(app.repository.executions.single.steps.first.state, 'done');
-    await tap(tester, find.byKey(const Key('nav-1')));
-    expect(find.text('辦理中 · 1 / 5'), findsOneWidget);
-
-    // Back on the procedure: where they got to, and Continue.
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/actions/arc');
+    await mount(tester, '/actions/arc', const Size(375, 2400));
+    expect(find.text('先線上預約。'), findsOneWidget);
+    expect(find.text('我要辦理'), findsNothing);
+    expect(find.byKey(const Key('start-action')), findsNothing);
+    expect(find.text('辦理證件 · 從官方公告整理'), findsOneWidget);
+    // An old link to the removed progress page opens the procedure itself.
+    GoRouter.of(tester.element(find.byType(Scaffold).first))
+        .go('/actions/arc/progress');
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('action-progress-note')), findsOneWidget);
-    expect(find.text('你上次做到第 1 / 5 步，按「繼續辦理」接著做。'), findsOneWidget);
-    expect(find.text('繼續辦理'), findsOneWidget);
-  });
-
-  testWidgets('Step interaction and stuck report reach the API', (
-    tester,
-  ) async {
-    final app = await mount(
-      tester,
-      '/actions/arc/progress',
-      const Size(375, 1400),
-      before: (app) => app.vm.startAction('arc'),
-    );
-    await tap(tester, find.byKey(const Key('step-0')));
-    expect(find.text('進度: 1 / 5'), findsOneWidget);
-
-    await tap(tester, find.byKey(const Key('stuck-1')));
-    await tap(tester, find.text('需要的文件不同'));
-    await tap(tester, find.text('送出'));
-    expect(app.repository.feedback.single['category'], 'documents');
-    expect(app.repository.executions.single.steps[1].state, 'stuck');
-  });
-
-  testWidgets('Completion sends the outcome', (tester) async {
-    final app = await mount(
-      tester,
-      '/actions/arc/complete',
-      const Size(1280, 1400),
-      before: (app) => app.vm.startAction('arc'),
-    );
-    await tap(tester, find.text('流程和原本不同'));
-    await tap(tester, find.text('費用'));
-    await tap(tester, find.byKey(const Key('send-outcome')));
-    expect(app.repository.feedback.single['category'], 'fee');
-    expect(app.repository.executions, isEmpty);
+    expect(find.text('先線上預約。'), findsOneWidget);
   });
 
   testWidgets('A whole card opens its post, not just the title', (

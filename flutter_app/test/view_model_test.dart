@@ -237,25 +237,10 @@ void main() {
     addTearDown(app.vm.dispose);
     await app.vm.loadProfile();
     await app.vm.loadSaved();
-    await app.vm.startAction('arc');
-    await app.vm.loadExecutions();
     expect(app.vm.saved.data, isNotNull);
-    expect(app.vm.executions.data, isNotEmpty);
     await app.vm.signOut();
     expect(app.vm.saved.data, isNull);
-    expect(app.vm.executions.data, isNull);
     expect(app.vm.profile, isNull);
-  });
-
-  test('Starting twice resumes the same execution', () async {
-    final app = TestApp();
-    addTearDown(app.vm.dispose);
-    final first = await app.vm.startAction('work-permit');
-    final again = await app.vm.startAction('work-permit');
-    expect(again!.id, first!.id);
-    await app.vm.setStepDone(first, first.steps.first.stepId, true);
-    expect(app.vm.openExecution('work-permit')!.doneCount, 1);
-    expect(app.vm.openExecution('arc'), isNull);
   });
 
   test('Documents checklist counts what is ready', () {

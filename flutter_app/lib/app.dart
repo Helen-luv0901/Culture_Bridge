@@ -125,15 +125,13 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
             '/actions/:id',
             (state) => ActionDetailPage(id: state.pathParameters['id']!),
             routes: [
-              _page(
-                'progress',
-                (state) => ActionProgressPage(id: state.pathParameters['id']!),
-              ),
-              _page(
-                'complete',
-                (state) =>
-                    ActionCompletionPage(id: state.pathParameters['id']!),
-              ),
+              // Old links to the removed progress pages open the procedure itself.
+              for (final gone in ['progress', 'complete'])
+                GoRoute(
+                  path: gone,
+                  redirect: (_, state) =>
+                      '/actions/${state.pathParameters['id']}',
+                ),
             ],
           ),
         ],

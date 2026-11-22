@@ -15,16 +15,7 @@ void openProcedure(BuildContext context, String id) {
   context.push('/actions/${Uri.encodeComponent(id)}');
 }
 
-/// Loads the reader's procedures in progress once (signed out there is nothing to load).
-void _loadExecutions(BridgeViewModel vm) {
-  if (!vm.signedIn || !vm.executions.needsLoad) return;
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (vm.signedIn && vm.executions.needsLoad) vm.loadExecutions();
-  });
-}
-
-/// 辦證件步驟: every official procedure as one compact card of rows, the ones being done
-/// first. Shown at the top of the 問答 tab, above the official Q&A.
+/// 辦理證件: every official procedure as one compact card of rows. Shown at the top of the 問答 tab, above the official Q&A.
 class ProcedureSection extends StatefulWidget {
   const ProcedureSection({super.key});
   @override
@@ -39,7 +30,6 @@ class _ProcedureSectionState extends State<ProcedureSection> {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    _loadExecutions(vm);
     return Column(
       key: const Key('procedures-section'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,7 +43,7 @@ class _ProcedureSectionState extends State<ProcedureSection> {
               header: true,
               headingLevel: 2,
               child: Text(
-                vm.pair('辦證件步驟', 'Step-by-step procedures'),
+                vm.pair('辦理證件', 'Step-by-step procedures'),
                 style: displayStyle(22),
               ),
             ),
@@ -74,21 +64,8 @@ class _ProcedureSectionState extends State<ProcedureSection> {
           load: (vm) => vm.loadActions(),
           builder: (context, actions) {
             if (actions.isEmpty) return const SizedBox.shrink();
-            // Being done first, then the usual order.
-            final doing = [
-              for (final a in actions)
-                if (vm.openExecution(a.id) != null) a,
-            ];
-            final sorted = [
-              ...doing,
-              for (final a in actions)
-                if (vm.openExecution(a.id) == null) a,
-            ];
-            final shown = _all
-                ? sorted
-                : sorted
-                      .take(doing.length > _folded ? doing.length : _folded)
-                      .toList();
+            final sorted = actions;
+            final shown = _all ? sorted : sorted.take(_folded).toList();
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -140,17 +117,7 @@ class _ProcedureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    final execution = vm.openExecution(action.id);
-    final doing = execution != null;
     final read = vm.isRead('guide:${action.id}');
-    final status = execution != null
-        ? vm.pair(
-            '辦理中 · ${execution.doneCount} / ${execution.steps.length}',
-            'In progress · ${execution.doneCount} of ${execution.steps.length}',
-          )
-        : read
-        ? vm.pair('已看過', 'Read')
-        : null;
     return InkWell(
       key: Key('procedure-row-${action.id}'),
       onTap: () => openProcedure(context, action.id),
@@ -168,16 +135,15 @@ class _ProcedureRow extends StatelessWidget {
                       action.title.of(vm.english),
                       style: displayStyle(
                         16,
-                        color: read && !doing ? Palette.muted : Palette.ink,
+                        color: read ? Palette.muted : Palette.ink,
                       ).copyWith(height: 1.5),
                     ),
-                    if (status != null)
+                    if (read)
                       Text(
-                        status,
-                        style: TextStyle(
+                        vm.pair('已看過', 'Read'),
+                        style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: doing ? FontWeight.w700 : FontWeight.w400,
-                          color: doing ? Palette.moss : Palette.muted,
+                          color: Palette.muted,
                         ),
                       ),
                   ],
@@ -228,25 +194,6 @@ class _ActionDetail extends StatefulWidget {
 }
 
 class _ActionDetailState extends State<_ActionDetail> {
-  bool _starting = false;
-
-  Future<void> _track() async {
-    final vm = BridgeScope.of(context);
-    final id = widget.detail.summary.id;
-    if (vm.openExecution(id) != null) {
-      context.push('/actions/$id/progress');
-      return;
-    }
-    if (!ensureSignedIn(context)) return;
-    setState(() => _starting = true);
-    final started = await vm.startAction(id);
-    if (!mounted) return;
-    setState(() => _starting = false);
-    if (started != null && context.mounted) {
-      context.push('/actions/$id/progress');
-    }
-  }
-
   /// Whether the guide was checked by a person, said once beside its sources.
   String _checked(BridgeViewModel vm) {
     final action = widget.detail.summary;
@@ -267,13 +214,10 @@ class _ActionDetailState extends State<_ActionDetail> {
     final detail = widget.detail;
     final action = detail.summary;
     vm.markRead('guide:${action.id}');
-    _loadExecutions(vm);
     final description = withoutCitations(
       action.description.of(vm.english),
       detail.sources,
     );
-    final execution = vm.openExecution(action.id);
-    final doing = execution != null;
     return FlowBody(
       maxWidth: 760,
       children: [
@@ -281,7 +225,7 @@ class _ActionDetailState extends State<_ActionDetail> {
         Align(
           alignment: AlignmentDirectional.centerStart,
           child: Text(
-            vm.pair('辦證件步驟 · 從官方公告整理', 'Procedure · From official notices'),
+            vm.pair('辦理證件 · 從官方公告整理', 'Procedure · From official notices'),
             style: mutedStyle.copyWith(fontSize: 13),
           ),
         ),
@@ -292,34 +236,6 @@ class _ActionDetailState extends State<_ActionDetail> {
             style: const TextStyle(fontSize: 16, height: 1.75),
           ),
         _KeyFacts(detail: detail),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FilledButton(
-              key: const Key('start-action'),
-              onPressed: _starting ? null : _track,
-              child: Text(
-                doing
-                    ? vm.t('continueAction')
-                    : vm.pair('我要辦理', 'I want to do this'),
-              ),
-            ),
-            // Progress is only mentioned once the student chose to do this procedure
-            // (pressed 我要辦理); before that the page just shows the steps.
-            if (execution case final e?) ...[
-              const SizedBox(height: 6),
-              Text(
-                vm.pair(
-                  '你上次做到第 ${e.doneCount} / ${e.steps.length} 步，按「繼續辦理」接著做。',
-                  'You got to step ${e.doneCount} of ${e.steps.length}. Tap Continue to pick up.',
-                ),
-                key: const Key('action-progress-note'),
-                style: mutedStyle,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
-        ),
         if (detail.steps.isNotEmpty)
           _Steps(steps: detail.steps, sources: detail.sources),
         if (detail.documents.isNotEmpty)
@@ -703,330 +619,6 @@ class SourceLine extends StatelessWidget {
       uri: uri,
       target: LinkTarget.blank,
       builder: (context, follow) => InkWell(onTap: follow, child: label),
-    );
-  }
-}
-
-/// Resolves the student's open execution for this procedure (loading it if needed).
-class _ExecutionView extends StatelessWidget {
-  const _ExecutionView({required this.actionId, required this.builder});
-  final String actionId;
-  final Widget Function(BuildContext context, Execution execution) builder;
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    if (!vm.signedIn) {
-      return FlowBody(
-        children: [
-          Text(vm.t('signInNeeded')),
-          FilledButton(
-            onPressed: () => ensureSignedIn(context),
-            child: Text(vm.t('signIn')),
-          ),
-        ],
-      );
-    }
-    return ResourceView<List<Execution>>(
-      resource: (vm) => vm.executions,
-      load: (vm) => vm.loadExecutions(),
-      builder: (context, _) {
-        final execution = vm.openExecution(actionId);
-        if (execution == null) {
-          return FlowBody(
-            children: [
-              Text(vm.t('noProgressYet')),
-              FilledButton(
-                onPressed: () => context.go('/actions/$actionId'),
-                child: Text(vm.t('startAction')),
-              ),
-            ],
-          );
-        }
-        return builder(context, execution);
-      },
-    );
-  }
-}
-
-class ActionProgressPage extends StatelessWidget {
-  const ActionProgressPage({super.key, required this.id});
-  final String id;
-  @override
-  Widget build(BuildContext context) => _ExecutionView(
-    actionId: id,
-    builder: (context, execution) => _Progress(execution: execution),
-  );
-}
-
-class _Progress extends StatefulWidget {
-  const _Progress({required this.execution});
-  final Execution execution;
-  @override
-  State<_Progress> createState() => _ProgressState();
-}
-
-class _ProgressState extends State<_Progress> {
-  String? _stuckStep;
-  String? _reason;
-  final _text = TextEditingController();
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    final e = widget.execution;
-    return FlowBody(
-      children: [
-        PaperCard(
-          color: Palette.oat,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              PaperHeading(vm.t('myActionProgress')),
-              Text(e.title.of(vm.english), style: displayStyle(25)),
-              const SizedBox(height: 14),
-              Text('${vm.t('progress')}: ${e.doneCount} / ${e.steps.length}'),
-              const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: e.steps.isEmpty ? 0 : e.doneCount / e.steps.length,
-                backgroundColor: Palette.edge,
-                color: Palette.moss,
-                minHeight: 8,
-              ),
-              if (e.newerVersionAvailable) ...[
-                const SizedBox(height: 12),
-                Text(
-                  vm.t('startedNewer'),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ],
-            ],
-          ),
-        ),
-        for (final (i, step) in e.steps.indexed)
-          PaperCard(
-            color: switch (step.state) {
-              'done' => Palette.paleMoss,
-              'stuck' => Palette.ochre,
-              _ => Palette.high,
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CheckboxListTile(
-                  key: Key('step-$i'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(step.title.of(vm.english)),
-                  value: step.state == 'done',
-                  onChanged: (value) =>
-                      vm.setStepDone(e, step.stepId, value ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-                if (step.state != 'done' && _stuckStep != step.stepId)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      key: Key('stuck-$i'),
-                      onPressed: () => setState(() {
-                        _stuckStep = step.stepId;
-                        _reason = null;
-                        _text.clear();
-                      }),
-                      child: Text(vm.t('imStuck')),
-                    ),
-                  ),
-                if (_stuckStep == step.stepId) ...[
-                  Text(vm.t('actionWhatHappened')),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final reason in [
-                        'dontUnderstandStep',
-                        'documentsDifferent',
-                        'websiteDoesNotWork',
-                      ])
-                        ChoiceChip(
-                          label: Text(vm.t(reason)),
-                          selected: _reason == reason,
-                          onSelected: (_) => setState(() => _reason = reason),
-                        ),
-                    ],
-                  ),
-                  TextField(
-                    controller: _text,
-                    maxLength: 2000,
-                    decoration: InputDecoration(labelText: vm.t('tellMore')),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton(
-                      onPressed: _reason == null || vm.reportingStuck
-                          ? null
-                          : () async {
-                              final ok = await vm.reportStuck(
-                                e,
-                                step.stepId,
-                                _reason!,
-                                _text.text,
-                              );
-                              if (ok && mounted) {
-                                setState(() => _stuckStep = null);
-                              }
-                            },
-                      child: Text(vm.t('send')),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        FilledButton(
-          key: const Key('complete-action'),
-          onPressed: () => context.push('/actions/${e.actionId}/complete'),
-          child: Text(vm.t('completeAction')),
-        ),
-      ],
-    );
-  }
-}
-
-class ActionCompletionPage extends StatelessWidget {
-  const ActionCompletionPage({super.key, required this.id});
-  final String id;
-  @override
-  Widget build(BuildContext context) => _ExecutionView(
-    actionId: id,
-    builder: (context, execution) => _Completion(execution: execution),
-  );
-}
-
-class _Completion extends StatefulWidget {
-  const _Completion({required this.execution});
-  final Execution execution;
-  @override
-  State<_Completion> createState() => _CompletionState();
-}
-
-class _CompletionState extends State<_Completion> {
-  String? _outcome;
-  final Set<String> _differences = {};
-  final _text = TextEditingController();
-  bool _sending = false;
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = BridgeScope.of(context);
-    final e = widget.execution;
-    return FlowBody(
-      children: [
-        Text(
-          vm
-              .t('completionQuestion')
-              .replaceAll('{action}', e.title.of(vm.english)),
-          style: displayStyle(25),
-        ),
-        Text(vm.t('feedbackHelpsNext')),
-        for (final outcome in ['success', 'different', 'failed'])
-          PaperCard(
-            color: _outcome == outcome ? Palette.paleMoss : Palette.high,
-            padding: EdgeInsets.zero,
-            child: RadioGroup<String>(
-              groupValue: _outcome,
-              onChanged: (value) => setState(() => _outcome = value),
-              child: RadioListTile<String>(
-                value: outcome,
-                title: Text(
-                  vm.t(
-                    {
-                      'success': 'completionSuccess',
-                      'different': 'completionDifferent',
-                      'failed': 'completionFailed',
-                    }[outcome]!,
-                  ),
-                ),
-                subtitle: Text(
-                  vm.t(
-                    {
-                      'success': 'completionSuccessDetail',
-                      'different': 'completionDifferentDetail',
-                      'failed': 'completionFailedDetail',
-                    }[outcome]!,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        if (_outcome == 'different')
-          PaperCard(
-            color: Palette.oat,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                PaperHeading(vm.t('whatWasDifferent')),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final category in [
-                      'documents',
-                      'fee',
-                      'location',
-                      'process',
-                      'eligibility',
-                    ])
-                      FilterChip(
-                        label: Text(vm.t(category)),
-                        selected: _differences.contains(category),
-                        onSelected: (_) => setState(
-                          () => _differences.contains(category)
-                              ? _differences.remove(category)
-                              : _differences.add(category),
-                        ),
-                      ),
-                  ],
-                ),
-                TextField(
-                  controller: _text,
-                  maxLength: 2000,
-                  decoration: InputDecoration(labelText: vm.t('tellMore')),
-                ),
-              ],
-            ),
-          ),
-        if (_outcome != null)
-          FilledButton(
-            key: const Key('send-outcome'),
-            onPressed: _sending
-                ? null
-                : () async {
-                    setState(() => _sending = true);
-                    final outcome = _outcome == 'failed' ? 'failed' : _outcome!;
-                    final ok = await vm.finishAction(
-                      e,
-                      outcome,
-                      differences: _differences,
-                      text: _text.text,
-                    );
-                    if (!mounted) return;
-                    setState(() => _sending = false);
-                    if (ok && context.mounted) context.go('/faqs');
-                  },
-            child: Text(vm.t('send')),
-          ),
-      ],
     );
   }
 }
