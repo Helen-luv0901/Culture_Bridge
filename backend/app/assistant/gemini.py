@@ -18,6 +18,9 @@ from app.assistant.llm import (
 )
 
 logger = logging.getLogger(__name__)
+
+# https://ai.google.dev/gemini-api/docs/thought-signatures — for function calls Gemini did not make.
+FOREIGN_CALL_SIGNATURE = b"skip_thought_signature_validator"
 # Every model is asked within a few seconds (one more each HEDGE_AFTER_SECONDS), so a round
 # lasts about the last one's start plus its timeout (20 s): 2 + 2 + 20 = 24 s, with room to spare.
 ROUND_BUDGET_SECONDS = 30.0
@@ -99,10 +102,16 @@ def to_contents(history: list[Turn]) -> list[types.Content]:
         elif isinstance(turn.raw, types.Content):
             contents.append(turn.raw)
         else:
+            # A turn another model (Groq) wrote has no thought signature, and Gemini 3 rejects
+            # tool calls without one (400 INVALID_ARGUMENT, production 2026-11-22). Google's
+            # documented placeholder for calls from another model goes on the first call.
             parts = [types.Part.from_text(text=turn.text)] if turn.text else []
             parts += [
-                types.Part(function_call=types.FunctionCall(id=c.id, name=c.name, args=c.args))
-                for c in turn.tool_calls
+                types.Part(
+                    function_call=types.FunctionCall(id=c.id, name=c.name, args=c.args),
+                    thought_signature=FOREIGN_CALL_SIGNATURE if index == 0 else None,
+                )
+                for index, c in enumerate(turn.tool_calls)
             ]
             contents.append(types.Content(role="model", parts=parts))
     return contents
