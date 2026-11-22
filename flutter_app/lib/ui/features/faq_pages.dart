@@ -459,8 +459,9 @@ class _NotShown extends StatelessWidget {
           key: const Key('faq-not-shown'),
           title: vm.pair('這則問答不提供', 'This question is not available'),
           body: vm.pair(
-            '學校行政相關內容需經逢甲大學官方發布並確認後才會顯示。',
-            'School administration content appears only once Feng Chia University has published and checked it.',
+            '這是學校行政人員之間的問答，不適用於學生，所以不顯示。有學校相關的問題，請問你學校的國際事務處。',
+            "This one was asked between school staff and does not apply to students. "
+                "For school matters, ask your school's international office.",
           ),
         ),
       ],

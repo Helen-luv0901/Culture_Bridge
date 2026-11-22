@@ -663,8 +663,8 @@ class _UrgentLine extends StatelessWidget {
         ),
         Text(
           vm.pair(
-            '（免付費，24 小時）· 逢甲大學國際事務處（行政二館 303 室）',
-            ' (free, 24 h) · FCU Office of International Affairs (Admin Bldg II, Rm 303)',
+            '（免付費，24 小時）· 或聯絡你學校的國際事務處',
+            " (free, 24 h) · or your school's international office",
           ),
           style: mutedStyle.copyWith(fontSize: 12),
         ),
