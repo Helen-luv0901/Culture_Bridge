@@ -18,8 +18,14 @@ class AppLoader extends StatefulWidget {
     this.onReady,
     this.timeout = const Duration(seconds: 60),
     this.initialLocation,
+    this.updateCheck,
+    this.openStore,
   });
   final Future<BridgeViewModel> Function() start;
+
+  /// Passed on to the app: whether the store has a newer version, and its page.
+  final Future<bool> Function()? updateCheck;
+  final Future<void> Function()? openStore;
 
   /// Where the app opens (the link the page was loaded with on the web); null: Home.
   final String? initialLocation;
@@ -71,6 +77,8 @@ class _AppLoaderState extends State<AppLoader> {
       return CultureBridgeApp(
         viewModel: vm,
         initialLocation: widget.initialLocation,
+        updateCheck: widget.updateCheck,
+        openStore: widget.openStore,
       );
     }
     final error = _error;

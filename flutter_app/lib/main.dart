@@ -11,6 +11,7 @@ import 'app.dart';
 import 'app_loader.dart';
 import 'data/admin_repository.dart';
 import 'data/api_client.dart';
+import 'data/app_updates.dart';
 import 'data/auth_service.dart';
 import 'data/culture_repository.dart';
 import 'data/error_reporter.dart';
@@ -105,6 +106,9 @@ Future<void> main() async {
     AppLoader(
       start: start,
       initialLocation: opened == '/' ? null : opened,
+      // On Android, a newer version on Google Play is offered once the app opens.
+      updateCheck: playHasUpdate,
+      openStore: openPlayPage,
       onReady: (vm) {
         // New posts show up on their own while the app is open; no checks in the
         // background.

@@ -229,6 +229,49 @@ void main() {
     expect(find.byKey(const Key('list-error')), findsNothing);
   });
 
+  testWidgets('A newer version on the store is offered, with its page', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(375, 812);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final app = (await tester.runAsync(_App.create))!;
+    addTearDown(app.vm.dispose);
+    var opened = 0;
+    await tester.pumpWidget(
+      CultureBridgeApp(
+        viewModel: app.vm,
+        initialLocation: '/',
+        updateCheck: () async => true,
+        openStore: () async => opened++,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('update-notice')), findsOneWidget);
+    expect(find.text('有新版本'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('update-now')));
+    await tester.pumpAndSettle();
+    expect(opened, 1);
+    expect(find.byKey(const Key('update-notice')), findsNothing);
+  });
+
+  testWidgets('No update notice when the store has nothing newer', (
+    tester,
+  ) async {
+    final app = (await tester.runAsync(_App.create))!;
+    addTearDown(app.vm.dispose);
+    await tester.pumpWidget(
+      CultureBridgeApp(
+        viewModel: app.vm,
+        initialLocation: '/',
+        updateCheck: () async => false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('update-notice')), findsNothing);
+  });
+
   test('Signing out forgets the unpublished draft on this device', () async {
     final app = await _App.create();
     app.vm.updateDraft(title: '還沒發的標題', voice: '只有我看得到的內容');
