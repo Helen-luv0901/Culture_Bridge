@@ -645,7 +645,10 @@ class _UrgentLine extends StatelessWidget {
             '1990 foreigner hotline (free, 24 h)',
           ),
         ),
-        Text(' · ', style: muted),
+        Text(
+          vm.pair(' · 教育部外籍生資訊：', ' · Ministry of Education, for students: '),
+          style: muted,
+        ),
         _FooterLink(
           key: const Key('assistant-nisa'),
           uri: Uri.parse('https://www.nisa.moe.gov.tw/'),

@@ -979,6 +979,7 @@ void main() {
     expect(find.textContaining('1990'), findsOneWidget);
     expect(find.text('1990 外國人生活諮詢熱線（免付費，24 小時）'), findsOneWidget);
     expect(find.byKey(const Key('assistant-nisa')), findsOneWidget);
+    expect(find.textContaining('教育部外籍生資訊'), findsOneWidget);
     expect(find.textContaining('國際事務處'), findsNothing);
     // Web: a floating window; the bubble stays to close it.
     expect(find.byKey(const Key('assistant-button')), findsOneWidget);
