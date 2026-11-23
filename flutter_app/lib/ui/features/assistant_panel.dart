@@ -625,50 +625,74 @@ class _Disclaimers extends StatelessWidget {
   }
 }
 
-/// Emergency or a real person: the 1990 hotline and the university's international office.
+/// Emergency or a real person: the 1990 hotline, and the Ministry of Education's site for
+/// international students.
 class _UrgentLine extends StatelessWidget {
   const _UrgentLine();
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
+    final muted = mutedStyle.copyWith(fontSize: 12);
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          vm.pair('緊急或需要真人：', 'Urgent, or need a person: '),
-          style: mutedStyle.copyWith(fontSize: 12),
-        ),
-        Link(
+        Text(vm.pair('緊急或需要真人：', 'Urgent, or need a person: '), style: muted),
+        _FooterLink(
+          key: const Key('assistant-hotline'),
           uri: Uri.parse('tel:1990'),
-          builder: (context, follow) => InkWell(
-            onTap: follow,
-            // 44 px tall to hit easily, but only as wide as its words, so the line still flows.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Align(
-                widthFactor: 1,
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  vm.pair('1990 外國人生活諮詢熱線', '1990 foreigner hotline'),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Palette.brickDeep,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Palette.brick,
-                  ),
-                ),
+          label: vm.pair(
+            '1990 外國人生活諮詢熱線（免付費，24 小時）',
+            '1990 foreigner hotline (free, 24 h)',
+          ),
+        ),
+        Text(' · ', style: muted),
+        _FooterLink(
+          key: const Key('assistant-nisa'),
+          uri: Uri.parse('https://www.nisa.moe.gov.tw/'),
+          label: 'https://www.nisa.moe.gov.tw/',
+          target: LinkTarget.blank,
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({
+    super.key,
+    required this.uri,
+    required this.label,
+    this.target = LinkTarget.defaultTarget,
+  });
+  final Uri uri;
+  final String label;
+  final LinkTarget target;
+
+  @override
+  Widget build(BuildContext context) {
+    return Link(
+      uri: uri,
+      target: target,
+      builder: (context, follow) => InkWell(
+        onTap: follow,
+        // 44 px tall to hit easily, but only as wide as its words, so the line still flows.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            widthFactor: 1,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Palette.brickDeep,
+                decoration: TextDecoration.underline,
+                decorationColor: Palette.brick,
               ),
             ),
           ),
         ),
-        Text(
-          vm.pair(
-            '（免付費，24 小時）· 或聯絡你學校的國際事務處',
-            " (free, 24 h) · or your school's international office",
-          ),
-          style: mutedStyle.copyWith(fontSize: 12),
-        ),
-      ],
+      ),
     );
   }
 }
