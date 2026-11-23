@@ -1,6 +1,8 @@
 import 'package:culture_bridge/app.dart';
+import 'package:culture_bridge/domain/api_models.dart';
 import 'package:culture_bridge/ui/core/app_shell.dart' show AppIconSlot;
 import 'package:culture_bridge/ui/core/motion.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -129,6 +131,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(app.vm.assistantOpen, isFalse);
     expect(find.byKey(const Key('assistant-sheet-motion')), findsNothing);
+  });
+
+  testWidgets('The assistant can be dragged down from anywhere on it', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812));
+    // From the chat, while it is at its top.
+    await tester.tap(find.byKey(const Key('assistant-button')));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('assistant-log')),
+      const Offset(0, 420),
+      kind: PointerDeviceKind.mouse, // a browser on a computer
+    );
+    await tester.pumpAndSettle();
+    expect(app.vm.assistantOpen, isFalse);
+    expect(find.byKey(const Key('assistant-sheet-motion')), findsNothing);
+
+    // From the bottom, by the emergency line.
+    await tester.tap(find.byKey(const Key('assistant-button')));
+    await tester.pumpAndSettle();
+    await tester.drag(find.textContaining('緊急或需要真人'), const Offset(0, 420));
+    await tester.pumpAndSettle();
+    expect(app.vm.assistantOpen, isFalse);
+  });
+
+  testWidgets('A chat scrolled down scrolls back before the sheet moves', (
+    tester,
+  ) async {
+    final app = await mount(tester, '/', const Size(375, 812));
+    await tester.tap(find.byKey(const Key('assistant-button')));
+    await tester.pumpAndSettle();
+    final log = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('assistant-log')),
+    );
+    final controller = log.controller!;
+    // Make the chat long enough to scroll, then scroll to its end.
+    app.repository.assistantReply = (message) => AssistantReply(
+      conversationId: 'c1',
+      text: '很長的回答。' * 60,
+      cards: const [],
+      screenActions: const [],
+      fallback: false,
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.enterText(find.byType(TextField).last, '問題 $i');
+      await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pumpAndSettle();
+    }
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    expect(controller.offset, greaterThan(100));
+    await tester.timedDrag(
+      find.byKey(const Key('assistant-log')),
+      const Offset(0, 80),
+      const Duration(milliseconds: 600),
+    );
+    await tester.pumpAndSettle();
+    expect(app.vm.assistantOpen, isTrue);
+    expect(controller.offset, lessThan(controller.position.maxScrollExtent));
   });
 
   testWidgets('A short, slow drag lets the assistant spring back open', (
