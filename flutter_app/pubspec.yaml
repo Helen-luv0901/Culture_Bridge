@@ -1,7 +1,7 @@
 name: culture_bridge
 description: Culture Bridge responsive Flutter frontend.
 publish_to: none
-version: 1.0.2+12
+version: 1.0.3+13
 environment:
   sdk: ^3.13.3
 dependencies:
