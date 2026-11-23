@@ -633,27 +633,41 @@ class _UrgentLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
     final muted = mutedStyle.copyWith(fontSize: 12);
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(vm.pair('緊急或需要真人：', 'Urgent, or need a person: '), style: muted),
-        _FooterLink(
-          key: const Key('assistant-hotline'),
-          uri: Uri.parse('tel:1990'),
-          label: vm.pair(
-            '1990 外國人生活諮詢熱線（免付費，24 小時）',
-            '1990 foreigner hotline (free, 24 h)',
-          ),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              vm.pair('緊急或需要真人：', 'Urgent, or need a person: '),
+              style: muted,
+            ),
+            _FooterLink(
+              key: const Key('assistant-hotline'),
+              uri: Uri.parse('tel:1990'),
+              label: vm.pair(
+                '1990 外國人生活諮詢熱線（免付費，24 小時）',
+                '1990 foreigner hotline (free, 24 h)',
+              ),
+            ),
+          ],
         ),
-        Text(
-          vm.pair(' · 教育部外籍生資訊：', ' · Ministry of Education, for students: '),
-          style: muted,
-        ),
-        _FooterLink(
-          key: const Key('assistant-nisa'),
-          uri: Uri.parse('https://www.nisa.moe.gov.tw/'),
-          label: 'https://www.nisa.moe.gov.tw/',
-          target: LinkTarget.blank,
+        // The ministry's site on a line of its own.
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              vm.pair('教育部外籍生資訊：', 'Ministry of Education, for students: '),
+              style: muted,
+            ),
+            _FooterLink(
+              key: const Key('assistant-nisa'),
+              uri: Uri.parse('https://www.nisa.moe.gov.tw/'),
+              label: 'https://www.nisa.moe.gov.tw/',
+              target: LinkTarget.blank,
+            ),
+          ],
         ),
       ],
     );
