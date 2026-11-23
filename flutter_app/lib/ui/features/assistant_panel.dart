@@ -1,6 +1,7 @@
 import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart' show VelocityTracker, kTouchSlop;
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/link.dart';
@@ -95,20 +96,76 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
   var _byHand = false;
   late final _sheetOffset = _SheetOffset(widget.animation, () => _byHand);
 
-  void _dragStart(DragStartDetails _) {
-    widget.animation.stop();
-    setState(() => _byHand = true);
+  /// The chat log inside the sheet: the sheet is pulled down only once it is at its top.
+  final _log = ScrollController();
+  late final _logPhysics = _HeldPhysics(() => _pulling);
+
+  /// A finger pulling the sheet down (from anywhere on it), and how far it has moved
+  /// down before that counts as a pull rather than a tap or a scroll.
+  var _pulling = false;
+  var _pointer = -1;
+  var _overLog = false;
+  var _pending = 0.0;
+  VelocityTracker? _tracker;
+  var _sheetHeight = 1.0;
+
+  bool _onLog(Offset global) {
+    if (!_log.hasClients) return false;
+    final box = _log.position.context.notificationContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached) return false;
+    return (Offset.zero & box.size).contains(box.globalToLocal(global));
   }
 
-  void _dragUpdate(DragUpdateDetails details, double height) {
-    final moved = (details.primaryDelta ?? 0) / height;
-    widget.animation.value = (widget.animation.value - moved).clamp(0.0, 1.0);
+  void _pointerDown(PointerDownEvent event) {
+    if (_pointer != -1) return; // one finger moves the sheet
+    _pointer = event.pointer;
+    _overLog = _onLog(event.position);
+    _pending = 0;
+    _tracker = VelocityTracker.withKind(event.kind)
+      ..addPosition(event.timeStamp, event.position);
+  }
+
+  void _pointerMove(PointerMoveEvent event) {
+    if (event.pointer != _pointer) return;
+    _tracker?.addPosition(event.timeStamp, event.position);
+    final dy = event.delta.dy;
+    if (!_pulling) {
+      // Only straight down, and the chat (if the finger is on it) already at its top.
+      final atTop = !_overLog || !_log.hasClients || _log.offset <= 0;
+      if (!atTop || dy <= 0 || event.delta.dx.abs() > dy) {
+        _pending = 0;
+        return;
+      }
+      _pending += dy;
+      if (_pending < kTouchSlop) return;
+      widget.animation.stop();
+      setState(() {
+        _pulling = true;
+        _byHand = true;
+      });
+    }
+    widget.animation.value = (widget.animation.value - dy / _sheetHeight).clamp(
+      0.0,
+      1.0,
+    );
+  }
+
+  void _pointerUp(PointerEvent event) {
+    if (event.pointer != _pointer) return;
+    _pointer = -1;
+    final tracker = _tracker;
+    _tracker = null;
+    if (!_pulling) return;
+    _pulling = false;
+    final speed = event is PointerUpEvent && tracker != null
+        ? tracker.getVelocity().pixelsPerSecond.dy
+        : 0.0;
+    _settle(speed, _sheetHeight);
   }
 
   /// Let go: the finger's speed carries into a spring (apple-design, velocity handoff).
   /// A quick flick down, or a sheet already more than half way down, closes.
-  Future<void> _dragEnd(DragEndDetails details, double height) async {
-    final speed = details.velocity.pixelsPerSecond.dy;
+  Future<void> _settle(double speed, double height) async {
     final value = widget.animation.value;
     final close = speed > 700 || (speed > -300 && value < 0.55);
     final simulation = SpringSimulation(
@@ -154,6 +211,7 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
+    _log.dispose();
     super.dispose();
   }
 
@@ -167,6 +225,8 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
       autofocus: true,
       child: AssistantPanel(
         uri: uri,
+        logController: phone ? _log : null,
+        logPhysics: phone ? _logPhysics : null,
         // Opening a question or post closes the chat, so the page isn't covered.
         onNavigate: (path) {
           vm.closeAssistant();
@@ -262,72 +322,91 @@ class _AssistantOverlayState extends State<AssistantOverlay> {
             top: top,
             bottom: keyboard,
             child: LayoutBuilder(
-              builder: (context, constraints) => SlideTransition(
-                key: const Key('assistant-sheet-motion'),
-                position: _sheetOffset,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Semantics(
-                        role: SemanticsRole.dialog,
-                        scopesRoute: true,
-                        namesRoute: true,
-                        explicitChildNodes: true,
-                        label: vm.pair(
-                          'Culture Bridge 助理',
-                          'Culture Bridge assistant',
-                        ),
-                        child: Material(
-                          color: Palette.high,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(6),
+              builder: (context, constraints) {
+                _sheetHeight = constraints.maxHeight;
+                return SlideTransition(
+                  key: const Key('assistant-sheet-motion'),
+                  position: _sheetOffset,
+                  // Anywhere on the sheet a drag down moves it, and far enough closes it.
+                  child: Listener(
+                    key: const Key('assistant-sheet'),
+                    onPointerDown: _pointerDown,
+                    onPointerMove: _pointerMove,
+                    onPointerUp: _pointerUp,
+                    onPointerCancel: _pointerUp,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Semantics(
+                            role: SemanticsRole.dialog,
+                            scopesRoute: true,
+                            namesRoute: true,
+                            explicitChildNodes: true,
+                            label: vm.pair(
+                              'Culture Bridge 助理',
+                              'Culture Bridge assistant',
                             ),
-                            side: BorderSide(color: Palette.oat),
+                            child: Material(
+                              color: Palette.high,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(6),
+                                ),
+                                side: BorderSide(color: Palette.oat),
+                              ),
+                              child: SafeArea(top: false, child: panel),
+                            ),
                           ),
-                          child: SafeArea(top: false, child: panel),
                         ),
-                      ),
-                    ),
-                    // The top edge is the handle: drag the sheet down to close it.
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      height: 22,
-                      child: ExcludeSemantics(
-                        child: GestureDetector(
-                          key: const Key('assistant-grabber'),
-                          behavior: HitTestBehavior.translucent,
-                          onVerticalDragStart: _dragStart,
-                          onVerticalDragUpdate: (d) =>
-                              _dragUpdate(d, constraints.maxHeight),
-                          onVerticalDragEnd: (d) =>
-                              _dragEnd(d, constraints.maxHeight),
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: Container(
-                              margin: const EdgeInsets.only(top: 6),
-                              width: 36,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Palette.oat,
-                                borderRadius: BorderRadius.circular(2),
+                        // The handle shows the sheet can be dragged down.
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          top: 0,
+                          height: 22,
+                          child: ExcludeSemantics(
+                            child: IgnorePointer(
+                              key: const Key('assistant-grabber'),
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  width: 36,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Palette.oat,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// While the sheet is being pulled down, the chat inside it stays where it is.
+class _HeldPhysics extends ScrollPhysics {
+  const _HeldPhysics(this.held, {super.parent});
+  final bool Function() held;
+
+  @override
+  _HeldPhysics applyTo(ScrollPhysics? ancestor) =>
+      _HeldPhysics(held, parent: buildParent(ancestor));
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) =>
+      held() ? 0 : super.applyPhysicsToUserOffset(position, offset);
 }
 
 /// A critically damped spring that settles in about a third of a second, no bounce.
@@ -367,9 +446,15 @@ class AssistantPanel extends StatefulWidget {
     required this.uri,
     required this.onNavigate,
     this.closable = true,
+    this.logController,
+    this.logPhysics,
   });
   final Uri uri;
   final void Function(String path) onNavigate;
+
+  /// From the phone sheet, so it knows when the chat is at its top.
+  final ScrollController? logController;
+  final ScrollPhysics? logPhysics;
 
   /// The window has a close button; the assistant tab's page does not.
   final bool closable;
@@ -380,13 +465,15 @@ class AssistantPanel extends StatefulWidget {
 
 class _AssistantPanelState extends State<AssistantPanel> {
   final _input = TextEditingController();
-  final _scroll = ScrollController();
+  ScrollController? _own;
+  late final ScrollController _scroll =
+      widget.logController ?? (_own = ScrollController());
   int _seen = 0;
 
   @override
   void dispose() {
     _input.dispose();
-    _scroll.dispose();
+    _own?.dispose();
     super.dispose();
   }
 
@@ -483,6 +570,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
               child: SingleChildScrollView(
                 key: const Key('assistant-log'),
                 controller: _scroll,
+                physics: widget.logPhysics,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -625,50 +713,91 @@ class _Disclaimers extends StatelessWidget {
   }
 }
 
-/// Emergency or a real person: the 1990 hotline and the university's international office.
+/// Emergency or a real person: the 1990 hotline, and the Ministry of Education's site for
+/// international students.
 class _UrgentLine extends StatelessWidget {
   const _UrgentLine();
   @override
   Widget build(BuildContext context) {
     final vm = BridgeScope.of(context);
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
+    final muted = mutedStyle.copyWith(fontSize: 12);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          vm.pair('緊急或需要真人：', 'Urgent, or need a person: '),
-          style: mutedStyle.copyWith(fontSize: 12),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              vm.pair('緊急或需要真人：', 'Urgent, or need a person: '),
+              style: muted,
+            ),
+            _FooterLink(
+              key: const Key('assistant-hotline'),
+              uri: Uri.parse('tel:1990'),
+              label: vm.pair(
+                '1990 外國人生活諮詢熱線（免付費，24 小時）',
+                '1990 foreigner hotline (free, 24 h)',
+              ),
+            ),
+          ],
         ),
-        Link(
-          uri: Uri.parse('tel:1990'),
-          builder: (context, follow) => InkWell(
-            onTap: follow,
-            // 44 px tall to hit easily, but only as wide as its words, so the line still flows.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Align(
-                widthFactor: 1,
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  vm.pair('1990 外國人生活諮詢熱線', '1990 foreigner hotline'),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Palette.brickDeep,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Palette.brick,
-                  ),
-                ),
+        // The ministry's site on a line of its own.
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              vm.pair('教育部外籍生資訊：', 'Ministry of Education, for students: '),
+              style: muted,
+            ),
+            _FooterLink(
+              key: const Key('assistant-nisa'),
+              uri: Uri.parse('https://www.nisa.moe.gov.tw/'),
+              label: 'https://www.nisa.moe.gov.tw/',
+              target: LinkTarget.blank,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({
+    super.key,
+    required this.uri,
+    required this.label,
+    this.target = LinkTarget.defaultTarget,
+  });
+  final Uri uri;
+  final String label;
+  final LinkTarget target;
+
+  @override
+  Widget build(BuildContext context) {
+    return Link(
+      uri: uri,
+      target: target,
+      builder: (context, follow) => InkWell(
+        onTap: follow,
+        // 44 px tall to hit easily, but only as wide as its words, so the line still flows.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            widthFactor: 1,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Palette.brickDeep,
+                decoration: TextDecoration.underline,
+                decorationColor: Palette.brick,
               ),
             ),
           ),
         ),
-        Text(
-          vm.pair(
-            '（免付費，24 小時）· 或聯絡你學校的國際事務處',
-            " (free, 24 h) · or your school's international office",
-          ),
-          style: mutedStyle.copyWith(fontSize: 12),
-        ),
-      ],
+      ),
     );
   }
 }

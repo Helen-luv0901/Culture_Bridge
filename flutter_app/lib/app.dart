@@ -23,9 +23,17 @@ class CultureBridgeApp extends StatefulWidget {
     super.key,
     required this.viewModel,
     this.initialLocation,
+    this.updateCheck,
+    this.openStore,
   });
   final BridgeViewModel viewModel;
   final String? initialLocation;
+
+  /// Whether the store has a newer version (asked once, after the app opens); null: never.
+  final Future<bool> Function()? updateCheck;
+
+  /// Opens the app's store page, from the update notice.
+  final Future<void> Function()? openStore;
 
   static _CultureBridgeAppState? _shown;
 
@@ -46,6 +54,48 @@ class _CultureBridgeAppState extends State<CultureBridgeApp> {
   void initState() {
     super.initState();
     CultureBridgeApp._shown = this;
+    final check = widget.updateCheck;
+    if (check != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _offerUpdate(check));
+    }
+  }
+
+  /// A newer version is out: say so, with a button to the store page.
+  Future<void> _offerUpdate(Future<bool> Function() check) async {
+    if (!await check() || !mounted) return;
+    final context = router.routerDelegate.navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    final vm = widget.viewModel;
+    final update = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        key: const Key('update-notice'),
+        title: Text(
+          vm.pair('有新版本', 'A new version is out'),
+          style: displayStyle(18),
+        ),
+        content: Text(
+          vm.pair(
+            'Culture Bridge 有新版本了，請到 Play 商店更新，才能使用最新的功能和修正。',
+            'Culture Bridge has a new version. Update it on Google Play to get the latest '
+                'features and fixes.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('update-later'),
+            onPressed: () => Navigator.pop(dialog, false),
+            child: Text(vm.pair('稍後', 'Later')),
+          ),
+          FilledButton(
+            key: const Key('update-now'),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(vm.pair('前往更新', 'Update')),
+          ),
+        ],
+      ),
+    );
+    if (update == true) await widget.openStore?.call();
   }
 
   late final GoRouter router = GoRouter(
